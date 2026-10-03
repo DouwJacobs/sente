@@ -1,0 +1,25 @@
+# Replace domain, certificate paths and upstream; install in nginx's http context.
+server {
+    listen 80;
+    server_name finance.example.com;
+    return 308 https://finance.example.com$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name finance.example.com;
+    ssl_certificate /etc/letsencrypt/live/finance.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/finance.example.com/privkey.pem;
+    client_max_body_size 26m;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        # Overwrite incoming client headers at this single edge proxy.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Forwarded "";
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_cache off;
+        proxy_buffering off;
+    }
+}

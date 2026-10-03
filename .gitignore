@@ -1,0 +1,32 @@
+node_modules/
+dist/
+target/
+bin/
+data/
+uploads/
+backups/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.csv
+.env
+.env.*
+!.env.example
+
+work/
+*.ofx
+*.zip
+*.sqlite-*
+*.sqlite.*
+web/test-results/
+web/playwright-report/
+*.tsbuildinfo
+
+__pycache__/
+
+# Owner-only account discovery exports never belong in source control.
+fnb-accounts*.json
+
+# Runtime connector encryption keys must stay outside source.
+fnb.key

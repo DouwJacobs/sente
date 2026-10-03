@@ -1,0 +1,19 @@
+.git
+.agents
+work
+data
+backups
+bin
+node_modules
+web/node_modules
+web/dist
+web/test-results
+web/playwright-report
+*.csv
+*.ofx
+*.zip
+.env
+.env.*
+
+# Separate connector prototype/reference is not part of the Go app image.
+connectors/
