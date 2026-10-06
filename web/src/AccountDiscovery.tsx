@@ -12,7 +12,7 @@ export function AccountDiscovery({data,refresh,notify}:PageProps){
  const edit=(index:number,change:Partial<Draft>)=>setDrafts(rows=>rows.map((row,i)=>i===index?{...row,...change}:row))
  if(!data.user.admin)return null
  return <><Button onClick={()=>{fileRequest.current++;setOpen(true);setDrafts([]);setFileError('')}}>Import discovered accounts</Button>
- {open&&<Modal title="Import discovered accounts" onClose={()=>{if(!busy){fileRequest.current++;setOpen(false)}}}><p className="muted">Choose the account file from the owner-run FNB test. Review each account before adding it. This imports account names and numbers only.</p>
+ {open&&<Modal title="Import discovered accounts" onClose={()=>{if(!busy){fileRequest.current++;setOpen(false)}}}><p className="muted">Choose the account file created by the FNB discovery tool. Check each account before adding it. This file contains account names and numbers only.</p>
  <Field label="Discovered account file" serverError={fileError}><input type="file" accept=".json,application/json" disabled={busy} onChange={async e=>{
   const request=++fileRequest.current;setFileError('');setDrafts([]);const file=e.target.files?.[0];if(!file)return;setReading(true)
   try{if(file.size>65536)throw new Error('Choose an account file smaller than 64 KiB.');const accounts=parseAccountDiscovery(await file.text());if(request!==fileRequest.current)return;setDrafts(accounts.map(row=>({...row,household:false,imported:false,error:''})))}catch(err){if(request===fileRequest.current)setFileError((err as Error).message)}finally{if(request===fileRequest.current)setReading(false)}

@@ -21,3 +21,9 @@ export function cents(value: string): number {
  if (!Number.isSafeInteger(amount) || amount > 900000000000000) throw new Error('Amount is too large')
  return negative ? -amount : amount
 }
+
+export async function download(path:string,filename:string){
+ const response=await fetch('/api'+path,{credentials:'same-origin'})
+ if(!response.ok){const result=await response.json().catch(()=>({}));throw new Error(result.error||'Export failed')}
+ const url=URL.createObjectURL(await response.blob()),link=document.createElement('a');link.href=url;link.download=filename;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+}
