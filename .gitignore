@@ -31,3 +31,7 @@ fnb-accounts*.json
 
 # Runtime connector encryption keys must stay outside source.
 fnb.key
+
+# Personal configuration and ruleset exports
+*-config-export.json
+*-ruleset*.json
