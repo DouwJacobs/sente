@@ -418,6 +418,9 @@ func updateTargetsTx(tx *sql.Tx, u User, id int64, b targetsInput) error {
 		} else if rootGroup != nil && *rootGroup > 0 {
 			gid = *rootGroup
 		} else {
+			if queryInt(tx, "SELECT COUNT(DISTINCT spending_group_id) FROM group_targets WHERE period_id=? AND category_id=? AND included=1", id, t.CategoryID) > 1 {
+				return fail(400, "Category belongs to multiple spending groups; specify the group")
+			}
 			var catGroup sql.NullInt64
 			tx.QueryRow("SELECT spending_group_id FROM categories WHERE id=?", t.CategoryID).Scan(&catGroup)
 			if catGroup.Valid && catGroup.Int64 > 0 {
