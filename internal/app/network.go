@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type networkValues struct {
@@ -104,7 +105,7 @@ func (a *App) networkStatus(w http.ResponseWriter, r *http.Request) error {
 	if saved.Enabled {
 		desired = networkValues{PublicURL: saved.PublicURL, TrustedProxies: saved.TrustedProxies, Source: "settings"}
 	}
-	send(w, map[string]any{"active": active, "environment": environment, "saved": saved, "restart_required": active != desired})
+	send(w, map[string]any{"active": active, "environment": environment, "saved": saved, "restart_required": active != desired, "restart_available": a.RequestRestart != nil})
 	return nil
 }
 func (a *App) saveNetwork(w http.ResponseWriter, r *http.Request) error {
@@ -159,4 +160,35 @@ func (a *App) ResetNetworkSettings() error {
 		_, err := tx.Exec("INSERT INTO audit(entity,entity_id,action,details) VALUES('network_settings',1,'offline_reset','{}')")
 		return err
 	})
+}
+
+func (a *App) restartNetwork(w http.ResponseWriter, r *http.Request) error {
+	u := Current(r)
+	if err := requireAdmin(u); err != nil {
+		return err
+	}
+	if a.RequestRestart == nil {
+		return fail(503, "Restart is unavailable in this runtime")
+	}
+	var b struct {
+		Version int64 `json:"version"`
+	}
+	if err := decode(r, &b); err != nil {
+		return err
+	}
+	if err := a.write(func(tx *sql.Tx) error {
+		var version int64
+		if err := tx.QueryRow("SELECT version FROM network_settings WHERE id=1").Scan(&version); err != nil {
+			return err
+		}
+		if version != b.Version {
+			return fail(409, "Network settings changed; reload before restarting")
+		}
+		return audit(tx, u, nil, "network_settings", 1, "restart_requested", nil)
+	}); err != nil {
+		return err
+	}
+	send(w, map[string]bool{"restarting": true})
+	time.AfterFunc(500*time.Millisecond, a.RequestRestart)
+	return nil
 }

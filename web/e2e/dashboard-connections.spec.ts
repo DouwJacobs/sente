@@ -1,0 +1,61 @@
+import {test,expect} from '@playwright/test'
+
+for(const width of [1280,360])test(`dashboard budget connections and inline editing at ${width}`,async({page})=>{
+ await page.setViewportSize({width,height:900})
+ await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click()
+ await expect(page.getByRole('heading',{name:'Spending by group'})).toBeVisible()
+ await page.evaluate(async()=>{
+  const me=await (await fetch('/api/me')).json()
+  for(const [id,group,allocations] of [[2,1,[{category_id:1,amount_cents:-50000,note:''},{category_id:2,amount_cents:-34650,note:''}]],[4,4,[{category_id:1,amount_cents:-28500,note:''}]]] as const){
+   const t=(await (await fetch('/api/transactions?id='+id)).json()).items[0]
+   const result=await fetch('/api/transactions/'+id,{method:'PUT',headers:{'Content-Type':'application/json','X-CSRF-Token':me.csrf},body:JSON.stringify({version:t.version,date:t.date,amount_cents:t.amount_cents,description:id===2?'Market groceries':'Corner restaurant',assignment:t.assignment,period_id:t.period_id,spending_group_id:group,is_transfer:false,allocations})});if(!result.ok)throw new Error(await result.text())
+  }
+ })
+ await page.reload();await expect(page.getByRole('heading',{name:'Spending by group'})).toBeVisible()
+ const day=page.locator('.spending-bucket').filter({has:page.locator('.bucket-name strong',{hasText:'Day-to-day'})})
+ const exceptions=page.locator('.spending-bucket').filter({has:page.locator('.bucket-name strong',{hasText:'Exceptions'})})
+ await day.locator('summary').first().click();await exceptions.locator('summary').first().click()
+ await expect(day.locator('.category-global-total').first()).toContainText('combined budget')
+ await day.getByRole('button',{name:'Groceries transactions',exact:true}).click()
+ const branch=page.getByRole('dialog',{name:'Groceries · Day-to-day',exact:true})
+ await expect(branch.locator('.dashboard-transaction')).toHaveCount(1)
+ await expect(branch.locator('.dashboard-transaction')).toContainText('Market groceries')
+ await expect(branch.locator('.dashboard-transaction')).not.toContainText('Corner restaurant')
+ await expect(branch.locator('.dashboard-transaction')).toContainText('Transaction total')
+ expect((await branch.locator('.dashboard-transaction-amount>strong').innerText()).replace(/[^0-9]/g,'')).toBe('50000')
+ await branch.locator('.dashboard-transaction').click()
+ const editor=page.getByRole('dialog',{name:'Transaction #2',exact:true})
+ await expect(editor).toBeVisible();await editor.getByLabel('Description',{exact:true}).fill('Dashboard edited groceries '+width)
+ await editor.getByLabel('Amount',{exact:true}).nth(0).fill('-600.00');await editor.getByLabel('Amount',{exact:true}).nth(1).fill('-246.50')
+ await editor.getByRole('button',{name:'Save changes',exact:true}).click();await expect(editor).toHaveCount(0)
+ await expect(day).toHaveAttribute('open','');await expect(branch).toBeVisible()
+ await expect(branch.locator('.dashboard-transaction')).toContainText('Dashboard edited groceries '+width)
+ await expect(branch.locator('.dashboard-transaction-amount>strong')).toHaveText(/600/)
+ await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
+ await branch.getByRole('button',{name:'Close',exact:true}).click();await exceptions.getByRole('button',{name:'Groceries transactions',exact:true}).click()
+ await expect(page.getByRole('dialog',{name:'Groceries · Exceptions',exact:true}).locator('.dashboard-transaction')).toContainText('Corner restaurant')
+ await expect(page.getByRole('dialog',{name:'Groceries · Exceptions',exact:true}).locator('.dashboard-transaction')).not.toContainText('Dashboard edited groceries')
+ await page.getByRole('dialog',{name:'Groceries · Exceptions',exact:true}).getByRole('button',{name:'Close',exact:true}).click();await page.getByRole('button',{name:'Edit budgets',exact:true}).click();await expect(page.getByRole('dialog',{name:'Group budgets · October 2026',exact:true})).toBeVisible();await page.keyboard.press('Escape')
+ if(width===360)await page.getByRole('button',{name:'More',exact:true}).click()
+ await page.getByRole('navigation',{name:width===360?'More pages':'Main navigation',exact:true}).getByRole('button',{name:'Budgets',exact:true}).click()
+ await expect(page.getByText('Selected period',{exact:true})).toBeVisible();await page.getByRole('button',{name:'View spending',exact:true}).click()
+ await expect(page.getByLabel('Budget period',{exact:true})).toHaveValue('1')
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+})
+
+test('aggregate category transactions open on dashboard; unbudgeted categories remain editable',async({page})=>{
+ await page.route('**/api/dashboard?**',async route=>{const response=await route.fetch(),d=await response.json();await route.fulfill({json:{...d,budget_cents:0,categories:d.categories.map((c:any)=>({...c,target_cents:0}))}})})
+ await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click()
+ await page.locator('.category-limits-summary>summary').click()
+ await page.locator('.category-limits-summary .spending-transactions').filter({has:page.locator('summary',{hasText:/^Groceries transactions across all groups$/})}).locator('summary').click()
+ const row=page.locator('.category-limits-summary .dashboard-transaction').first();await expect(row).toBeVisible();await row.click();await expect(page.getByRole('dialog',{name:/Transaction #/})).toBeVisible();await page.keyboard.press('Escape')
+ await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
+})
+
+test('selected period stays visible outside the current budget list page',async({page})=>{
+ await page.route('**/api/periods?**',async route=>{const response=await route.fetch(),d=await response.json();if(new URL(route.request().url()).searchParams.get('page_size')==='20')await route.fulfill({json:{...d,items:[],total:21}});else await route.fulfill({response})})
+ await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click()
+ await expect(page.getByRole('heading',{name:'Spending by group'})).toBeVisible()
+ await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Budgets',exact:true}).click()
+ await expect(page.getByText('Selected period',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Edit budgets',exact:true}).click();await expect(page.getByRole('dialog',{name:'Group budgets · October 2026',exact:true})).toBeVisible()
+})

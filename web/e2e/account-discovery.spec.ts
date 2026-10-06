@@ -6,7 +6,7 @@ test('account-only file review imports private metadata with explicit correction
  await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
  const before=await(await page.request.get('/api/transactions')).json()
  await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()
- await page.getByRole('tab',{name:'Accounts',exact:true}).click()
+ await page.getByRole('tab',{name:'Accounts',exact:true}).click();await page.getByRole('button',{name:'Open Accounts',exact:true}).click();await page.getByText('Import an account discovery file',{exact:true}).click()
  await page.getByRole('button',{name:'Import discovered accounts',exact:true}).click()
  const dialog=page.getByRole('dialog',{name:'Import discovered accounts',exact:true})
  const report={schema_version:1,source:'fnb-account-discovery',accounts:[{name:'Synthetic discovery account',bank_id:'******9876'},{name:'Existing synthetic',bank_id:'12345678901'}]}

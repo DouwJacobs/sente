@@ -1,6 +1,6 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
-import {exactBalance,normalizeSnapshot,readBalanceDOM,loginAndAccounts,logoutBankSession,clickLogoutDOM,balanceFieldCountsDOM,previousSessionDOM,signedOutDOM,finishBankSession} from './refresh.mjs'
+import {exactBalance,workerFailure,normalizeSnapshot,readBalanceDOM,loginAndAccounts,logoutBankSession,clickLogoutDOM,balanceFieldCountsDOM,previousSessionDOM,signedOutDOM,finishBankSession} from './refresh.mjs'
 import vm from 'node:vm'
 test('uses exact signed ZAR decimals and rejects ambiguous money or reward units',()=>{
  for(const [text,expected] of [['R 1,234.56','1234.56'],['-0.01','-0.01'],['R -9 876.54','-9876.54'],['0.00','0.00'],['R 0','0.00'],['R +12.3','12.30'],['R −1.23','-1.23']])assert.equal(exactBalance(text),expected)
@@ -163,4 +163,36 @@ test('unconfirmed logout discards all transaction reports as well as balances',a
  const context={pages:async()=>[{url:()=> 'https://www.fnb.co.za/',evaluate:async()=>false}]}
  const result=await finishBankSession(context,{accounts:[{name:'Synthetic',bank_id:'00123456'}],reports:[{transactions:[{description:'Synthetic secret bank row'}]}],skipped:0})
  assert.equal(result.error,'LOGOUT_REQUIRED');assert.equal(result.accounts.length,0);assert.equal(result.reports,undefined)
+})
+
+
+test('resolved masked credit summary uses full identity and preserves hidden balance exclusion',()=>{
+ const full='123400005678',mask='1234****5678'
+ const node=text=>({textContent:text,innerText:text,matches:()=>false,getClientRects:()=>[{}]})
+ const names=[node('Synthetic credit')],numbers=[node(mask)]
+ let balanceReads=0
+ const balance={matches:()=>false,getClientRects:()=>[{}],get innerText(){balanceReads++;return 'R -12.34'}}
+ const document={querySelectorAll:selector=>selector.includes('nickname')?names:selector.includes('accountNumber')?numbers:[balance]}
+ const read=hidden=>vm.runInNewContext('('+readBalanceDOM.toString()+')(options)',{document,options:{hidden,aliases:{[full]:mask}},getComputedStyle:()=>({visibility:'visible'})})
+ let result=read([full]);assert.equal(result.rows[0].bank_id,full);assert.equal(result.rows[0].balance_text,null);assert.equal(balanceReads,0)
+ result=read([]);assert.equal(result.rows[0].bank_id,full);assert.equal(balanceReads,1)
+ assert.equal(normalizeSnapshot(result.rows).accounts[0].balance_decimal,'-12.34')
+})
+
+
+test('masked credit discovery requires verified product marker and retains ZAR/duplicate checks',()=>{
+ const mask='123456******7890',card={name:'Synthetic card',bank_id:mask,account_type:'Credit',balance_text:'R -12.34'}
+ const snapshot=normalizeSnapshot([card]);assert.equal(snapshot.accounts[0].bank_id,mask);assert.equal(snapshot.accounts[0].account_type,'Credit');assert.equal(snapshot.accounts[0].balance_decimal,'-12.34')
+ assert.throws(()=>normalizeSnapshot([{...card,account_type:'Savings'}]),{code:'ACCOUNT_LIST_NOT_FOUND'})
+ assert.throws(()=>normalizeSnapshot([{...card,balance_text:'USD 1.00'}]),{code:'ACCOUNT_LIST_NOT_FOUND'})
+ assert.throws(()=>normalizeSnapshot([card,card]),{code:'ACCOUNT_LAYOUT_CHANGED'})
+})
+
+
+test('worker failures distinguish startup and timeout without exposing exception text',()=>{
+ const secret=new Error('synthetic password and browser command details')
+ assert.deepEqual(workerFailure(secret,4),{accounts:[],skipped:0,error:'CONNECTOR_START_FAILED',diagnostics:{refresh_phase:4}})
+ assert.equal(workerFailure(secret,5).error,'REFRESH_FAILED')
+ assert.equal(workerFailure(secret,5,true).error,'CONNECTOR_TIMEOUT')
+ assert.ok(!JSON.stringify(workerFailure(secret,5,true)).includes(secret.message))
 })

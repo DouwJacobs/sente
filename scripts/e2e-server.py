@@ -30,12 +30,14 @@ if os.environ.get("E2E_EMPTY") != "1":
     DELETE FROM periods;
     INSERT INTO periods(id,name,start_date,end_date) VALUES(1,'October 2026','2026-10-20','2026-11-19');
     INSERT INTO targets VALUES(1,1,450000),(1,2,200000),(1,3,120000);
+    INSERT INTO group_targets(period_id,category_id,amount_cents) VALUES(1,1,450000),(1,2,200000),(1,3,120000);
+    INSERT INTO budget_groups VALUES(1,NULL);
     INSERT INTO rules(user_id,account_id,pattern,category_id,priority) VALUES(1,1,'Market',1,0);
     """)
     rows=[("2026-10-20",3500000,"Salary payment",4,"approved"),
           ("2026-10-21",-84650,"Market groceries",1,"approved"),
           ("2026-10-22",-62000,"Fuel station",2,"approved"),
-          ("2026-10-24",-28500,"Corner restaurant",3,"pending_review"),
+          ("2026-10-24",-28500,"Corner restaurant",3,"approved"),
           ("2026-10-25",-125000,"Synthetic long description for a purchase that needs categorization and review on mobile",None,"pending_review")]
     for date,amount,description,category,state in rows:
         cur=db.execute("INSERT INTO transactions(account_id,date,amount_cents,description,source_date,source_amount,source_description,provenance,review_state,period_id) VALUES(1,?,?,?,?,?,?,'{}',?,1)",(date,amount,description,date,amount,description,state))

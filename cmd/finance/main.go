@@ -33,9 +33,22 @@ func password() (string, error) {
 	}
 	return strings.TrimSuffix(scanner.Text(), "\r"), nil
 }
+
+var errRestart = fmt.Errorf("restart requested")
+
 func main() {
-	if err := run(); err != nil {
-		log.Fatal(err)
+	for {
+		err := run()
+		if err == errRestart {
+			if os.Getenv("DEV_RESTART_MANAGED") == "1" {
+				os.Exit(75)
+			}
+			continue
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 }
 func run() error {
@@ -101,11 +114,25 @@ func run() error {
 			return fmt.Errorf("PORT must be 1–65535")
 		}
 		server := &http.Server{Addr: net.JoinHostPort(os.Getenv("LISTEN_ADDRESS"), strconv.Itoa(port)), Handler: a.Handler(env("STATIC_DIR", "web/dist")), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 240 * time.Second, IdleTimeout: 120 * time.Second, MaxHeaderBytes: 1 << 20}
+		restart := make(chan struct{}, 1)
+		a.RequestRestart = func() {
+			select {
+			case restart <- struct{}{}:
+			default:
+			}
+		}
+		restarting := false
+		shutdownDone := make(chan struct{})
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 		defer signal.Stop(signals)
 		go func() {
-			<-signals
+			defer close(shutdownDone)
+			select {
+			case <-signals:
+			case <-restart:
+				restarting = true
+			}
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			server.Shutdown(ctx)
@@ -115,6 +142,10 @@ func run() error {
 		log.Printf("Finance tracker listening on port %d", port)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			return err
+		}
+		<-shutdownDone
+		if restarting {
+			return errRestart
 		}
 		return nil
 	default:

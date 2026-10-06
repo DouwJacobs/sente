@@ -1,7 +1,7 @@
 // Synthetic bank-shaped pages only; no bank navigation or credentials.
 import {chromium} from '../web/node_modules/playwright/index.mjs'
 import assert from 'node:assert/strict'
-import {readTransactionDOM,normalizeTransactionTable,clickSuccessfulDOM} from '../connectors/fnb/owner/transactions.mjs'
+import {readTransactionDOM,normalizeTransactionTable,clickSuccessfulDOM,readCreditIdentityDOM} from '../connectors/fnb/owner/transactions.mjs'
 const browser=await chromium.launch({headless:true})
 try{
  const page=await browser.newPage()
@@ -57,5 +57,15 @@ try{
  await page.setContent(loanDetails+'<div class="transaction-table">'+loanHeader.replace('Balance','Available balance')+renderLoan()+'</div>')
  result=await page.evaluate(readTransactionDOM);assert.equal(result.posted_history,false)
  assert.throws(()=>normalizeTransactionTable(result,'00123456','synthetic'),{code:'TRANSACTION_LAYOUT_CHANGED'})
- console.log('PASS: home-loan effective-date ledger and pending/unknown-layout rejection; synthetic Chromium header mapping, selected Successful/Pending, explicit selection, hidden rows, ambiguous/unknown headers, 150 rows and checked radio/semantic headers')
+ await page.setContent(details.replace('Fusion','FNB Premier Credit Card'))
+ let identity=await page.evaluate(readCreditIdentityDOM)
+ assert.deepEqual(identity,{bank_id:'00123456',credit:true,currency:''})
+ await page.setContent(details.replace('Fusion','FNB Premier Credit Card')+'<div class="dlTitle">Account Number</div><div>99887766</div>')
+ assert.equal(await page.evaluate(readCreditIdentityDOM),null)
+ const masked='123456******7890'
+ await page.setContent(details.replace('00123456',masked).replace('Fusion','FNB Premier Credit Card')+tabs+'<div class="transaction-table">'+header+row()+'</div>')
+ result=await page.evaluate(readTransactionDOM)
+ assert.equal(normalizeTransactionTable(result,masked,'synthetic').bank_id,masked)
+ assert.equal((await page.evaluate(readCreditIdentityDOM)).bank_id,masked)
+ console.log('PASS: masked credit identity/table; unique credit detail identity; home-loan effective-date ledger and pending/unknown-layout rejection; synthetic Chromium header mapping, selected Successful/Pending, explicit selection, hidden rows, ambiguous/unknown headers, 150 rows and checked radio/semantic headers')
 }finally{await browser.close()}

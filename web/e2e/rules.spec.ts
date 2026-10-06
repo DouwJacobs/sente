@@ -5,6 +5,7 @@ async function login(page:Page){
 async function categories(page:Page,mobile=false){
  if(mobile){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:'Categories',exact:true}).click()}
  else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Categories',exact:true}).click()
+ await page.getByRole('tab',{name:'Automatic rules',exact:true}).click()
 }
 for(const mobile of [false,true]){
  test('simple rules across enabled accounts '+(mobile?'360px':'desktop'),async({page})=>{
@@ -13,7 +14,7 @@ for(const mobile of [false,true]){
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
   await login(page);await categories(page,mobile)
   const count=await page.evaluate(async()=> (await fetch('/api/accounts?page=0&page_size=100&role=editor').then(r=>r.json())).total)
-  await expect(page.getByRole('tab',{name:'Rules',exact:true})).toHaveAttribute('aria-selected','true')
+  await expect(page.getByRole('tab',{name:'Automatic rules',exact:true})).toHaveAttribute('aria-selected','true')
   await expect(page.locator('input[type=file]')).toHaveCount(0)
   const before=await page.evaluate(async()=>JSON.stringify(await fetch('/api/transactions').then(r=>r.json())))
   await page.getByRole('button',{name:'Add rule',exact:true}).click()
@@ -32,7 +33,7 @@ for(const mobile of [false,true]){
   await expect(dialog).not.toBeVisible()
   const row=page.locator('.rule-row').filter({hasText:'Description contains “'+pattern+'”'})
   await expect(row).toHaveCount(1)
-  await expect(row.getByText('All current enabled accounts · Money out',{exact:true})).toBeVisible()
+  await expect(row.getByText('All current accounts you can edit · Money out',{exact:true})).toBeVisible()
   const after=await page.evaluate(async()=>JSON.stringify(await fetch('/api/transactions').then(r=>r.json())))
   expect(after).toBe(before)
   await row.getByRole('button',{name:'Pause',exact:true}).click()
@@ -66,6 +67,6 @@ test('rule editor can create its category and check overlapping rules',async({pa
  await dialog.getByText('Check an example',{exact:true}).click()
  await dialog.getByLabel('Example description').fill('Market specific')
  await dialog.getByRole('button',{name:'Check rule',exact:true}).click()
- await expect(dialog.getByText('Another rule suggests a different classification. Review the overlapping rule.',{exact:true})).toBeVisible()
+ await expect(dialog.getByText('Another matching rule suggests a different category or spending group. Check both rules.',{exact:true})).toBeVisible()
  await dialog.getByRole('button',{name:'Close',exact:true}).click()
 })

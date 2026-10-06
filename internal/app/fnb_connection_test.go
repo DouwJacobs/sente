@@ -184,6 +184,8 @@ func TestFNBHiddenLedgerViewsAndPreservation(t *testing.T) {
 func TestFNBScheduleRunsOncePausesOnFailureAndExcludesDisabledOwner(t *testing.T) {
 	e := setup(t)
 	connectFNBTest(t, e)
+	transactionTargets(t, e)
+	e.a.DB.Exec("UPDATE accounts SET sync_hidden=1 WHERE id=2")
 	e.a.DB.Exec("UPDATE fnb_connections SET interval_hours=24,next_due=1")
 	calls := 0
 	e.a.fnbProvider = func(ctx context.Context, c fnbCredentials, manual bool) (fnbSnapshot, error) {
@@ -191,7 +193,7 @@ func TestFNBScheduleRunsOncePausesOnFailureAndExcludesDisabledOwner(t *testing.T
 			t.Fatal("scheduled job marked manual")
 		}
 		calls++
-		return fnbSnapshot{Accounts: []fnbAccountSnapshot{{Name: "Synthetic", BankID: "12345678901", Balance: fnbDecimal("1.00")}}}, nil
+		return fnbSnapshot{Accounts: []fnbAccountSnapshot{{Name: "Synthetic", BankID: "12345678901", Balance: fnbDecimal("1.00")}}, Reports: []FNBReport{transactionReport("12345678901", c.RunID)}}, nil
 	}
 	e.a.refreshDueFNB(time.Now())
 	e.a.refreshDueFNB(time.Now())

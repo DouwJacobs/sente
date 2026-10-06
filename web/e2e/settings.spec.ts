@@ -5,14 +5,14 @@ for(const width of [1440,360])test(`settings navigation keeps account views clea
  await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password')
  await page.getByRole('button',{name:'Sign in',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
- async function navigate(name:string){if(width===360){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name,exact:true}).click()}else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name,exact:true}).click()}
+ async function navigate(name:string){if(width===360&&name!=='Accounts'){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name,exact:true}).click()}else await page.getByRole('navigation',{name:width===360?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name,exact:true}).click()}
  await navigate('Accounts')
  await expect(page.getByRole('heading',{name:'FNB connection',exact:true})).toHaveCount(0)
- await expect(page.getByRole('button',{name:'Add account',exact:true})).toHaveCount(0)
- await page.getByRole('button',{name:'Manage accounts',exact:true}).click()
- await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible()
- await expect(page.getByRole('tab',{name:'Accounts',exact:true})).toHaveAttribute('aria-selected','true')
  await expect(page.getByRole('button',{name:'Add account',exact:true})).toBeVisible()
+ await page.getByRole('button',{name:'Bank connection',exact:true}).click()
+ await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible()
+ await expect(page.getByRole('tab',{name:'Banking',exact:true})).toHaveAttribute('aria-selected','true')
+ await expect(page.getByRole('heading',{name:'FNB connection',exact:true})).toBeVisible()
  await page.getByRole('tab',{name:'General',exact:true}).click()
  const draft='Unsaved synthetic workspace'
  await page.getByLabel('Display name',{exact:true}).fill(draft)

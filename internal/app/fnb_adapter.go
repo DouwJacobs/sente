@@ -58,6 +58,9 @@ func NormalizeFNBReport(report FNBReport, selectedBankID string) (FNBNormalizedR
 	if selectedBankID == "" || report.BankID != selectedBankID {
 		return out, fmt.Errorf("connector account mismatch")
 	}
+	if fnbMaskedCredit.MatchString(report.BankID) && report.AccountType != "Credit" {
+		return out, fmt.Errorf("masked connector identity requires credit account")
+	}
 	if report.Currency != "ZAR" {
 		return out, fmt.Errorf("unsupported connector currency")
 	}
@@ -133,7 +136,7 @@ func NormalizeFNBReport(report FNBReport, selectedBankID string) (FNBNormalizedR
 			out.References[normalized.Row] = row.Reference
 		}
 		if fee != 0 {
-			feeRow := SourceRow{Row: len(out.File.Rows) + 1, Date: row.Date, Amount: -fee, Description: "Service Fees", SourceReference: row.Reference, SourceBankRow: i + 1, SourceComponent: "service_fee", SourceBankDescription: row.Description, SourceServiceFee: &fee, SourceNetKey: normalized.SourceNetKey}
+			feeRow := SourceRow{Row: len(out.File.Rows) + 1, Date: row.Date, Amount: -fee, Description: "Service Fees", SourceReference: row.Reference, SourceBankRow: i + 1, SourceComponent: "service_fee", SourceBankDescription: row.Description, SourceServiceFee: &fee, SourceNetKey: normalized.SourceNetKey, Balance: normalized.Balance}
 			out.File.Rows = append(out.File.Rows, feeRow)
 			if row.Reference != "" {
 				out.References[feeRow.Row] = row.Reference

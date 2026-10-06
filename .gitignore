@@ -2,6 +2,7 @@ node_modules/
 dist/
 target/
 bin/
+/finance
 data/
 uploads/
 backups/

@@ -3,8 +3,13 @@ async function login(page:Page){
  await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
 }
 async function navigate(page:Page,name:string,mobile=false){
- if(mobile&&name!=='Review'){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name,exact:true}).click()}
- else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name,exact:true}).click()
+ const tab=name==='Review'?'Needs review':name==='Imports'?'Import activity':''
+ const target=tab?'Transactions':name
+ if(mobile&&!['Dashboard','Transactions','Accounts'].includes(target)){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:target,exact:true}).click()}
+ else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:target,exact:true}).click()
+ await expect(page.getByRole('heading',{name:target,exact:true,level:1})).toBeVisible()
+ if(tab)await page.getByRole('tab',{name:new RegExp(tab)}).click()
+ if(name==='Categories')await page.getByRole('tab',{name:'Automatic rules',exact:true}).click()
 }
 for(const mobile of [false,true]){
  test('typed category and atomic transaction rule '+(mobile?'360px':'desktop'),async({page})=>{
@@ -13,7 +18,7 @@ for(const mobile of [false,true]){
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
   await login(page);await navigate(page,'Review',mobile)
   await page.getByRole('button').filter({hasText:'Synthetic long description'}).click()
-  const transaction=page.getByRole('dialog').filter({hasText:'Category allocations'})
+  const transaction=page.getByRole('dialog').filter({hasText:'Category amounts'})
   await transaction.getByLabel('Category',{exact:true}).click()
   const picker=page.getByRole('dialog',{name:'Select category',exact:true})
   const before=await page.evaluate(async()=> (await fetch('/api/categories').then(r=>r.json())).length)
@@ -37,9 +42,14 @@ for(const mobile of [false,true]){
    const rows=await fetch('/api/rules').then(r=>r.json());return rows.filter((r:{pattern:string})=>r.pattern==='Synthetic long description')
   })
   expect(rule).toHaveLength(1);expect(rule[0].category_name).toBe(category);expect(rule[0].spending_group_name).toBe('Recurring');expect(rule[0].direction).toBe('debit');expect(rule[0].account_id).toBe(1)
+  await page.getByRole('tab',{name:'All transactions',exact:true}).click()
   await page.getByRole('button').filter({hasText:'Synthetic long description'}).click()
-  await expect(page.getByRole('dialog').getByText('Pending review',{exact:true})).toBeVisible()
-  await page.getByRole('dialog').getByRole('button',{name:'Close',exact:true}).first().click()
+  await expect(page.getByRole('dialog').getByText('Accepted',{exact:true})).toBeVisible()
+  // Restore the shared source fixture for the next independent category workflow.
+  await transaction.getByLabel('Category',{exact:true}).click()
+  await picker.getByRole('button',{name:/^Uncategorized/}).click()
+  await transaction.getByRole('button',{name:'Save changes',exact:true}).click()
+  await expect(transaction).not.toBeVisible()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
   expect(errors).toEqual([])
  })

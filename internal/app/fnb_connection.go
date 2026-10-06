@@ -27,9 +27,10 @@ type fnbCredentials struct {
 	RunID               string   `json:"run_id,omitempty"`
 }
 type fnbAccountSnapshot struct {
-	Name    string  `json:"name"`
-	BankID  string  `json:"bank_id"`
-	Balance *string `json:"balance_decimal"`
+	AccountType string  `json:"account_type,omitempty"`
+	Name        string  `json:"name"`
+	BankID      string  `json:"bank_id"`
+	Balance     *string `json:"balance_decimal"`
 }
 type fnbSnapshot struct {
 	Accounts    []fnbAccountSnapshot `json:"accounts"`
@@ -40,6 +41,7 @@ type fnbSnapshot struct {
 }
 
 var fnbNumber = regexp.MustCompile(`^[0-9]{3,64}$`)
+var fnbMaskedCredit = regexp.MustCompile(`^[0-9]{3,}[xX*•●]+[0-9]{3,}$`)
 
 func (a *App) fnbKey(create bool) ([]byte, error) {
 	path := a.fnbKeyPath
@@ -362,7 +364,20 @@ func (a *App) fnbRefresh(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func (a *App) refreshFNB(owner int64, manual bool) error {
-	_, err := a.runFNB(owner, manual, false)
+	transactions := false
+	if !manual {
+		var u User
+		u.ID = owner
+		if err := a.DB.QueryRow("SELECT admin,budget_member FROM users WHERE id=?", owner).Scan(&u.Admin, &u.Member); err != nil {
+			return err
+		}
+		targets, err := a.fnbTargets(a.DB, u)
+		if err != nil {
+			return err
+		}
+		transactions = len(targets) > 0
+	}
+	_, err := a.runFNB(owner, manual, transactions)
 	return err
 }
 func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]ParsedFile, error) {
@@ -477,14 +492,22 @@ func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]
 		err = fmt.Errorf("provider failure")
 	}
 	switch code {
-	case "SESSION_CONFLICT", "LOGIN_LAYOUT_CHANGED", "APPROVAL_REQUIRED", "ACCOUNT_LAYOUT_CHANGED", "BROWSER_NOT_FOUND", "KEY_UNAVAILABLE", "BALANCE_LAYOUT_CHANGED", "LOGOUT_REQUIRED", "TRANSACTION_LAYOUT_CHANGED", "TRANSACTION_ACCOUNT_MISMATCH", "TRANSACTION_FEE_REVIEW_REQUIRED", "TRANSACTION_ACCOUNT_UNSUPPORTED":
+	case "CONNECTOR_START_FAILED", "CONNECTOR_RESPONSE_INVALID", "CONNECTOR_TIMEOUT", "SESSION_CONFLICT", "LOGIN_LAYOUT_CHANGED", "APPROVAL_REQUIRED", "ACCOUNT_LAYOUT_CHANGED", "BROWSER_NOT_FOUND", "KEY_UNAVAILABLE", "BALANCE_LAYOUT_CHANGED", "LOGOUT_REQUIRED", "TRANSACTION_LAYOUT_CHANGED", "TRANSACTION_ACCOUNT_MISMATCH", "TRANSACTION_FEE_REVIEW_REQUIRED", "TRANSACTION_ACCOUNT_UNSUPPORTED":
 	default:
 		code = "REFRESH_FAILED"
 	}
 	if err == nil {
 		now = time.Now().UTC().Format(time.RFC3339)
 		if transactions {
-			previews, err = a.stageFNBTransactions(u, targets, snapshot, runID)
+			if !manual {
+				err = a.applyFNBSnapshot(u, snapshot, now)
+			}
+			if err == nil {
+				previews, err = a.stageFNBTransactions(u, targets, snapshot, runID)
+				if err == nil {
+					err = a.autoCommitFNB(u, previews)
+				}
+			}
 		} else {
 			if selected > 0 {
 				filtered := snapshot.Accounts[:0]
@@ -518,7 +541,7 @@ func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]
 	if interval > 0 {
 		due = time.Now().Add(time.Duration(interval) * time.Hour).Unix()
 	}
-	if transactions {
+	if transactions && manual {
 		// Account balance dates and last successful balance refresh remain accurate.
 		_, err = a.DB.Exec("UPDATE fnb_connections SET state='ready',next_due=?,last_error='',last_diagnostics=?,version=version+1 WHERE user_id=?", due, fnbDiagnosticJSON(snapshot.Diagnostics), owner)
 		return previews, err
@@ -532,7 +555,7 @@ func (a *App) applyFNBSnapshot(u User, snapshot fnbSnapshot, observed string) er
 	}
 	seen := map[string]bool{}
 	for _, row := range snapshot.Accounts {
-		if !fnbNumber.MatchString(row.BankID) || strings.TrimSpace(row.Name) == "" || len(row.Name) > 100 || seen[row.BankID] {
+		if (!fnbNumber.MatchString(row.BankID) && !(len(row.BankID) <= 64 && row.AccountType == "Credit" && fnbMaskedCredit.MatchString(row.BankID))) || strings.TrimSpace(row.Name) == "" || len(row.Name) > 100 || seen[row.BankID] {
 			return fmt.Errorf("invalid discovery")
 		}
 		seen[row.BankID] = true
@@ -632,22 +655,33 @@ func runFNBProvider(ctx context.Context, credentials fnbCredentials, manual bool
 		runner = filepath.Join(cwd, "connectors/fnb/owner/refresh.mjs")
 	}
 	payload, _ := json.Marshal(map[string]any{"username": credentials.Username, "password": credentials.Password, "visible": manual, "hidden": credentials.Hidden, "transaction_accounts": credentials.TransactionAccounts, "run_id": credentials.RunID})
+	nodeEnv, bridgeErr := fnbNodeEnvironment(ctx, executable)
+	if bridgeErr != nil {
+		return fnbSnapshot{Error: "CONNECTOR_START_FAILED", Diagnostics: map[string]int{"connector_interop_failed": 1}}, nil
+	}
 	cmd := exec.CommandContext(ctx, executable, runner)
+	cmd.Env = nodeEnv
 	cmd.Stdin = bytes.NewReader(payload)
 	defer clear(payload)
 	var output bytes.Buffer
 	cmd.Stdout = &limitedFNBWriter{writer: &output, remaining: 16 << 20}
 	cmd.Stderr = io.Discard
 	if err = cmd.Run(); err != nil {
-		return snapshot, fmt.Errorf("connector unavailable")
+		code := "CONNECTOR_START_FAILED"
+		diagnostics := map[string]int{"connector_process_failed": 1}
+		if ctx.Err() != nil {
+			code = "CONNECTOR_TIMEOUT"
+			diagnostics["refresh_timed_out"] = 1
+		}
+		return fnbSnapshot{Error: code, Diagnostics: diagnostics}, nil
 	}
 	d := json.NewDecoder(&output)
 	d.DisallowUnknownFields()
 	if err = d.Decode(&snapshot); err != nil {
-		return snapshot, fmt.Errorf("invalid connector result")
+		return fnbSnapshot{Error: "CONNECTOR_RESPONSE_INVALID", Diagnostics: map[string]int{"connector_response_invalid": 1}}, nil
 	}
 	if d.Decode(new(any)) != io.EOF {
-		return snapshot, fmt.Errorf("invalid connector result")
+		return fnbSnapshot{Error: "CONNECTOR_RESPONSE_INVALID", Diagnostics: map[string]int{"connector_response_invalid": 1}}, nil
 	}
 	return snapshot, nil
 }
@@ -699,7 +733,7 @@ func (a *App) refreshDueFNB(now time.Time) {
 
 func safeFNBDiagnostics(input map[string]int) map[string]int {
 	out := map[string]int{}
-	for _, key := range []string{"name_nodes", "number_nodes", "ledger_nodes", "matched_rows", "missing_rows", "invalid_amounts", "unsupported_entries", "hidden_rows", "blank_balances", "placeholder_balances", "sign_suffix", "parenthesized", "comma_decimal", "other_format", "evaluation_failed", "trailing_minus", "currency_suffix", "unknown_text", "repeated_decimal", "balance_label", "unavailable_text", "loading_text", "logout_clicked", "logout_confirmed", "logout_unconfirmed", "balance_failure", "reward_entries", "non_zar_entries", "transaction_rows", "transaction_headers", "transaction_invalid_rows", "transaction_accounts", "transaction_failure", "transaction_identity_fields", "transaction_type_fields", "transaction_navigation", "transaction_accounts_requested", "transaction_failed_account_position", "transaction_unsupported_type", "transaction_unsupported_currency", "transaction_fee_rows", "transaction_successful_controls", "transaction_pending_controls", "transaction_selected_successful"} {
+	for _, key := range []string{"name_nodes", "number_nodes", "ledger_nodes", "matched_rows", "missing_rows", "invalid_amounts", "unsupported_entries", "hidden_rows", "blank_balances", "placeholder_balances", "sign_suffix", "parenthesized", "comma_decimal", "other_format", "evaluation_failed", "trailing_minus", "currency_suffix", "unknown_text", "repeated_decimal", "balance_label", "unavailable_text", "loading_text", "logout_clicked", "logout_confirmed", "logout_unconfirmed", "balance_failure", "reward_entries", "non_zar_entries", "refresh_phase", "refresh_timed_out", "profile_cleanup_failed", "connector_process_failed", "connector_interop_failed", "connector_response_invalid", "masked_credit_resolved", "masked_credit_failed", "masked_credit_navigation", "masked_credit_detail_masked", "masked_credit_detail_invalid", "masked_credit_number_mismatch", "masked_credit_duplicate_identity", "masked_credit_non_zar", "transaction_rows", "transaction_headers", "transaction_invalid_rows", "transaction_accounts", "transaction_failure", "transaction_identity_fields", "transaction_type_fields", "transaction_navigation", "transaction_accounts_requested", "transaction_failed_account_position", "transaction_unsupported_type", "transaction_unsupported_currency", "transaction_fee_rows", "transaction_successful_controls", "transaction_pending_controls", "transaction_selected_successful"} {
 		if value, ok := input[key]; ok && value >= 0 && value <= 10000 {
 			out[key] = value
 		}

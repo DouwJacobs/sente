@@ -121,3 +121,26 @@ func TestNetworkOriginCanonicalization(t *testing.T) {
 		}
 	}
 }
+
+func TestNetworkRestartAuthorizationAndVersion(t *testing.T) {
+	e := setup(t)
+	status(t, e.req(t, 1, "/api/network/restart", "POST", map[string]any{"version": 1}), 503)
+	requested := make(chan bool, 2)
+	e.a.RequestRestart = func() { requested <- true }
+	status(t, e.req(t, 2, "/api/network/restart", "POST", map[string]any{"version": 1}), 403)
+	status(t, e.req(t, 1, "/api/network/restart", "POST", map[string]any{"version": 99}), 409)
+	select {
+	case <-requested:
+		t.Fatal("rejected request restarted")
+	default:
+	}
+	status(t, e.req(t, 1, "/api/network/restart", "POST", map[string]any{"version": 1}), 200)
+	select {
+	case <-requested:
+	case <-time.After(2 * time.Second):
+		t.Fatal("restart not requested")
+	}
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM audit WHERE action='restart_requested'") != 1 {
+		t.Fatal("missing audit")
+	}
+}

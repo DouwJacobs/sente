@@ -55,8 +55,8 @@ func TestDefaultsSeedOncePreserveHistoryAndCustomOverride(t *testing.T) {
 		t.Fatalf("custom override failed %+v", p.Rows[0])
 	}
 	status(t, e.commit(t, p.ID, nil, false), 200)
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='pending_review' AND is_transfer=0") != 1 {
-		t.Fatal("defaults bypassed review/transfer semantics")
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='approved' AND is_transfer=0") != 1 {
+		t.Fatal("categorized defaults were not accepted")
 	}
 }
 func TestDefaultMigrationPreservesConflictingKindsAndNewAccounts(t *testing.T) {
@@ -101,8 +101,8 @@ func TestTransactionRuleAtomicityDirectionAndGroup(t *testing.T) {
 	if queryInt(e.a.DB, "SELECT COUNT(*) FROM rules WHERE account_id=1 AND category_id=1 AND spending_group_id=? AND direction='debit'", gid) != 1 {
 		t.Fatal("rule lost account/category/group/direction")
 	}
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE id=? AND version=2 AND review_state='pending_review'", tid) != 1 {
-		t.Fatal("rule approved transaction")
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE id=? AND version=2 AND review_state='approved'", tid) != 1 {
+		t.Fatal("categorized rule edit was not accepted")
 	}
 	// Stale edits roll back the rule too; transfers/splits cannot create one.
 	status(t, e.req(t, 1, "/api/transactions/"+ruleID(tid), "PUT", body), 409)

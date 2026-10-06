@@ -113,6 +113,9 @@ func (a *App) stageFNBTransactions(u User, targets []fnbTarget, snapshot fnbSnap
 					return err
 				}
 			}
+			if _, err = tx.Exec("INSERT INTO account_import_checks VALUES(?,CURRENT_TIMESTAMP,?) ON CONFLICT(account_id) DO UPDATE SET last_checked=excluded.last_checked,import_id=excluded.import_id", target.ID, p.ID); err != nil {
+				return err
+			}
 			previews = append(previews, p)
 		}
 		return nil

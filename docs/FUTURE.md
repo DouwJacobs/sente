@@ -2,7 +2,7 @@
 
 ## Agent access through MCP / ACP
 
-Requested by the owner on 2026-10-02. This is an accepted future product direction, outside the current MVP; no agent server is implemented or enabled.
+Requested by the owner on 2026-10-02 and authorized for implementation on 2026-10-04. The MCP finance server is now implemented; see [MCP.md](MCP.md) for the current tool surface, redaction, per-user tokens and exact browser approval workflow. ACP remains future work. The original direction below is historical; the latest acceptance/seen policy supersedes mandatory manual transaction approval.
 
 ### Goal
 
@@ -49,3 +49,6 @@ Acceptance checks should cover inaccessible accounts in aggregates and transfer 
 The owner requested FNB profile syncing with privately entered credentials, periodic updates controlled in Settings, an administrator-editable workspace display name, and a backlog based on the supplied Vault22 references. These are documented with constraints, next steps and acceptance checks in [HANDOVER.md](HANDOVER.md). None is implemented yet. Spending groups and flat independent categories are implemented in the current app.
 
 Later documentation-only requests also cover the supplied Vault22 budget-management reference, inline category creation from Budgets, and reducing mandatory computer-use inspection token usage. See HANDOVER.md for the current behavior, planning questions and intended acceptance checks.
+
+
+2026-10-05 owner direction: expand dashboard spending groups into categories, then into bounded transaction lists without leaving Dashboard. Reuse the shared transaction edit modal. Each list must retain selected period/account, parent spending-group ID and category ID together; the same category in another group must not leak into that branch. Split rows must clearly distinguish that category allocation from the parent transaction amount. Refresh affected dashboard totals after saves; retain disclosure state and current scope. Implemented 2026-10-05: dashboard now provides bounded inline group/category spending lists and the shared editor, including split contribution labels, scoped refunds/transfers and refreshed totals.

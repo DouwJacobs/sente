@@ -3,6 +3,7 @@
 from pathlib import Path
 import os
 import shutil
+import sqlite3
 import signal
 import socket
 import subprocess
@@ -43,6 +44,7 @@ def free_port(value):
     if not 1 <= port <= 65535:
         raise ValueError("Development ports must be between 1 and 65535")
     with socket.socket() as check:
+        check.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             check.bind(("127.0.0.1", port))
         except OSError:
@@ -74,7 +76,7 @@ def main():
     if ui_port == api_port:
         raise RuntimeError("DEV_PORT and DEV_API_PORT must be different.")
     origin = env.get("DEV_PUBLIC_URL", f"http://127.0.0.1:{ui_port}").rstrip("/")
-    env.update(PORT=str(api_port), PUBLIC_URL=origin,
+    env.update(DEV_RESTART_MANAGED="1", PORT=str(api_port), PUBLIC_URL=origin,
                DATABASE_PATH=env.get("DATABASE_PATH", str(ROOT / "data/dev/finance.sqlite")),
                BACKUP_DIR=env.get("BACKUP_DIR", str(ROOT / "backups/dev")),
                STATIC_DIR=str(WEB / "dist"), DEV_API_TARGET=f"http://127.0.0.1:{api_port}")
@@ -103,16 +105,37 @@ def main():
     if not build():
         raise RuntimeError("Initial backend build failed.")
     server = backend()
-    vite = subprocess.Popen([npm, "run", "dev", "--", "--port", str(ui_port), "--strictPort"],
-                            cwd=WEB, env=env, start_new_session=True)
-    processes.append(vite)
+    def frontend():
+        public_url = origin
+        for attempt in range(100):
+            try:
+                with sqlite3.connect(f"file:{env['DATABASE_PATH']}?mode=ro", uri=True) as db:
+                    row = db.execute("SELECT enabled,public_url FROM network_settings WHERE id=1").fetchone()
+                if row and row[0]:
+                    public_url = row[1]
+                break
+            except sqlite3.OperationalError:
+                if attempt == 99:
+                    raise RuntimeError("Backend network settings are unavailable")
+                time.sleep(0.1)
+        env["DEV_PUBLIC_URL"] = public_url
+        proc = subprocess.Popen([npm, "run", "dev", "--", "--port", str(ui_port), "--strictPort"],
+                                cwd=WEB, env=env, start_new_session=True)
+        processes.append(proc)
+        return proc
+    vite = frontend()
     print(f"[dev] Open {origin}. UI edits hot reload; Go/schema edits rebuild and restart the API.", flush=True)
     print("[dev] Uses a separate persistent development database. Ctrl+C stops both servers.", flush=True)
     while True:
         time.sleep(0.5)
         if vite.poll() is not None:
             raise RuntimeError("Vite stopped. Read its output above.")
-        if server.poll() is not None:
+        if server.poll() == 75:
+            stop(vite)
+            server = backend()
+            vite = frontend()
+            print("[dev] Network restart complete; backend and Vite restarted.", flush=True)
+        elif server.poll() is not None:
             raise RuntimeError("The Go backend stopped. Read its output above.")
         current = sources()
         if current != observed:

@@ -1,7 +1,7 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import vm from 'node:vm'
-import {normalizeTransactionTable,transactionDate,transactionMoney,readTransactionDOM,clickTransactionAccountDOM,clickTransactionTabDOM,clickAccountsDOM,fetchTransactions} from './transactions.mjs'
+import {normalizeTransactionTable,transactionDate,transactionMoney,readTransactionDOM,clickTransactionAccountDOM,clickTransactionTabDOM,clickAccountsDOM,fetchTransactions,resolveMaskedCreditAccounts,readCreditIdentityDOM} from './transactions.mjs'
 const table=()=>({bank_id:'00123456',account_type:'Cheque',headers:['Date','Description','Reference','Service Fee','Amount','Balance'],posted_history:true,rows:[['03 Oct 2026','Synthetic purchase','ref-one','0','R -0.29','R 1,234.56'],['2026-10-02','Synthetic refund','','0.00','R +12.34','R 1,234.85']]})
 test('exact signed money, strict dates, references and identical purchases survive',()=>{
  const input=table();input.rows.push(input.rows[0])
@@ -164,4 +164,52 @@ test('loan Effective Date ledger preserves zero adjustments, repayments and stan
  assert.ok(report.transactions.every(r=>r.service_fee_decimal==='0.00'&&!r.source_reference))
  input.posted_history=false
  assert.throws(()=>normalizeTransactionTable(input,'00123456','run'),{code:'TRANSACTION_LAYOUT_CHANGED'})
+})
+
+
+test('masked credit identity is verified, used for navigation, and not guessed from nickname',async()=>{
+ const raw=[{name:'Synthetic nickname',bank_id:'1234****5678',balance_text:null}]
+ const full='123400005678',clicked=[]
+ const page={url:()=> 'https://www.fnb.co.za/',evaluate:async(fn,arg)=>{
+  if(fn===clickTransactionAccountDOM){clicked.push(arg);return true}
+  if(fn===readCreditIdentityDOM)return {bank_id:full,credit:true,currency:'ZAR'}
+  if(fn===readTransactionDOM)return {...table(),bank_id:full,account_type:'Credit'}
+  if(fn.toString().includes('session'))return false
+  return true
+ }}
+ const aliases=await resolveMaskedCreditAccounts(page,raw)
+ assert.deepEqual(aliases,{[full]:'1234****5678'})
+ const reports=await fetchTransactions({pages:async()=>[page]},[full],'run',undefined,aliases)
+ assert.deepEqual(clicked,['1234****5678','1234****5678'])
+ assert.equal(reports[0].bank_id,full);assert.equal(reports[0].account_type,'Credit')
+ assert.ok(!JSON.stringify(reports).includes('****'))
+ const original=page.evaluate
+ for(const identity of [{bank_id:'999900005678',credit:true,currency:'ZAR'},{bank_id:full,credit:true,currency:'USD'},{bank_id:'1234****9999',credit:true,currency:'ZAR'}]){
+  page.evaluate=async(fn,arg)=>fn===readCreditIdentityDOM?identity:original(fn,arg)
+  await assert.rejects(()=>resolveMaskedCreditAccounts(page,raw),err=>{assert.equal(err.code,'ACCOUNT_LAYOUT_CHANGED');assert.equal(err.diagnostics.masked_credit_failed,1);assert.equal(err.diagnostics.masked_credit_navigation,3);assert.equal(err.diagnostics[identity.currency==='USD'?'masked_credit_non_zar':identity.bank_id.includes('*')?'masked_credit_detail_masked':'masked_credit_number_mismatch'],1);return !JSON.stringify(err).includes(full)})
+ }
+})
+test('hidden masked identity is not navigated and ambiguous hidden suffixes reject',async()=>{
+ const raw=[{name:'Synthetic',bank_id:'1234****5678'}],full='123400005678'
+ const page={evaluate:async()=>{throw Error('hidden identity navigated')}}
+ assert.deepEqual(await resolveMaskedCreditAccounts(page,raw,undefined,[full]),{[full]:raw[0].bank_id})
+ await assert.rejects(()=>resolveMaskedCreditAccounts(page,raw,undefined,[full,'123411115678']),{code:'ACCOUNT_LAYOUT_CHANGED'})
+})
+
+
+test('owner-selected masked summary identity supports credit fetch without inventing digits',async()=>{
+ const mask='123456******7890',rows=[{name:'Synthetic card',bank_id:mask}]
+ const page={url:()=> 'https://www.fnb.co.za/',evaluate:async(fn)=>{
+  if(fn===readCreditIdentityDOM)return {bank_id:mask,credit:true,currency:'ZAR'}
+  if(fn===readTransactionDOM)return {...table(),bank_id:mask,account_type:'Credit'}
+  if(fn.toString().includes('session'))return false
+  return true
+ }}
+ const aliases=await resolveMaskedCreditAccounts(page,rows)
+ assert.deepEqual(aliases,{[mask]:mask})
+ const reports=await fetchTransactions({pages:async()=>[page]},[mask],'run',undefined,aliases)
+ assert.equal(reports[0].bank_id,mask);assert.equal(reports[0].transactions.length,2)
+ await assert.rejects(()=>resolveMaskedCreditAccounts(page,[...rows,...rows]),{code:'ACCOUNT_LAYOUT_CHANGED'})
+ const invalid={...table(),bank_id:mask,account_type:'Savings'}
+ assert.throws(()=>normalizeTransactionTable(invalid,mask,'run'),{code:'TRANSACTION_ACCOUNT_UNSUPPORTED'})
 })

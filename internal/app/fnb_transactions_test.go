@@ -39,7 +39,7 @@ func TestFNBLiveStagingReuseCommitProvenanceAndReview(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := previews[0]
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 0 || p.Rows[0].CategoryID == nil || *p.Rows[0].CategoryID != 1 || p.Rows[0].SpendingGroupID == nil || p.Rows[1].Duplicate != "possible" || p.Rows[0].FITID != "" || p.Coverage == nil || !p.Coverage.PossibleGap {
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 0 || p.Rows[0].CategoryID == nil || *p.Rows[0].CategoryID != 1 || p.Rows[0].SpendingGroupID == nil || p.Rows[1].Duplicate != "" || p.Rows[0].FITID != "" || p.Coverage == nil || !p.Coverage.PossibleGap {
 		t.Fatal("staging/classification/duplicate invariant failed", p)
 	}
 	snapshot.Reports[0].RunID = "run-two"
@@ -47,9 +47,8 @@ func TestFNBLiveStagingReuseCommitProvenanceAndReview(t *testing.T) {
 	if err != nil || reused[0].ID != p.ID || reused[0].RunID != "run-one" || queryInt(e.a.DB, "SELECT COUNT(*) FROM imports") != 1 {
 		t.Fatal("repeat snapshot lost durable provenance", err)
 	}
-	status(t, e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", p.ID), "POST", map[string]any{}), 409)
 	status(t, e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", p.ID), "POST", map[string]any{"decisions": map[string]string{"2": "keep"}, "classification_version": p.ClassificationVersion}), 200)
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='pending_review' AND amount_cents=-29 AND spending_group_id=1") != 2 {
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='approved' AND amount_cents=-29 AND spending_group_id=1") != 2 {
 		t.Fatal("amounts, review or identical purchases lost")
 	}
 	var raw string
@@ -119,8 +118,8 @@ func TestFNBLiveRouteSerializesFiltersTargetsAndSanitizesFailures(t *testing.T) 
 	}
 	status(t, e.req(t, 2, "/api/fnb/transactions", "POST", nil), 403)
 	status(t, e.req(t, 1, "/api/fnb/transactions", "POST", nil), 200)
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM imports") != 1 || queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 0 {
-		t.Fatal("route auto-committed")
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM imports") != 1 || queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 2 {
+		t.Fatal("route did not automatically import")
 	}
 	e.a.fnbProvider = func(context.Context, fnbCredentials, bool) (fnbSnapshot, error) {
 		return fnbSnapshot{Error: "LOGOUT_REQUIRED", Reports: []FNBReport{transactionReport("12345678901", "bad")}, Diagnostics: map[string]int{"transaction_rows": 2, "synthetic-secret": 1}}, nil
@@ -135,15 +134,15 @@ func TestFNBLiveRouteSerializesFiltersTargetsAndSanitizesFailures(t *testing.T) 
 		t.Fatal("unsanitized or unsuspended failure")
 	}
 }
-func TestFNBLiveCrossFormatOverlapRemainsCandidate(t *testing.T) {
+func TestFNBLiveCrossFormatOverlapAutomaticallySkipped(t *testing.T) {
 	e := setup(t)
 	targets := transactionTargets(t, e)[:1]
 	report := transactionReport(targets[0].BankID, "run")
 	report.Transactions = report.Transactions[:1]
 	e.a.DB.Exec("INSERT INTO transactions(account_id,date,amount_cents,description,source_date,source_amount,source_description,source_key,provenance,fitid) VALUES(1,'2026-10-01',-29,'Synthetic purchase','2026-10-01',-29,'Synthetic purchase',?,'{}','ofx-identifier')", fingerprint(SourceRow{Date: "2026-10-01", Amount: -29, Description: "Synthetic purchase"}))
 	p, err := e.a.stageFNBTransactions(e.owner, targets, fnbSnapshot{Reports: []FNBReport{report}}, "run")
-	if err != nil || p[0].Rows[0].Duplicate != "possible" || p[0].Rows[0].FITID != "" {
-		t.Fatal("cross-format identity guessed", err)
+	if err != nil || p[0].Rows[0].Duplicate != "exact_source" || p[0].Rows[0].FITID != "" {
+		t.Fatal("cross-format overlap not recognized", err)
 	}
 }
 
@@ -178,11 +177,12 @@ func TestFNBLiveFeesAcrossAccountsCommitOnceWithClassificationAndProvenance(t *t
 		if len(p.Rows) != 3 || p.Coverage.ServiceFeeRows != 1 || p.Rows[1].CategoryID == nil || *p.Rows[1].CategoryID != 3 {
 			t.Fatal("fee classification or rows lost", p)
 		}
-		status(t, e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", p.ID), "POST", map[string]any{"classification_version": p.ClassificationVersion}), 200)
-		status(t, e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", p.ID), "POST", map[string]any{}), 409)
+		if !p.AlreadyImported {
+			t.Fatal("live import did not complete automatically")
+		}
 	}
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='pending_review'") != 6 || queryInt(e.a.DB, "SELECT SUM(amount_cents) FROM transactions") != 2400 || queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE amount_cents=-5") != 2 {
-		t.Fatal("fee double counted or approved")
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='pending_review'") != 4 || queryInt(e.a.DB, "SELECT SUM(amount_cents) FROM transactions") != 2400 || queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE amount_cents=-5") != 2 {
+		t.Fatal("fee totals or automatic acceptance incorrect")
 	}
 	var provenance string
 	e.a.DB.QueryRow("SELECT provenance FROM transactions WHERE amount_cents=-5 LIMIT 1").Scan(&provenance)
@@ -190,7 +190,7 @@ func TestFNBLiveFeesAcrossAccountsCommitOnceWithClassificationAndProvenance(t *t
 		t.Fatal("fee provenance lost", provenance)
 	}
 }
-func TestFNBLiveCombinedExportOverlapFlagsBothFeeComponents(t *testing.T) {
+func TestFNBLiveCombinedExportOverlapSkipsBothFeeComponents(t *testing.T) {
 	e := setup(t)
 	targets := transactionTargets(t, e)[:1]
 	report := transactionReport(targets[0].BankID, "run")
@@ -198,11 +198,10 @@ func TestFNBLiveCombinedExportOverlapFlagsBothFeeComponents(t *testing.T) {
 	report.Transactions[0].ServiceFee = "0.05"
 	e.a.DB.Exec("INSERT INTO transactions(account_id,date,amount_cents,description,source_date,source_amount,source_description,source_key,provenance) VALUES(1,'2026-10-01',-34,'Synthetic purchase','2026-10-01',-34,'Synthetic purchase',?,'{}')", fingerprint(SourceRow{Date: "2026-10-01", Amount: -34, Description: "Synthetic purchase"}))
 	p, err := e.a.stageFNBTransactions(e.owner, targets, fnbSnapshot{Reports: []FNBReport{report}}, "run")
-	if err != nil || len(p[0].Rows) != 2 || p[0].Rows[0].Duplicate != "possible" || p[0].Rows[1].Duplicate != "possible" {
+	if err != nil || len(p[0].Rows) != 2 || p[0].Rows[0].Duplicate != "exact_source" || p[0].Rows[1].Duplicate != "exact_source" {
 		t.Fatal("combined export silently duplicated", err)
 	}
-	status(t, e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", p[0].ID), "POST", map[string]any{}), 409)
-	status(t, e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", p[0].ID), "POST", map[string]any{"decisions": map[string]string{"1": "skip", "2": "skip"}}), 200)
+	status(t, e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", p[0].ID), "POST", map[string]any{}), 200)
 	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 1 {
 		t.Fatal("combined transaction charged again")
 	}
@@ -239,5 +238,43 @@ func TestFNBLiveHomeLoanAmongSevenAccountsStagesWithoutChangingDebtSigns(t *test
 	}
 	if queryInt(e.a.DB, "SELECT COUNT(*) FROM imports") != 7 || queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 0 {
 		t.Fatal("staging created ledger entries or omitted accounts")
+	}
+}
+
+func TestFNBOwnerSelectedMaskedCreditDiscoveryStagingAndVisibility(t *testing.T) {
+	e := setup(t)
+	mask := "123456******7890"
+	snapshot := fnbSnapshot{Accounts: []fnbAccountSnapshot{{Name: "Synthetic card", BankID: mask, AccountType: "Credit", Balance: fnbDecimal("-12.34")}}}
+	if err := e.a.applyFNBSnapshot(e.owner, snapshot, "2026-10-04T08:00:00Z"); err != nil {
+		t.Fatal(err)
+	}
+	targets, err := e.a.fnbTargets(e.a.DB, e.owner)
+	if err != nil || len(targets) != 1 || targets[0].BankID != mask {
+		t.Fatal("masked card not selected", err)
+	}
+	report := transactionReport(mask, "mask-run")
+	report.AccountType = "Credit"
+	previews, err := e.a.stageFNBTransactions(e.owner, targets, fnbSnapshot{Reports: []FNBReport{report}}, "mask-run")
+	if err != nil || len(previews) != 1 || previews[0].AccountID != mask {
+		t.Fatal("masked card not staged", err)
+	}
+	repeated, err := e.a.stageFNBTransactions(e.owner, targets, fnbSnapshot{Reports: []FNBReport{report}}, "mask-run")
+	if err != nil || repeated[0].ID != previews[0].ID {
+		t.Fatal("masked snapshot reuse lost", err)
+	}
+	snapshot.Accounts[0].AccountType = "Savings"
+	if err := e.a.applyFNBSnapshot(e.owner, snapshot, "2026-10-04T08:00:00Z"); err == nil {
+		t.Fatal("masked non-credit accepted")
+	}
+	e.a.DB.Exec("UPDATE accounts SET sync_hidden=1 WHERE id=?", targets[0].ID)
+	selected, err := e.a.fnbTargets(e.a.DB, e.owner)
+	if err != nil || len(selected) != 0 {
+		t.Fatal("hidden masked card selected")
+	}
+	if _, err = e.a.stageFNBTransactions(e.owner, targets, fnbSnapshot{Reports: []FNBReport{report}}, "mask-run"); err == nil {
+		t.Fatal("hidden masked card staged")
+	}
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 0 {
+		t.Fatal("discovery/staging created ledger")
 	}
 }

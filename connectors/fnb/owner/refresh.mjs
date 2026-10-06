@@ -4,7 +4,7 @@ import {mkdtemp,rm,access} from 'node:fs/promises'
 import {tmpdir,homedir} from 'node:os'
 import {join} from 'node:path'
 import {normalizeAccounts,ProbeError} from './accounts.mjs'
-import {fetchTransactions} from './transactions.mjs'
+import {fetchTransactions,resolveMaskedCreditAccounts} from './transactions.mjs'
 export function exactBalance(text){
  if(typeof text!=='string')throw new ProbeError('BALANCE_LAYOUT_CHANGED')
  // Ledger fields provide ZAR units; signs and omitted decimal zeros are exact.
@@ -28,9 +28,10 @@ export function normalizeSnapshot(raw,hidden=[],diagnostics={}){
  const excluded=new Set(hidden),accounts=[];let skipped=0
  for(const row of raw){
   if(typeof row.name!=='string'||!row.name.trim()||Buffer.byteLength(row.name.trim())>100)throw new ProbeError('ACCOUNT_LAYOUT_CHANGED')
-  if(typeof row.bank_id!=='string'||!/^[0-9]{3,64}$/.test(row.bank_id.replace(/\s/g,''))){skipped++;continue}
+  const maskedCredit=row.account_type==='Credit'&&typeof row.bank_id==='string'&&row.bank_id.length<=64&&/^[0-9]{3,}[xX*•●]+[0-9]{3,}$/.test(row.bank_id.replace(/\s/g,''))
+  if(typeof row.bank_id!=='string'||!maskedCredit&&!/^[0-9]{3,64}$/.test(row.bank_id.replace(/\s/g,''))){skipped++;continue}
   const metadata=normalizeAccounts([{name:row.name,bank_id:row.bank_id}]).accounts[0]
-  if(!/^[0-9]{3,64}$/.test(metadata.bank_id)){skipped++;continue}
+  if(!maskedCredit&&!/^[0-9]{3,64}$/.test(metadata.bank_id)){skipped++;continue}
   let balance=null
   if(!excluded.has(metadata.bank_id)&&row.balance_text!=null){
    const text=row.balance_text.trim()
@@ -46,13 +47,15 @@ export function normalizeSnapshot(raw,hidden=[],diagnostics={}){
     err.diagnostics=diagnostics;throw err
    }}
   }
-  accounts.push({...metadata,balance_decimal:balance})
+  accounts.push({...metadata,balance_decimal:balance,...(maskedCredit?{account_type:'Credit'}:{})})
  }
  if(!accounts.length)throw new ProbeError('ACCOUNT_LIST_NOT_FOUND')
  normalizeAccounts(accounts) // duplicate identities remain an error
  return {accounts,skipped,...(Object.keys(diagnostics).length?{diagnostics}: {})}
 }
-export function readBalanceDOM(hidden){
+export function readBalanceDOM(options){
+ const hidden=Array.isArray(options)?options:options.hidden||[]
+ const aliases=Array.isArray(options)?{}:options.aliases||{}
  const visible=node=>!node.matches('input,textarea,select,[contenteditable]')&&node.getClientRects().length>0&&getComputedStyle(node).visibility!=='hidden'
  const names=[...document.querySelectorAll('[name="nickname"]')].filter(visible)
  const numbers=[...document.querySelectorAll('[name="accountNumber"]')].filter(visible)
@@ -60,9 +63,12 @@ export function readBalanceDOM(hidden){
  const diagnostics={name_nodes:names.length,number_nodes:numbers.length,ledger_nodes:balances.length,matched_rows:0,missing_rows:0,unsupported_entries:0,hidden_rows:0}
  if(!names.length||names.length!==numbers.length)return {rows:null,diagnostics}
  const rows=names.map((node,i)=>{
-  const bank_id=(numbers[i].textContent||'').replace(/\s/g,'')
-  if(hidden.includes(bank_id)){diagnostics.hidden_rows++;return {name:node.textContent||'',bank_id,balance_text:null}}
-  if(!/^[0-9]{3,64}$/.test(bank_id)){diagnostics.unsupported_entries++;return {name:node.textContent||'',bank_id,balance_text:null}}
+  const summary_id=(numbers[i].textContent||'').replace(/\s/g,'')
+  const bank_id=Object.keys(aliases).find(id=>aliases[id]===summary_id)||summary_id
+  const maskedCredit=aliases[bank_id]===bank_id&&bank_id.length<=64&&/^[0-9]{3,}[xX*•●]+[0-9]{3,}$/.test(bank_id)
+  const metadata={name:node.textContent||'',bank_id,...(maskedCredit?{account_type:'Credit'}:{})}
+  if(hidden.includes(bank_id)){diagnostics.hidden_rows++;return {...metadata,balance_text:null}}
+  if(!maskedCredit&&!/^[0-9]{3,64}$/.test(bank_id)){diagnostics.unsupported_entries++;return {...metadata,balance_text:null}}
   let parent=node.parentElement,balanceNode
   for(let depth=0;parent&&depth<8;depth++,parent=parent.parentElement){
    const rowNames=[...parent.querySelectorAll('[name="nickname"]')].filter(visible)
@@ -72,9 +78,9 @@ export function readBalanceDOM(hidden){
    if(rowNames.length===1&&rowNumbers.length===1&&rowNumbers[0]===numbers[i]&&rowBalances.length===1){balanceNode=rowBalances[0];break}
   }
   if(!balanceNode&&balances.length===names.length)balanceNode=balances[i]
-  if(!balanceNode){diagnostics.missing_rows++;return {name:node.textContent||'',bank_id,balance_text:null}}
+  if(!balanceNode){diagnostics.missing_rows++;return {...metadata,balance_text:null}}
   diagnostics.matched_rows++
-  return {name:node.textContent||'',bank_id,balance_text:balanceNode.innerText??balanceNode.textContent??''}
+  return {...metadata,balance_text:balanceNode.innerText??balanceNode.textContent??''}
  })
  return {rows:diagnostics.missing_rows?null:rows,diagnostics}
 }
@@ -199,7 +205,19 @@ export async function loginAndAccounts(page,credentials,signal){
       await new Promise(resolve=>setTimeout(resolve,500))
      }
      if(!result.rows)throw new ProbeError('BALANCE_LAYOUT_CHANGED',result.diagnostics)
-     return normalizeSnapshot(result.rows,credentials.hidden||[],result.diagnostics)
+     const aliases=await resolveMaskedCreditAccounts(candidate,result.rows,signal,credentials.hidden||[])
+     if(Object.keys(aliases).length){
+      for(let attempt=0;attempt<10;attempt++){
+       if(signal?.aborted)throw new ProbeError('REFRESH_FAILED')
+       if(await candidate.evaluate(previousSessionDOM))throw new ProbeError('SESSION_CONFLICT')
+       result=await candidate.evaluate(readBalanceDOM,{hidden:credentials.hidden||[],aliases})
+       if(result.rows)break
+       await new Promise(resolve=>setTimeout(resolve,500))
+      }
+      if(!result.rows)throw new ProbeError('BALANCE_LAYOUT_CHANGED',result.diagnostics)
+      result.diagnostics.masked_credit_resolved=Object.keys(aliases).length
+     }
+     return {...normalizeSnapshot(result.rows,credentials.hidden||[],result.diagnostics),navigation_aliases:aliases}
     }
     await candidate.evaluate(()=>{
      const link=[...document.querySelectorAll('.shortCutLink')].find(node=>/\bAccounts\b/.test(node.textContent||''))
@@ -219,8 +237,13 @@ async function executable(){
  for(const file of candidates){try{await access(file);return file}catch{}}
  throw new ProbeError('BROWSER_NOT_FOUND')
 }
+export function workerFailure(err,phase,aborted=false){
+ const allowed=['SESSION_CONFLICT','LOGIN_LAYOUT_CHANGED','APPROVAL_REQUIRED','ACCOUNT_LAYOUT_CHANGED','BALANCE_LAYOUT_CHANGED','BROWSER_NOT_FOUND','TRANSACTION_LAYOUT_CHANGED','TRANSACTION_ACCOUNT_MISMATCH','TRANSACTION_FEE_REVIEW_REQUIRED','TRANSACTION_ACCOUNT_UNSUPPORTED']
+ const error=err instanceof ProbeError&&allowed.includes(err.code)?err.code:aborted?'CONNECTOR_TIMEOUT':phase<=4?'CONNECTOR_START_FAILED':'REFRESH_FAILED'
+ return {accounts:[],skipped:0,error,diagnostics:{...(err instanceof ProbeError?err.diagnostics||{}:{}),refresh_phase:phase,...(aborted?{refresh_timed_out:1}:{})}}
+}
 export async function main(){
- let browser,context,profile;let result
+ let browser,context,profile;let result,phase=1
  const abort=new AbortController()
  const cancel=()=>abort.abort()
  process.on('SIGINT',cancel);process.on('SIGTERM',cancel)
@@ -229,26 +252,32 @@ export async function main(){
   let input='';for await(const chunk of process.stdin){input+=chunk;if(input.length>16384)throw new ProbeError('REFRESH_FAILED')}
   const credentials=JSON.parse(input);input=''
   if(typeof credentials.username!=='string'||typeof credentials.password!=='string'||!credentials.username||!credentials.password||!Array.isArray(credentials.hidden||[]))throw new ProbeError('REFRESH_FAILED')
+  phase=2
   const {default:puppeteer}=await import('puppeteer-core')
+  phase=3
   profile=await mkdtemp(join(tmpdir(),'finance-fnb-refresh-'))
   const env={};for(const key of ['PATH','Path','SYSTEMROOT','SystemRoot','WINDIR','TEMP','TMP','HOME','USERPROFILE','LOCALAPPDATA','APPDATA','DISPLAY','WAYLAND_DISPLAY','XDG_RUNTIME_DIR'])if(process.env[key])env[key]=process.env[key]
+  phase=4
   browser=await puppeteer.launch({executablePath:await executable(),headless:!credentials.visible,pipe:true,userDataDir:profile,env,timeout:30000})
   context=await browser.createBrowserContext();const page=await context.newPage();if(credentials.visible)await page.bringToFront()
+  phase=5
   result=await loginAndAccounts(page,credentials,abort.signal)
+  const aliases=result.navigation_aliases||{}
+  delete result.navigation_aliases
   if(credentials.transaction_accounts?.length){
    if(credentials.transaction_accounts.some(id=>!result.accounts.some(account=>account.bank_id===id)))throw new ProbeError('TRANSACTION_ACCOUNT_MISMATCH')
-   result.reports=await fetchTransactions(context,credentials.transaction_accounts,credentials.run_id,abort.signal)
+   phase=6
+   result.reports=await fetchTransactions(context,credentials.transaction_accounts,credentials.run_id,abort.signal,aliases)
    result.diagnostics={...result.diagnostics,transaction_accounts:result.reports.length,transaction_accounts_requested:credentials.transaction_accounts.length,transaction_fee_rows:result.reports.reduce((sum,r)=>sum+r.transactions.filter(t=>t.service_fee_decimal&&t.service_fee_decimal!=='0.00').length,0),transaction_rows:result.reports.reduce((sum,r)=>sum+r.transactions.length,0)}
   }
   credentials.username='';credentials.password=''
  }catch(err){
-  const allowed=['SESSION_CONFLICT','LOGIN_LAYOUT_CHANGED','APPROVAL_REQUIRED','ACCOUNT_LAYOUT_CHANGED','BALANCE_LAYOUT_CHANGED','BROWSER_NOT_FOUND','TRANSACTION_LAYOUT_CHANGED','TRANSACTION_ACCOUNT_MISMATCH','TRANSACTION_FEE_REVIEW_REQUIRED','TRANSACTION_ACCOUNT_UNSUPPORTED']
-  result={accounts:[],skipped:0,error:err instanceof ProbeError&&allowed.includes(err.code)?err.code:'REFRESH_FAILED',...(err instanceof ProbeError&&err.diagnostics?{diagnostics:err.diagnostics}:{})}
+  result=workerFailure(err,phase,abort.signal.aborted)
  }finally{
   if(context)result=await finishBankSession(context,result)
   clearTimeout(timeout);process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel)
   try{await context?.close()}catch{};try{await browser?.close()}catch{}
-  if(profile){try{await rm(profile,{recursive:true,force:true})}catch{result={accounts:[],skipped:0,error:'REFRESH_FAILED'}}}
+  if(profile){try{await rm(profile,{recursive:true,force:true})}catch{result={accounts:[],skipped:0,error:'REFRESH_FAILED',diagnostics:{refresh_phase:8,profile_cleanup_failed:1}}}}
  }
  process.stdout.write(JSON.stringify(result))
 }

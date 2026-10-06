@@ -113,7 +113,7 @@ Read AGENTS.md, docs/PLAN.md, docs/ARCHITECTURE.md, and docs/UI.md. UI changes m
 
 ## Future direction
 
-Provider-agnostic agent access for transaction updates, financial overviews, and spending-based budget setup is recorded in [docs/FUTURE.md](docs/FUTURE.md). MCP is the proposed finance-tool interface; ACP is a possible later agent-session integration. This is planned future work, not a feature enabled in this release.
+Provider-agnostic agent access for transaction updates, financial overviews, and spending-based budget setup is recorded in [docs/FUTURE.md](docs/FUTURE.md). MCP is implemented as the finance-tool interface with browser-approved OAuth connections and exact change proposals; ACP remains a possible later agent-session integration.
 
 ## Handover additions
 
@@ -125,7 +125,7 @@ For the owner-operated live account-discovery test, see [connectors/fnb/owner/RE
 
 ### FNB accounts and balance refresh (local WSL development)
 
-Settings → Banking → FNB connection lets an administrator enter their FNB username/password, then Refresh now to log in automatically and refresh names, bank numbers and ledger balances. Complete any phone approval; enable/save debug mode if browser interaction is required. Successful discovery creates private accounts and updates existing accounts only with current editor access; sharing is preserved. No transactions are fetched by this connection yet. Manual metadata-file import remains available.
+Settings → Banking → FNB connection lets an administrator enter their FNB username/password, then Refresh now to log in automatically and refresh names, bank numbers and ledger balances. Complete any phone approval; enable/save debug mode if browser interaction is required. Successful discovery creates private accounts and updates existing accounts only with current editor access; sharing is preserved. Get transactions in Transactions → Import activity also imports recent posted history automatically, applies rules and skips saved FNB occurrences. Only missing categories enter Needs review. Scheduled refreshes perform this transaction flow for mapped visible editable accounts alongside summary balances. Manual metadata-file import remains available.
 
 Choose Off, every 6/12 hours, daily or weekly and Save refresh schedule. Scheduling starts off and runs only while the server is running. Approval/layout/provider failures pause automatic attempts; use Refresh now or replace credentials to recover. Do not assume successful manual discovery proves automatic login or balance compatibility: these need owner-run live verification. Unsupported account-number entries are counted/skipped; dated existing balances are preserved when the bank does not supply a current balance.
 
@@ -152,3 +152,10 @@ Vault22 was a development reference only. There is no Vault22 upload/mapping set
 Starter categories and rules are included automatically, covering everyday expenses, salary, interest and common FNB charges. Built-in rules apply to all enabled accounts, including new accounts; edit, pause or delete them as needed. Custom account rules take precedence. Defaults are added once, preserving existing categories, budgets and transaction history.
 
 While editing a transaction, search the category picker, type a new name and press Enter (or Create) to create and select it. New categories default to Expense; choose Income when appropriate. Select the optional checkbox to remember the category and spending group for similar descriptions in that account. Saving the transaction and rule is atomic; reusing the same account/pattern/direction updates that rule.
+
+## MCP agents
+
+Settings → MCP provides the server endpoint with public setup instructions, per-user browser-approved OAuth connections and exact change approvals. Connect with Streamable HTTP and browser OAuth approval; read-only is the default. Agents can read privacy-filtered transactions/categories/rules/budgets and prepare atomic transaction edits, bulk categorization, category/rule changes and budget limits. See [docs/MCP.md](docs/MCP.md) for setup, supported tools, permissions and privacy limits. Bank credentials/identifiers and import source details are never in the tool surface.
+
+
+Share the endpoint with your agent; opening it supplies setup instructions. Connect through a remote MCP/OAuth client and approve its browser request. Manage and revoke connected agents in Settings → MCP; no manual token copying is needed.

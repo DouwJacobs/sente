@@ -25,6 +25,7 @@ export function normalizeTransactionTable(table,bankID,runID){
  const fail=code=>{diagnostics.transaction_invalid_rows++;throw new ProbeError(code,diagnostics)}
  if(table?.bank_id!==bankID)return fail('TRANSACTION_ACCOUNT_MISMATCH')
  const type=table.account_type
+ if(/[xX*•●]/.test(bankID)&&type!=='Credit')return fail('TRANSACTION_ACCOUNT_UNSUPPORTED')
  if(!['Cheque','Savings','Credit','Easy','Home Loan'].includes(type)){diagnostics.transaction_unsupported_type=1;return fail('TRANSACTION_ACCOUNT_UNSUPPORTED')}
  if(!Array.isArray(table.headers)||!Array.isArray(table.rows)||table.rows.length>150)return fail('TRANSACTION_LAYOUT_CHANGED')
  const columns=table.headers.map(h=>headerNames[h.trim().toLowerCase().replace(/\s+/g,' ')])
@@ -164,8 +165,8 @@ async function waitFor(page,signal,read,accept,arg){
  }
  throw new ProbeError('TRANSACTION_LAYOUT_CHANGED',read===readTransactionDOM?{transaction_rows:last?.rows?.length||0,transaction_headers:last?.headers?.length||0,transaction_identity_fields:last?.bank_id?1:0,transaction_type_fields:last?.account_type?1:0,transaction_successful_controls:last?.successful_controls||0,transaction_pending_controls:last?.pending_controls||0,transaction_selected_successful:last?.selected_successful||0}:undefined)
 }
-export async function fetchTransactions(context,bankIDs,runID,signal){
- if(!Array.isArray(bankIDs)||!bankIDs.length||bankIDs.length>100||new Set(bankIDs).size!==bankIDs.length||bankIDs.some(id=>!/^\d{3,64}$/.test(id))||!runID)throw new ProbeError('TRANSACTION_LAYOUT_CHANGED')
+export async function fetchTransactions(context,bankIDs,runID,signal,aliases={}){
+ if(!Array.isArray(bankIDs)||!bankIDs.length||bankIDs.length>100||new Set(bankIDs).size!==bankIDs.length||bankIDs.some(id=>typeof id!=='string'||id.length>64||!/^\d{3,64}$/.test(id)&&!/^[0-9]{3,}[xX*•●]+[0-9]{3,}$/.test(id))||!runID)throw new ProbeError('TRANSACTION_LAYOUT_CHANGED')
  const pages=(await context.pages()).filter(approved)
  let page
  for(const candidate of pages)if(await candidate.evaluate(()=>!!document.querySelector('[name="nickname"]'))){page=candidate;break}
@@ -176,7 +177,7 @@ export async function fetchTransactions(context,bankIDs,runID,signal){
  for(const bankID of bankIDs){
   if(reports.length){await waitFor(page,signal,clickAccountsDOM,Boolean);await waitFor(page,signal,()=>[...document.querySelectorAll('[name="nickname"]')].filter(n=>n.getClientRects().length).length>0,Boolean)}
   phase=1
-  await waitFor(page,signal,clickTransactionAccountDOM,Boolean,bankID)
+  await waitFor(page,signal,clickTransactionAccountDOM,Boolean,aliases[bankID]||bankID)
   phase=2
   await waitFor(page,signal,clickTransactionTabDOM,Boolean)
   await waitFor(page,signal,clickSuccessfulDOM,Boolean)
@@ -190,4 +191,61 @@ export async function fetchTransactions(context,bankIDs,runID,signal){
   throw err
  }
  return reports
+}
+
+
+// Resolve only masked credit-card identities, within the current authenticated
+// session. Aliases are navigation handles, never persistent account identities.
+export function readCreditIdentityDOM(){
+ const visible=node=>!!node&&node.getClientRects().length>0&&getComputedStyle(node).visibility!=='hidden'
+ if(visible(document.querySelector('#loaderOverlay:not(.Hhide)')))return null
+ const fields=[...document.querySelectorAll('.dlTitle')].filter(visible)
+ const text=node=>(node?.innerText||'').trim()
+ const field=label=>{const matches=fields.filter(node=>label.test(text(node)));return matches.length===1?text(matches[0].nextElementSibling):''}
+ const bank_id=field(/^Account\s*(?:number|no\.?)$/i).replace(/\s/g,'')
+ const type=field(/^Type$/i),currency=field(/^Currency$/i)
+ return bank_id&&type?{bank_id,credit:/\bCredit\b/i.test(type),currency}:null
+}
+export async function resolveMaskedCreditAccounts(page,rows,signal,hidden=[]){
+ const aliases={},seen=new Set(rows.map(row=>row.bank_id.replace(/\s/g,'')))
+ if(seen.size!==rows.length)throw new ProbeError('ACCOUNT_LAYOUT_CHANGED',{masked_credit_duplicate_identity:1,masked_credit_failed:1})
+ let resolved=0,phase=0
+ for(const row of rows){
+  const mask=row.bank_id.replace(/\s/g,'')
+  if(!/^[0-9xX*•●]+$/.test(mask)||!/[xX*•●]/.test(mask)||!/[0-9]/.test(mask))continue
+  const pattern='^'+mask.replace(/[xX*•●]+/g,'[0-9]+')+'$'
+  const hiddenMatches=hidden.filter(id=>id===mask||new RegExp(pattern).test(id))
+  if(hiddenMatches.length>1)throw new ProbeError('ACCOUNT_LAYOUT_CHANGED',{masked_credit_failed:1})
+  if(hiddenMatches.length===1){aliases[hiddenMatches[0]]=mask;continue}
+  try{
+   phase=1
+   await waitFor(page,signal,clickTransactionAccountDOM,Boolean,mask)
+   phase=2
+   await waitFor(page,signal,clickTransactionTabDOM,Boolean)
+   phase=3
+   const identity=await waitFor(page,signal,readCreditIdentityDOM,Boolean)
+   if(identity.credit){
+    // The visible digits must agree with the detail identity. Never invent an
+    // identity from a nickname, card suffix alone or a masked number.
+    const reject=reason=>{throw new ProbeError('ACCOUNT_LAYOUT_CHANGED',{[reason]:1})}
+    if(identity.bank_id===mask&&mask.length<=64&&/^[0-9]{3,}[xX*•●]+[0-9]{3,}$/.test(mask)){
+     if(identity.currency&&!/^(?:ZAR|Rand|South African Rand)$/i.test(identity.currency))reject('masked_credit_non_zar')
+     aliases[mask]=mask;resolved++
+    }else{
+    if(!/^[0-9]{3,64}$/.test(identity.bank_id))reject(/[xX*•●]/.test(identity.bank_id)?'masked_credit_detail_masked':'masked_credit_detail_invalid')
+    if(!new RegExp(pattern).test(identity.bank_id))reject('masked_credit_number_mismatch')
+    if(seen.has(identity.bank_id))reject('masked_credit_duplicate_identity')
+    if(identity.currency&&!/^(?:ZAR|Rand|South African Rand)$/i.test(identity.currency))reject('masked_credit_non_zar')
+    aliases[identity.bank_id]=mask;seen.add(identity.bank_id);resolved++
+    }
+   }
+   phase=4
+   await waitFor(page,signal,clickAccountsDOM,Boolean)
+   await waitFor(page,signal,()=>[...document.querySelectorAll('[name="nickname"]')].filter(n=>n.getClientRects().length).length>0,Boolean)
+  }catch(err){
+   if(err instanceof ProbeError)err.diagnostics={...err.diagnostics,masked_credit_resolved:resolved,masked_credit_failed:1,masked_credit_navigation:phase}
+   throw err
+  }
+ }
+ return aliases
 }
