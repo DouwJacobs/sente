@@ -28,8 +28,8 @@ func TestRuleDirectionGroupConflictAndReview(t *testing.T) {
 		t.Fatalf("direction/group mismatch: %+v", p.Rows)
 	}
 	status(t, e.commit(t, p.ID, nil, false), 200)
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='pending_review' AND is_transfer=0") != 2 {
-		t.Fatal("classification approved or transferred a transaction")
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE review_state='pending_review' AND is_transfer=0") != 1 {
+		t.Fatal("categorized entry not accepted or missing entry accepted")
 	}
 	if queryInt(e.a.DB, "SELECT spending_group_id FROM transactions WHERE fitid='rule-out'") != gid {
 		t.Fatal("group not committed")

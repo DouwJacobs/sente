@@ -180,6 +180,15 @@ func Restore(target, snapshot string) error {
 		prepared.Close()
 		return err
 	}
+	// Older supported snapshots predate MCP; only clear tables they contain.
+	for _, table := range []string{"mcp_oauth_codes", "mcp_access_tokens", "mcp_refresh_tokens", "mcp_oauth_requests", "mcp_oauth_clients", "mcp_proposals", "mcp_tokens"} {
+		if queryInt(prepared, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?", table) == 1 {
+			if _, err := prepared.Exec("DELETE FROM " + table); err != nil {
+				prepared.Close()
+				return err
+			}
+		}
+	}
 	if err := prepared.Close(); err != nil {
 		return err
 	}

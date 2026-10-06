@@ -14,6 +14,9 @@ func fingerprint(row SourceRow) string {
 }
 func normalize(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), " ")) }
 func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
+	if err := q.QueryRow("SELECT name FROM accounts WHERE id=?", account).Scan(&p.AccountName); err != nil {
+		return err
+	}
 	p.AlreadyImported = queryInt(q, "SELECT COUNT(*) FROM imports WHERE account_id=? AND hash=? AND status='committed'", account, p.Hash) > 0
 	rules, err := loadRules(q, account)
 	if err != nil {
@@ -30,7 +33,30 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 		if row.Error != "" {
 			continue
 		}
-		classify(row, rules)
+		row.CategoryID = nil
+		row.SpendingGroupID = nil
+		row.MerchantID = nil
+		row.MerchantName = ""
+		row.Suggestion = ""
+		mm, err := matchMerchantDetails(q, account, row.Description, row.Amount)
+		if err != nil {
+			return err
+		}
+		if mm != nil {
+			row.MerchantID = &mm.ID
+			row.MerchantName = mm.Name
+			if mm.CategoryID != nil {
+				row.CategoryID = mm.CategoryID
+				row.SpendingGroupID = mm.SpendingGroupID
+				row.Suggestion = "Merchant: " + mm.Name
+			}
+		}
+		if row.CategoryID == nil {
+			classify(row, rules)
+		}
+		if p.Format == "fnb-live" && row.FITID == "" {
+			continue
+		}
 		if row.FITID != "" {
 			matches, err := data(q, "SELECT id,source_date date,source_amount amount_cents,source_description description FROM transactions WHERE account_id=? AND fitid=?", account, row.FITID)
 			if err != nil {
@@ -82,6 +108,9 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 		if len(fingerprints[key]) < 5 {
 			fingerprints[key] = append(fingerprints[key], map[string]any{"row": row.Row, "date": row.Date, "amount_cents": row.Amount, "description": row.Description})
 		}
+	}
+	if p.Format == "fnb-live" {
+		return a.annotateLiveDuplicates(q, account, p)
 	}
 	return nil
 }
@@ -195,154 +224,172 @@ func (a *App) imports(w http.ResponseWriter, r *http.Request) error {
 	send(w, items)
 	return nil
 }
+
+type importCommitOptions struct {
+	PreviewVersion        string            `json:"preview_version"`
+	SkipAllCandidates     bool              `json:"skip_all_candidates"`
+	ConfirmValid          bool              `json:"confirm_valid_rows"`
+	ClassificationVersion string            `json:"classification_version"`
+	Decisions             map[string]string `json:"decisions"`
+}
+
 func (a *App) commitImport(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
 	id := parseID(r)
-	var b struct {
-		PreviewVersion        string            `json:"preview_version"`
-		SkipAllCandidates     bool              `json:"skip_all_candidates"`
-		ConfirmValid          bool              `json:"confirm_valid_rows"`
-		ClassificationVersion string            `json:"classification_version"`
-		Decisions             map[string]string `json:"decisions"`
-	}
+	var b importCommitOptions
 	if err := decode(r, &b); err != nil {
 		return err
 	}
 	inserted := 0
 	skipped := 0
 	err := a.write(func(tx *sql.Tx) error {
-		var account int64
-		var status, raw string
-		if err := tx.QueryRow("SELECT account_id,status,data FROM imports WHERE id=?", id).Scan(&account, &status, &raw); err != nil {
-			return fail(404, "Import not found")
-		}
-		if !ruleAccess(tx, a, u, account) {
-			return fail(403, "Account editor access required")
-		}
-		if status == "committed" {
-			return fail(409, "This import is already committed")
-		}
-		var p ParsedFile
-		if err := json.Unmarshal([]byte(raw), &p); err != nil {
-			return err
-		}
-		if p.Error != "" {
-			return fail(400, p.Error)
-		}
-		var bank string
-		if err := tx.QueryRow("SELECT bank_id FROM accounts WHERE id=?", account).Scan(&bank); err != nil {
-			return err
-		}
-		if p.AccountID != bank || p.Currency != "ZAR" {
-			return fail(409, "Account identity changed; preview this file again against the correct account")
-		}
-		expected := b.ClassificationVersion
-		if expected == "" {
-			expected = p.ClassificationVersion
-		}
-		if err := a.annotate(tx, account, &p); err != nil {
-			return err
-		}
-
-		if b.PreviewVersion != "" && b.PreviewVersion != importPreviewVersion(p) {
-			return fail(409, "Import preview changed. Reload it before confirming.")
-		}
-
-		if b.SkipAllCandidates {
-			if b.Decisions == nil {
-				b.Decisions = map[string]string{}
-			}
-			for _, row := range p.Rows {
-				if row.Error == "" && (row.Duplicate == "possible" || row.Duplicate == "conflict") {
-					key := strconv.Itoa(row.Row)
-					if b.Decisions[key] == "" {
-						b.Decisions[key] = "skip"
-					}
-				}
-			}
-		}
-		if expected != p.ClassificationVersion {
-			return fail(409, "Classification rules changed. Inspect the current preview before importing.")
-		}
-		if p.AlreadyImported {
-			return fail(409, "This exact file has already been imported")
-		}
-		invalid := false
-		for _, row := range p.Rows {
-			if row.Error != "" {
-				invalid = true
-			}
-		}
-		if invalid && !b.ConfirmValid {
-			return fail(400, "Confirm importing valid rows while retaining rejected rows")
-		}
-		for i := range p.Rows {
-			row := &p.Rows[i]
-			decision := b.Decisions[strconv.Itoa(row.Row)]
-			if decision != "" && decision != "keep" && decision != "skip" {
-				return fail(400, "Invalid duplicate decision")
-			}
-			if row.Error != "" {
-				skipped++
-				continue
-			}
-			one := ParsedFile{Hash: p.Hash, Rows: []SourceRow{*row}}
-			if err := a.annotate(tx, account, &one); err != nil {
-				return err
-			}
-			*row = one.Rows[0]
-			switch row.Duplicate {
-			case "conflict":
-				if decision != "skip" {
-					return fail(409, "A bank transaction ID has conflicting details; inspect and skip the conflicting row")
-				}
-			case "exact_id":
-				decision = "skip"
-			case "possible":
-				if decision == "" {
-					return fail(409, "Resolve all possible duplicates before importing")
-				}
-			}
-			if decision == "skip" {
-				skipped++
-				continue
-			}
-			source, _ := json.Marshal(map[string]any{"file": p.Name, "hash": p.Hash, "format": p.Format, "row": row.Row, "date": row.Date, "amount_cents": row.Amount, "description": row.Description, "fitid": row.FITID, "balance_cents": row.Balance, "source_reference": row.SourceReference, "run_id": p.RunID, "coverage": p.Coverage, "source_bank_row": row.SourceBankRow, "source_component": row.SourceComponent, "source_bank_description": row.SourceBankDescription, "source_service_fee_cents": row.SourceServiceFee})
-			var fit any
-			if row.FITID != "" {
-				fit = row.FITID
-			}
-			period := autoPeriod(tx, account, row.Date)
-			res, err := tx.Exec("INSERT INTO transactions(account_id,date,amount_cents,description,fitid,source_date,source_amount,source_description,source_key,provenance,import_id,period_id,spending_group_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", account, row.Date, row.Amount, row.Description, fit, row.Date, row.Amount, row.Description, fingerprint(*row), string(source), id, period, row.SpendingGroupID)
-			if err != nil {
-				return err
-			}
-			tid, _ := res.LastInsertId()
-			if _, err := tx.Exec("INSERT INTO allocations(transaction_id,category_id,amount_cents) VALUES(?,?,?)", tid, row.CategoryID, row.Amount); err != nil {
-				return err
-			}
-			if err := audit(tx, u, account, "transaction", tid, "imported", map[string]any{"import_id": id, "row": row.Row, "suggestion": row.Suggestion}); err != nil {
-				return err
-			}
-			inserted++
-		}
-		if p.Balance != nil && validDate(p.BalanceDate) {
-			if _, err := tx.Exec("UPDATE accounts SET balance_cents=?,balance_date=?,version=version+1 WHERE id=? AND (balance_date IS NULL OR balance_date<=?)", *p.Balance, p.BalanceDate, account, p.BalanceDate); err != nil {
-				return err
-			}
-		}
-		p.Decisions, p.Inserted, p.Skipped = b.Decisions, inserted, skipped
-		result, _ := json.Marshal(p)
-		if _, err := tx.Exec("UPDATE imports SET status='committed',data=? WHERE id=?", string(result), id); err != nil {
-			return err
-		}
-		return audit(tx, u, account, "import", id, "committed", map[string]int{"inserted": inserted, "skipped": skipped})
+		return a.commitStagedImport(tx, u, id, b, &inserted, &skipped)
 	})
 	if err != nil {
 		return err
 	}
 	send(w, map[string]int{"inserted": inserted, "skipped": skipped})
 	return nil
+}
+
+// Shared by the HTTP endpoint and automatic connector imports, under a write transaction.
+func (a *App) commitStagedImport(tx *sql.Tx, u User, id int64, b importCommitOptions, inserted, skipped *int) error {
+	var account int64
+	var status, raw string
+	if err := tx.QueryRow("SELECT account_id,status,data FROM imports WHERE id=?", id).Scan(&account, &status, &raw); err != nil {
+		return fail(404, "Import not found")
+	}
+	if !ruleAccess(tx, a, u, account) {
+		return fail(403, "Account editor access required")
+	}
+	if status == "committed" {
+		return fail(409, "This import is already committed")
+	}
+	var p ParsedFile
+	if err := json.Unmarshal([]byte(raw), &p); err != nil {
+		return err
+	}
+	if p.Error != "" {
+		return fail(400, p.Error)
+	}
+	var bank string
+	if err := tx.QueryRow("SELECT bank_id FROM accounts WHERE id=?", account).Scan(&bank); err != nil {
+		return err
+	}
+	if p.AccountID != bank || p.Currency != "ZAR" {
+		return fail(409, "Account identity changed; preview this file again against the correct account")
+	}
+	expected := b.ClassificationVersion
+	if expected == "" {
+		expected = p.ClassificationVersion
+	}
+	if err := a.annotate(tx, account, &p); err != nil {
+		return err
+	}
+
+	if b.PreviewVersion != "" && b.PreviewVersion != importPreviewVersion(p) {
+		return fail(409, "Import preview changed. Reload it before confirming.")
+	}
+
+	if b.SkipAllCandidates {
+		if b.Decisions == nil {
+			b.Decisions = map[string]string{}
+		}
+		for _, row := range p.Rows {
+			if row.Error == "" && (row.Duplicate == "possible" || row.Duplicate == "conflict") {
+				key := strconv.Itoa(row.Row)
+				if b.Decisions[key] == "" {
+					b.Decisions[key] = "skip"
+				}
+			}
+		}
+	}
+	if expected != p.ClassificationVersion {
+		return fail(409, "Classification rules changed. Inspect the current preview before importing.")
+	}
+	if p.AlreadyImported {
+		return fail(409, "This exact file has already been imported")
+	}
+	invalid := false
+	for _, row := range p.Rows {
+		if row.Error != "" {
+			invalid = true
+		}
+	}
+	if invalid && !b.ConfirmValid {
+		return fail(400, "Confirm importing valid rows while retaining rejected rows")
+	}
+	for i := range p.Rows {
+		row := &p.Rows[i]
+		decision := b.Decisions[strconv.Itoa(row.Row)]
+		if decision != "" && decision != "keep" && decision != "skip" {
+			return fail(400, "Invalid duplicate decision")
+		}
+		if row.Error != "" {
+			(*skipped)++
+			continue
+		}
+		if p.Format != "fnb-live" {
+			one := ParsedFile{Hash: p.Hash, Rows: []SourceRow{*row}}
+			if err := a.annotate(tx, account, &one); err != nil {
+				return err
+			}
+			*row = one.Rows[0]
+		}
+		switch row.Duplicate {
+		case "conflict":
+			if decision != "skip" {
+				return fail(409, "A bank transaction ID has conflicting details; inspect and skip the conflicting row")
+			}
+		case "exact_id", "exact_source":
+			decision = "skip"
+		case "possible":
+			if decision == "" {
+				return fail(409, "Resolve all possible duplicates before importing")
+			}
+		}
+		if decision == "skip" {
+			(*skipped)++
+			continue
+		}
+		source, _ := json.Marshal(map[string]any{"file": p.Name, "hash": p.Hash, "format": p.Format, "row": row.Row, "date": row.Date, "amount_cents": row.Amount, "description": row.Description, "fitid": row.FITID, "balance_cents": row.Balance, "source_reference": row.SourceReference, "run_id": p.RunID, "coverage": p.Coverage, "source_bank_row": row.SourceBankRow, "source_component": row.SourceComponent, "source_bank_description": row.SourceBankDescription, "source_service_fee_cents": row.SourceServiceFee})
+		var fit any
+		if row.FITID != "" {
+			fit = row.FITID
+		}
+		period := autoPeriod(tx, account, row.Date)
+		res, err := tx.Exec("INSERT INTO transactions(account_id,date,amount_cents,description,fitid,source_date,source_amount,source_description,source_key,provenance,import_id,period_id,spending_group_id,merchant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", account, row.Date, row.Amount, row.Description, fit, row.Date, row.Amount, row.Description, fingerprint(*row), string(source), id, period, row.SpendingGroupID, row.MerchantID)
+		if err != nil {
+			return err
+		}
+		tid, _ := res.LastInsertId()
+		if row.MerchantID == nil {
+			if err := a.importMerchant(tx, tid, account, row.Description, row.Amount); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.Exec("INSERT INTO allocations(transaction_id,category_id,amount_cents) VALUES(?,?,?)", tid, row.CategoryID, row.Amount); err != nil {
+			return err
+		}
+		if err := acceptCategorized(tx, u, account, tid); err != nil {
+			return err
+		}
+		if err := audit(tx, u, account, "transaction", tid, "imported", map[string]any{"import_id": id, "row": row.Row, "suggestion": row.Suggestion}); err != nil {
+			return err
+		}
+		(*inserted)++
+	}
+	if p.Balance != nil && validDate(p.BalanceDate) {
+		if _, err := tx.Exec("UPDATE accounts SET balance_cents=?,balance_date=?,version=version+1 WHERE id=? AND (balance_date IS NULL OR balance_date<=?)", *p.Balance, p.BalanceDate, account, p.BalanceDate); err != nil {
+			return err
+		}
+	}
+	p.Decisions, p.Inserted, p.Skipped = b.Decisions, *inserted, *skipped
+	result, _ := json.Marshal(p)
+	if _, err := tx.Exec("UPDATE imports SET status='committed',data=?,committed_at=CURRENT_TIMESTAMP WHERE id=?", string(result), id); err != nil {
+		return err
+	}
+	return audit(tx, u, account, "import", id, "committed", map[string]int{"inserted": *inserted, "skipped": *skipped})
 }
 
 // Both file uploads and connector snapshots enter the same durable preview.

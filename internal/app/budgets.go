@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -68,6 +69,10 @@ func (a *App) periods(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
+		p["group_budgets"], err = data(a.DB, "SELECT COALESCE(gt.spending_group_id,0) id,COALESCE(g.name,'No spending group') name,SUM(gt.amount_cents) target_cents FROM group_targets gt LEFT JOIN spending_groups g ON g.id=gt.spending_group_id WHERE gt.period_id=? AND gt.included=1 GROUP BY gt.spending_group_id ORDER BY name,id LIMIT 20", p["id"])
+		if err != nil {
+			return err
+		}
 		p["targets"] = v
 		p["target_total"] = queryInt(a.DB, "SELECT COALESCE(SUM(amount_cents),0) FROM targets WHERE period_id=?", p["id"])
 	}
@@ -121,6 +126,21 @@ func (a *App) createPeriod(w http.ResponseWriter, r *http.Request) error {
 		}
 		id, _ = res.LastInsertId()
 		if _, err := tx.Exec("INSERT INTO targets SELECT ?,category_id,amount_cents FROM targets WHERE period_id=?", id, previous); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("INSERT INTO group_targets(period_id,category_id,spending_group_id,amount_cents,carry_forward,included) SELECT ?,category_id,spending_group_id,amount_cents,carry_forward,included FROM group_targets WHERE period_id=? AND carry_forward=1 AND included=1", id, previous); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("INSERT INTO group_targets(period_id,category_id,amount_cents) SELECT ?,t.category_id,t.amount_cents FROM targets t WHERE t.period_id=? AND NOT EXISTS(SELECT 1 FROM group_targets g WHERE g.period_id=t.period_id AND g.category_id=t.category_id)", id, previous); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("DELETE FROM targets WHERE period_id=?", id); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("INSERT INTO targets SELECT period_id,category_id,SUM(amount_cents) FROM group_targets WHERE period_id=? AND included=1 GROUP BY period_id,category_id", id); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("INSERT INTO budget_groups SELECT DISTINCT period_id,spending_group_id FROM group_targets WHERE period_id=?", id); err != nil {
 			return err
 		}
 		if err := reassign(tx); err != nil {
@@ -284,48 +304,191 @@ func (a *App) updateTargets(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	id := parseID(r)
-	var b struct {
-		Version int64 `json:"version"`
-		Merge   bool  `json:"merge"`
-		Targets []struct {
-			CategoryID int64 `json:"category_id"`
-			Amount     int64 `json:"amount_cents"`
-		} `json:"targets"`
-	}
+	var b targetsInput
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	err := a.write(func(tx *sql.Tx) error {
-		res, err := tx.Exec("UPDATE periods SET version=version+1 WHERE id=? AND version=?", id, b.Version)
-		if err != nil {
-			return err
-		}
-		if err := affected(res); err != nil {
-			return err
-		}
-		if !b.Merge {
-			if _, err := tx.Exec("DELETE FROM targets WHERE period_id=?", id); err != nil {
-				return err
-			}
-		}
-		seen := map[int64]bool{}
-		for _, t := range b.Targets {
-			if t.Amount < 0 || t.Amount > 900000000000000 || seen[t.CategoryID] || queryInt(tx, "SELECT COUNT(*) FROM categories WHERE id=? AND kind='expense'", t.CategoryID) != 1 {
-				return fail(400, "Choose unique expense categories and nonnegative limits")
-			}
-			seen[t.CategoryID] = true
-			if _, err := tx.Exec("INSERT INTO targets VALUES(?,?,?) ON CONFLICT(period_id,category_id) DO UPDATE SET amount_cents=excluded.amount_cents", id, t.CategoryID, t.Amount); err != nil {
-				return err
-			}
-		}
-		return audit(tx, u, nil, "period", id, "limits_updated", b)
-	})
-	if err != nil {
+	if err := a.write(func(tx *sql.Tx) error { return updateTargetsTx(tx, u, id, b) }); err != nil {
 		return err
 	}
 	success(w)
 	return nil
 }
+
+type targetItem struct {
+	CategoryID        int64  `json:"category_id"`
+	Amount            int64  `json:"amount_cents"`
+	SpendingGroupID   *int64 `json:"spending_group_id,omitempty"`
+	GroupID           *int64 `json:"group_id,omitempty"`
+	SpendingGroupName string `json:"spending_group_name,omitempty"`
+}
+
+type targetGroupItem struct {
+	GroupID           int64        `json:"group_id,omitempty"`
+	SpendingGroupID   int64        `json:"spending_group_id,omitempty"`
+	SpendingGroupName string       `json:"spending_group_name,omitempty"`
+	Targets           []targetItem `json:"targets"`
+}
+
+type targetsInput struct {
+	Version         int64             `json:"version"`
+	GroupID         *int64            `json:"group_id,omitempty"`
+	SpendingGroupID *int64            `json:"spending_group_id,omitempty"`
+	Merge           bool              `json:"merge,omitempty"`
+	Targets         []targetItem      `json:"targets"`
+	Groups          []targetGroupItem `json:"groups,omitempty"`
+}
+
+func updateTargetsTx(tx *sql.Tx, u User, id int64, b targetsInput) error {
+	if err := requireMember(u); err != nil {
+		return err
+	}
+
+	res, err := tx.Exec("UPDATE periods SET version=version+1 WHERE id=? AND version=?", id, b.Version)
+	if err != nil {
+		return err
+	}
+	if err := affected(res); err != nil {
+		return err
+	}
+
+	rootGroup := b.GroupID
+	if rootGroup == nil && b.SpendingGroupID != nil {
+		rootGroup = b.SpendingGroupID
+	}
+
+	if rootGroup != nil && len(b.Groups) == 0 {
+		b.GroupID = rootGroup
+		return updateGroupTargetsTx(tx, u, id, b)
+	}
+
+	allTargets := make([]targetItem, 0, len(b.Targets))
+	for _, g := range b.Groups {
+		gid := g.GroupID
+		if gid == 0 {
+			gid = g.SpendingGroupID
+		}
+		if gid == 0 && strings.TrimSpace(g.SpendingGroupName) != "" {
+			tx.QueryRow("SELECT id FROM spending_groups WHERE name=? COLLATE NOCASE", strings.TrimSpace(g.SpendingGroupName)).Scan(&gid)
+		}
+		for _, t := range g.Targets {
+			if t.SpendingGroupID == nil && t.GroupID == nil && gid > 0 {
+				copyGid := gid
+				t.SpendingGroupID = &copyGid
+			}
+			allTargets = append(allTargets, t)
+		}
+	}
+	allTargets = append(allTargets, b.Targets...)
+
+	if len(allTargets) == 0 && !b.Merge {
+		if _, err := tx.Exec("DELETE FROM group_targets WHERE period_id=?", id); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("DELETE FROM budget_groups WHERE period_id=?", id); err != nil {
+			return err
+		}
+		if err := syncBudgetTotalsTx(tx, id); err != nil {
+			return err
+		}
+		return audit(tx, u, nil, "period", id, "limits_updated", b)
+	}
+
+	type resolvedTarget struct {
+		CategoryID      int64
+		Amount          int64
+		SpendingGroupID any
+	}
+
+	var resolved []resolvedTarget
+	seenKey := map[string]bool{}
+
+	for _, t := range allTargets {
+		if t.Amount < 0 || t.Amount > 900000000000000 || queryInt(tx, "SELECT COUNT(*) FROM categories WHERE id=? AND kind='expense'", t.CategoryID) != 1 {
+			return fail(400, "Choose unique expense categories and nonnegative limits")
+		}
+
+		var gid int64
+		if t.SpendingGroupID != nil && *t.SpendingGroupID > 0 {
+			gid = *t.SpendingGroupID
+		} else if t.GroupID != nil && *t.GroupID > 0 {
+			gid = *t.GroupID
+		} else if strings.TrimSpace(t.SpendingGroupName) != "" {
+			tx.QueryRow("SELECT id FROM spending_groups WHERE name=? COLLATE NOCASE", strings.TrimSpace(t.SpendingGroupName)).Scan(&gid)
+		} else if rootGroup != nil && *rootGroup > 0 {
+			gid = *rootGroup
+		} else {
+			var catGroup sql.NullInt64
+			tx.QueryRow("SELECT spending_group_id FROM categories WHERE id=?", t.CategoryID).Scan(&catGroup)
+			if catGroup.Valid && catGroup.Int64 > 0 {
+				gid = catGroup.Int64
+			} else {
+				var ruleGroup sql.NullInt64
+				tx.QueryRow("SELECT spending_group_id FROM builtin_rules WHERE category_id=? AND spending_group_id IS NOT NULL LIMIT 1", t.CategoryID).Scan(&ruleGroup)
+				if !ruleGroup.Valid {
+					tx.QueryRow("SELECT spending_group_id FROM rules WHERE category_id=? AND spending_group_id IS NOT NULL LIMIT 1", t.CategoryID).Scan(&ruleGroup)
+				}
+				if ruleGroup.Valid && ruleGroup.Int64 > 0 {
+					gid = ruleGroup.Int64
+				} else {
+					tx.QueryRow("SELECT id FROM spending_groups WHERE name='Day-to-day' LIMIT 1").Scan(&gid)
+				}
+			}
+		}
+
+		if gid > 0 && queryInt(tx, "SELECT COUNT(*) FROM spending_groups WHERE id=?", gid) != 1 {
+			return fail(400, "Choose a valid spending group")
+		}
+
+		key := fmt.Sprintf("%d:%d", gid, t.CategoryID)
+		if seenKey[key] {
+			return fail(400, "Choose unique expense categories and nonnegative limits")
+		}
+		seenKey[key] = true
+
+		var groupVal any
+		if gid > 0 {
+			groupVal = gid
+		}
+
+		if queryInt(tx, "SELECT archived FROM categories WHERE id=?", t.CategoryID) == 1 &&
+			queryInt(tx, "SELECT COUNT(*) FROM group_targets WHERE period_id=? AND category_id=? AND spending_group_id IS ? AND included=1", id, t.CategoryID, groupVal) == 0 {
+			return fail(400, "Archived categories cannot receive new budgets")
+		}
+
+		resolved = append(resolved, resolvedTarget{
+			CategoryID:      t.CategoryID,
+			Amount:          t.Amount,
+			SpendingGroupID: groupVal,
+		})
+	}
+
+	if !b.Merge {
+		if _, err := tx.Exec("DELETE FROM group_targets WHERE period_id=?", id); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("DELETE FROM budget_groups WHERE period_id=?", id); err != nil {
+			return err
+		}
+	}
+
+	for _, rt := range resolved {
+		carryForward := queryInt(tx, "SELECT archived FROM categories WHERE id=?", rt.CategoryID) == 0
+		if _, err := tx.Exec("INSERT INTO group_targets(period_id,category_id,spending_group_id,amount_cents,carry_forward,included) VALUES(?,?,?,?,?,1) ON CONFLICT DO UPDATE SET amount_cents=excluded.amount_cents,included=1", id, rt.CategoryID, rt.SpendingGroupID, rt.Amount, carryForward); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("INSERT OR IGNORE INTO budget_groups VALUES(?,?)", id, rt.SpendingGroupID); err != nil {
+			return err
+		}
+	}
+
+	if err := syncBudgetTotalsTx(tx, id); err != nil {
+		return err
+	}
+
+	return audit(tx, u, nil, "period", id, "limits_updated", b)
+}
+
 func (a *App) settings(w http.ResponseWriter, r *http.Request) error {
 	if err := requireMember(Current(r)); err != nil {
 		return err
@@ -364,16 +527,21 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 	if err := requireMember(u); err != nil {
 		return err
 	}
+	tx, err := a.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 	pid, _ := strconv.ParseInt(r.URL.Query().Get("period"), 10, 64)
 	if pid == 0 {
 		loc, _ := time.LoadLocation("Africa/Johannesburg")
 		today := time.Now().In(loc).Format("2006-01-02")
-		pid = queryInt(a.DB, "SELECT id FROM periods WHERE start_date<=? AND end_date>=? ORDER BY start_date DESC,id DESC LIMIT 1", today, today)
+		pid = queryInt(tx, "SELECT id FROM periods WHERE start_date<=? AND end_date>=? ORDER BY start_date DESC,id DESC LIMIT 1", today, today)
 		if pid == 0 {
-			pid = queryInt(a.DB, "SELECT id FROM periods ORDER BY start_date DESC,id DESC LIMIT 1")
+			pid = queryInt(tx, "SELECT id FROM periods ORDER BY start_date DESC,id DESC LIMIT 1")
 		}
 	}
-	periods, err := data(a.DB, "SELECT * FROM periods WHERE id=?", pid)
+	periods, err := data(tx, "SELECT * FROM periods WHERE id=?", pid)
 	if err != nil {
 		return err
 	}
@@ -386,10 +554,10 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 	args := []any{pid}
 	showTargets := true
 	if account != 0 {
-		if !a.can(a.DB, u, account, false) {
+		if !a.can(tx, u, account, false) {
 			return fail(403, "Account access required")
 		}
-		household := queryInt(a.DB, "SELECT household FROM accounts WHERE id=?", account) == 1
+		household := queryInt(tx, "SELECT household FROM accounts WHERE id=?", account) == 1
 		condition = "t.account_id=? AND t.date>=? AND t.date<=?"
 		args = []any{account, p["start_date"], p["end_date"]}
 		if household {
@@ -398,7 +566,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 		}
 		showTargets = false
 	}
-	rows, err := data(a.DB, "SELECT t.id,t.review_state,t.is_transfer,l.amount_cents,c.id category_id,c.name,c.group_name,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id WHERE a.sync_hidden=0 AND "+condition, args...)
+	rows, err := data(tx, "SELECT t.id,t.spending_group_id,g.name spending_group_name,g.color spending_group_color,t.review_state,t.is_transfer,l.amount_cents,c.id category_id,c.name,c.group_name,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id LEFT JOIN spending_groups g ON g.id=t.spending_group_id WHERE a.sync_hidden=0 AND "+condition+accountScopeSQL(u), args...)
 	if err != nil {
 		return err
 	}
@@ -406,7 +574,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 	pendingCount := map[int64]bool{}
 	uncategorized := map[int64]bool{}
 	categories := map[int64]map[string]any{}
-	catRows, err := data(a.DB, "SELECT c.*,COALESCE(t.amount_cents,0) target_cents FROM categories c LEFT JOIN targets t ON t.category_id=c.id AND t.period_id=? ORDER BY c.name,c.id", pid)
+	catRows, err := data(tx, "SELECT c.*,COALESCE(t.amount_cents,0) target_cents FROM categories c LEFT JOIN targets t ON t.category_id=c.id AND t.period_id=? ORDER BY c.name,c.id", pid)
 	if err != nil {
 		return err
 	}
@@ -445,18 +613,33 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
+	budgetRows := []map[string]any{}
+	if showTargets {
+		budgetRows, err = data(tx, "SELECT gt.category_id,gt.amount_cents,gt.spending_group_id,g.name spending_group_name,g.color spending_group_color,c.name FROM group_targets gt LEFT JOIN spending_groups g ON g.id=gt.spending_group_id JOIN categories c ON c.id=gt.category_id WHERE gt.period_id=? AND gt.included=1", pid)
+		if err != nil {
+			return err
+		}
+	}
+	groups, groupTotal, err := dashboardGroups(r, rows, categories, budgetRows)
+	if err != nil {
+		return err
+	}
+	incomeCategories, incomeTotal, err := dashboardIncome(r, rows)
+	if err != nil {
+		return err
+	}
 	var limits int64
 	for _, c := range catRows {
 		limits += num(c["target_cents"])
 	}
-	unassigned := queryInt(a.DB, "SELECT COUNT(*) FROM transactions t JOIN accounts a ON a.id=t.account_id WHERE a.sync_hidden=0 AND a.household=1 AND t.period_id IS NULL AND t.assignment!='outside'")
+	unassigned := queryInt(tx, "SELECT COUNT(*) FROM transactions t JOIN accounts a ON a.id=t.account_id WHERE a.sync_hidden=0 AND a.household=1 AND t.period_id IS NULL AND t.assignment!='outside'"+accountScopeSQL(u))
 	balanceScope := " AND a.household=1"
 	balanceArgs := []any{u.Member, u.ID}
 	if account != 0 {
 		balanceScope = " AND a.id=?"
 		balanceArgs = append(balanceArgs, account)
 	}
-	balances, err := data(a.DB, "SELECT a.id,a.name,a.household,a.balance_cents,a.balance_date FROM accounts a WHERE "+accessSQL+balanceScope+" ORDER BY a.name", balanceArgs...)
+	balances, err := data(tx, "SELECT a.id,a.name,a.household,a.balance_cents,a.balance_date FROM accounts a WHERE "+accountAccessSQL(u)+balanceScope+" ORDER BY a.name", balanceArgs...)
 	if err != nil {
 		return err
 	}
@@ -467,6 +650,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 	if !r.URL.Query().Has("balance_page") && len(balances) > 100 {
 		balances = balances[:100]
 	}
+	budgetSort(catRows, r.URL.Query().Get("sort"))
 	if r.URL.Query().Has("category_page") {
 		page, err := strconv.Atoi(r.URL.Query().Get("category_page"))
 		if err != nil || page < 0 || page > 1000000 {
@@ -504,7 +688,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 		}
 		balances = balances[start:end]
 	}
-	send(w, map[string]any{"period": p, "income_cents": income, "spent_cents": spent, "pending_spend_cents": pendingSpend, "pending_count": len(pendingCount), "uncategorized_count": len(uncategorized), "budget_cents": limits, "remaining_cents": limits - spent, "has_targets": showTargets, "categories": catRows, "category_total": categoryTotal, "balances": balances, "balance_total": balanceTotal, "unassigned_count": unassigned})
+	send(w, map[string]any{"period": p, "income_cents": income, "income_categories": incomeCategories, "income_category_total": incomeTotal, "spent_cents": spent, "pending_spend_cents": pendingSpend, "pending_count": len(pendingCount), "uncategorized_count": len(uncategorized), "budget_cents": limits, "remaining_cents": limits - spent, "has_targets": showTargets, "spending_groups": groups, "group_total": groupTotal, "categories": catRows, "category_total": categoryTotal, "balances": balances, "balance_total": balanceTotal, "unassigned_count": unassigned})
 	return nil
 }
 
@@ -515,6 +699,17 @@ func (a *App) targetPages(w http.ResponseWriter, r *http.Request) error {
 	id := parseID(r)
 	if queryInt(a.DB, "SELECT COUNT(*) FROM periods WHERE id=?", id) == 0 {
 		return fail(404, "Period not found")
+	}
+	if r.URL.Query().Has("group") {
+		gid, err := strconv.ParseInt(r.URL.Query().Get("group"), 10, 64)
+		if err != nil || gid < 0 || gid > 0 && queryInt(a.DB, "SELECT COUNT(*) FROM spending_groups WHERE id=?", gid) != 1 {
+			return fail(400, "Choose a spending group")
+		}
+		query := "SELECT c.id,c.name,c.kind,COALESCE(t.amount_cents,0) amount_cents,t.carry_forward FROM categories c LEFT JOIN group_targets t ON t.category_id=c.id AND t.period_id=? AND COALESCE(t.spending_group_id,0)=? WHERE c.kind='expense'"
+		if r.URL.Query().Get("budget_only") == "1" {
+			query += " AND t.included=1"
+		}
+		return a.metadataPage(w, r, query, []any{id, gid}, "name", "name,id")
 	}
 	return a.metadataPage(w, r, "SELECT c.id,c.name,c.kind,COALESCE(t.amount_cents,0) amount_cents FROM categories c LEFT JOIN targets t ON t.category_id=c.id AND t.period_id=? WHERE c.kind='expense'", []any{id}, "name", "name,id")
 }

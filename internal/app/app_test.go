@@ -55,7 +55,7 @@ func setup(t *testing.T) *testEnv {
 			t.Fatal(err)
 		}
 	}
-	return &testEnv{a, a.Handler(t.TempDir()), User{1, "owner", true, true}, User{2, "other", false, false}, User{3, "viewer", false, false}}
+	return &testEnv{a, a.Handler(t.TempDir()), User{ID: 1, Username: "owner", Admin: true, Member: true}, User{ID: 2, Username: "other"}, User{ID: 3, Username: "viewer"}}
 }
 func (e *testEnv) req(t *testing.T, uid int, path, method string, body any) *httptest.ResponseRecorder {
 	t.Helper()
@@ -281,13 +281,13 @@ func TestReviewSplitsAndOptimisticEdits(t *testing.T) {
 	cat := int64(1)
 	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{&cat, -6000, ""}, {&cat, -3000, ""}})), 400)
 	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{&cat, -6000, "Food"}, {&cat, -4000, "Other"}})), 200)
-	status(t, e.req(t, 1, "/api/review", "POST", map[string]any{"items": []map[string]int64{{"id": id, "version": 2}}}), 200)
-	status(t, e.req(t, 1, path, "PUT", editBody(2, -10000, []Allocation{{&cat, -10000, ""}})), 409)
-	status(t, e.req(t, 1, path, "PUT", editBody(3, -10000, []Allocation{{&cat, -10000, ""}})), 200)
+	// Filling all split categories accepts automatically.
+	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{&cat, -10000, ""}})), 409)
+	status(t, e.req(t, 1, path, "PUT", editBody(2, -10000, []Allocation{{&cat, -10000, ""}})), 200)
 	var state string
 	e.a.DB.QueryRow("SELECT review_state FROM transactions WHERE id=?", id).Scan(&state)
-	if state != "pending_review" {
-		t.Fatal("edit did not reopen review")
+	if state != "approved" {
+		t.Fatal("categorized edit did not stay accepted")
 	}
 	if queryInt(e.a.DB, "SELECT SUM(amount_cents) FROM transactions") != -10000 || queryInt(e.a.DB, "SELECT SUM(amount_cents) FROM allocations") != -10000 {
 		t.Fatal("split doubled cash movement")
@@ -465,6 +465,7 @@ func TestAuthenticationCSRFAndRecovery(t *testing.T) {
 }
 func TestBackupRestoreAndRetention(t *testing.T) {
 	e := setup(t)
+	mcpToken(t, e, 1, true)
 	cat := int64(1)
 	seedTransaction(t, e, 1, -100, "2026-10-21", &cat)
 	var snapshot string
@@ -490,6 +491,11 @@ func TestBackupRestoreAndRetention(t *testing.T) {
 	defer restored.Close()
 	if queryInt(restored, "SELECT COUNT(*) FROM transactions") != 1 || queryInt(restored, "SELECT COUNT(*) FROM sessions") != 0 {
 		t.Fatal("restore data/session invariants failed")
+	}
+	for _, table := range []string{"mcp_tokens", "mcp_proposals", "mcp_oauth_clients", "mcp_oauth_requests", "mcp_oauth_codes", "mcp_access_tokens", "mcp_refresh_tokens"} {
+		if queryInt(restored, "SELECT COUNT(*) FROM "+table) != 0 {
+			t.Fatal("restore retained agent credentials", table)
+		}
 	}
 	if err := Restore(filepath.Join(t.TempDir(), "bad.sqlite"), filepath.Join(t.TempDir(), "missing.sqlite")); err == nil {
 		t.Fatal("missing backup accepted")

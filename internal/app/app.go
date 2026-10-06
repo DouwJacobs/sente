@@ -30,6 +30,13 @@ import (
 var schema string
 
 type App struct {
+	RequestRestart func()
+
+	mcpCursorOnce          sync.Once
+	mcpCursorKey           []byte
+	mcpCursorError         error
+	mcpOnce                sync.Once
+	mcpHTTP                http.Handler
 	fnbMu                  sync.Mutex
 	fnbRefreshAccount      atomic.Int64
 	fnbRefreshTransactions atomic.Bool
@@ -54,10 +61,11 @@ type App struct {
 	lock                   *os.File
 }
 type User struct {
-	ID       int64  `json:"id"`
-	Username string `json:"username"`
-	Admin    bool   `json:"admin"`
-	Member   bool   `json:"budget_member"`
+	MCPAccounts []int64 `json:"-"`
+	ID          int64   `json:"id"`
+	Username    string  `json:"username"`
+	Admin       bool    `json:"admin"`
+	Member      bool    `json:"budget_member"`
 }
 type authContext struct {
 	User User
@@ -170,6 +178,9 @@ func (a *App) ResetPassword(username, password string) error {
 		if _, err := tx.Exec("UPDATE users SET password=? WHERE id=?", string(digest), id); err != nil {
 			return err
 		}
+		if _, err := tx.Exec("DELETE FROM mcp_tokens WHERE user_id=?", id); err != nil {
+			return err
+		}
 		_, err := tx.Exec("DELETE FROM sessions WHERE user_id=?", id)
 		return err
 	})
@@ -267,6 +278,9 @@ func wrap(h handler) http.HandlerFunc {
 	}
 }
 func (a *App) can(q queryer, u User, account int64, edit bool) bool {
+	if !mcpAccountAllowed(u, account) {
+		return false
+	}
 	var role string
 	err := q.QueryRow("SELECT CASE WHEN a.household=1 AND ?=1 THEN 'editor' ELSE COALESCE(g.role,'') END FROM accounts a LEFT JOIN grants g ON g.account_id=a.id AND g.user_id=? WHERE a.id=?", u.Member, u.ID, account).Scan(&role)
 	return err == nil && (role == "editor" || (!edit && role == "viewer"))
@@ -294,10 +308,15 @@ func validDate(s string) bool {
 }
 func (a *App) Handler(static string) http.Handler {
 	mux := http.NewServeMux()
+	a.oauthRoutes(mux)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { send(w, map[string]string{"status": "ok"}) })
 	mux.HandleFunc("GET /api/setup", wrap(a.setupStatus))
 	mux.HandleFunc("POST /api/setup", wrap(a.setupAdmin))
 	mux.HandleFunc("POST /api/login", wrap(a.login))
+	mux.Handle("/api/mcp", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		a.mcpOnce.Do(func() { a.mcpHTTP = a.mcpHandler() })
+		a.mcpHTTP.ServeHTTP(w, r)
+	}))
 	mux.HandleFunc("/api/", a.protect(a.routes()))
 	fs := http.FileServer(http.Dir(static))
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -324,7 +343,16 @@ func (a *App) Handler(static string) http.Handler {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			w.Header().Set("Cache-Control", "no-store")
 		}
-		if r.Method != "GET" && r.Method != "HEAD" {
+		if strings.HasPrefix(r.URL.Path, "/oauth/") || strings.HasPrefix(r.URL.Path, "/.well-known/") {
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Referrer-Policy", "no-referrer")
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+		if r.URL.Path == "/mcp/authorize" {
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Referrer-Policy", "no-referrer")
+		}
+		if r.Method != "GET" && r.Method != "HEAD" && r.URL.Path != "/oauth/token" && r.URL.Path != "/oauth/register" && r.URL.Path != "/oauth/revoke" {
 			if origin := r.Header.Get("Origin"); origin != "" && origin != a.PublicURL {
 				wrap(func(http.ResponseWriter, *http.Request) error { return fail(403, "Origin not allowed") })(w, r)
 				return
@@ -397,8 +425,18 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) error {
 }
 func (a *App) routes() http.Handler {
 	m := http.NewServeMux()
+	a.workflowRoutes(m)
+	m.HandleFunc("GET /api/mcp/settings", wrap(a.mcpSettings))
+	m.HandleFunc("GET /api/mcp/authorization/{id}", wrap(a.mcpAuthorization))
+	m.HandleFunc("POST /api/mcp/authorization/{id}", wrap(a.decideMCPAuthorization))
+	m.HandleFunc("DELETE /api/mcp/connections/{id}", wrap(a.revokeMCPToken))
+	m.HandleFunc("PUT /api/mcp/connections/{id}/permissions", wrap(a.updateMCPPermissions))
+	m.HandleFunc("DELETE /api/mcp/tokens/{id}", wrap(a.revokeMCPToken))
+	m.HandleFunc("POST /api/mcp/proposals/{id}", wrap(a.decideMCPProposal))
+	m.HandleFunc("POST /api/mcp/proposals/batch", wrap(a.decideMCPProposalBatch))
 	m.HandleFunc("GET /api/network", wrap(a.networkStatus))
 	m.HandleFunc("PUT /api/network", wrap(a.saveNetwork))
+	m.HandleFunc("POST /api/network/restart", wrap(a.restartNetwork))
 	m.HandleFunc("GET /api/me", wrap(func(w http.ResponseWriter, r *http.Request) error {
 		v := r.Context().Value(authKey).(authContext)
 		send(w, map[string]any{"user": v.User, "csrf": v.CSRF})
@@ -445,6 +483,7 @@ func (a *App) routes() http.Handler {
 	m.HandleFunc("GET /api/transactions", wrap(a.transactions))
 	m.HandleFunc("PUT /api/transactions/{id}", wrap(a.editTransaction))
 	m.HandleFunc("POST /api/review", wrap(a.review))
+	m.HandleFunc("POST /api/transactions/seen", wrap(a.transactionSeen))
 	m.HandleFunc("POST /api/transfers", wrap(a.linkTransfer))
 	m.HandleFunc("DELETE /api/transfers/{id}", wrap(a.unlinkTransfer))
 	m.HandleFunc("GET /api/audit/{id}", wrap(a.transactionAudit))
@@ -455,6 +494,8 @@ func (a *App) routes() http.Handler {
 	m.HandleFunc("POST /api/imports/{id}/commit", wrap(a.commitImport))
 	m.HandleFunc("GET /api/periods", wrap(a.periods))
 	m.HandleFunc("GET /api/periods/{id}/targets", wrap(a.targetPages))
+	m.HandleFunc("GET /api/periods/{id}/budget-groups", wrap(a.budgetGroupPages))
+	m.HandleFunc("PUT /api/periods/{id}/budget", wrap(a.updateBudgetBuilder))
 	m.HandleFunc("POST /api/periods", wrap(a.createPeriod))
 	m.HandleFunc("POST /api/periods/{id}/preview", wrap(a.previewPeriod))
 	m.HandleFunc("PUT /api/periods/{id}", wrap(a.updatePeriod))
@@ -464,6 +505,7 @@ func (a *App) routes() http.Handler {
 	m.HandleFunc("GET /api/settings", wrap(a.settings))
 	m.HandleFunc("PUT /api/settings", wrap(a.updateSettings))
 	m.HandleFunc("GET /api/dashboard", wrap(a.dashboard))
+	m.HandleFunc("GET /api/search", wrap(a.globalSearch))
 	m.HandleFunc("GET /api/backups", wrap(a.backups))
 	m.HandleFunc("POST /api/backups", wrap(a.backupNow))
 	return m

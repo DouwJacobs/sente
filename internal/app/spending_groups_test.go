@@ -22,10 +22,10 @@ func TestIndependentSpendingGroups(t *testing.T) {
 	path := "/api/transactions/" + strconv.FormatInt(id, 10)
 	status(t, e.req(t, 3, path, "PUT", body), 403)
 	status(t, e.req(t, 1, path, "PUT", body), 200)
-	status(t, e.req(t, 1, "/api/review", "POST", map[string]any{"items": []map[string]any{{"id": id, "version": 2}}}), 200)
+	// A complete category is already accepted after the edit.
 	before := e.req(t, 1, "/api/dashboard?period=1", "GET", nil)
 	status(t, before, 200)
-	body["version"] = 3
+	body["version"] = 2
 	body["spending_group_id"] = 6 // The Transfer label does not designate a ledger transfer.
 	status(t, e.req(t, 1, path, "PUT", body), 200)
 	if queryInt(e.a.DB, "SELECT is_transfer FROM transactions WHERE id=?", id) != 0 {
@@ -33,17 +33,17 @@ func TestIndependentSpendingGroups(t *testing.T) {
 	}
 	var state string
 	e.a.DB.QueryRow("SELECT review_state FROM transactions WHERE id=?", id).Scan(&state)
-	if state != "pending_review" {
-		t.Fatal("classification edit must require review")
+	if state != "approved" {
+		t.Fatal("categorized group edit must remain accepted")
 	}
 	if queryInt(e.a.DB, "SELECT category_id FROM allocations WHERE transaction_id=?", id) != 1 {
 		t.Fatal("group edit changed category")
 	}
 	status(t, e.req(t, 1, path, "PUT", body), 409)
-	body["version"] = 4
+	body["version"] = 3
 	body["spending_group_id"] = 999
 	status(t, e.req(t, 1, path, "PUT", body), 400)
-	if queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", id) != 4 {
+	if queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", id) != 3 {
 		t.Fatal("invalid group changed transaction")
 	}
 	if queryInt(e.a.DB, "SELECT COUNT(*) FROM audit WHERE entity='transaction' AND details LIKE '%spending_group_id%'") != 2 {
@@ -111,7 +111,15 @@ func TestSpendingGroupMigrationPreservesLedger(t *testing.T) {
 	}
 	defer db.Close()
 	db.SetMaxOpenConns(1)
-	old := strings.ReplaceAll(schema, "spending_group_id INTEGER REFERENCES spending_groups(id),", "")
+	old := schema
+	for _, definition := range []string{"CREATE TABLE IF NOT EXISTS group_targets(", "CREATE UNIQUE INDEX IF NOT EXISTS group_target_scope", "CREATE TABLE IF NOT EXISTS budget_groups(", "CREATE UNIQUE INDEX IF NOT EXISTS budget_group_scope"} {
+		start := strings.Index(old, definition)
+		if start >= 0 {
+			end := start + strings.Index(old[start:], ";") + 1
+			old = old[:start] + old[end:]
+		}
+	}
+	old = strings.ReplaceAll(old, "spending_group_id INTEGER REFERENCES spending_groups(id),", "")
 	// A version-2 fixture predates built-in classification entirely.
 	builtinStart := strings.Index(old, "CREATE TABLE IF NOT EXISTS builtin_rules(")
 	if builtinStart >= 0 {
@@ -152,3 +160,52 @@ func TestFlatCategoryCreation(t *testing.T) {
 	status(t, e.req(t, 1, "/api/categories", "POST", map[string]any{"name": "groceries", "kind": "expense", "group_name": "Another group"}), 409)
 	status(t, e.req(t, 3, "/api/categories", "POST", map[string]any{"name": "Restricted", "kind": "expense"}), 403)
 }
+
+func TestCategorySpendingGroupAndBudgetInheritance(t *testing.T) {
+	e := setup(t)
+	res := e.req(t, 1, "/api/categories", "POST", map[string]any{"name": "Coffee & Treats", "kind": "expense", "spending_group_name": "Day-to-day"})
+	status(t, res, 200)
+	var catRes map[string]any
+	json.NewDecoder(res.Body).Decode(&catRes)
+	cid := num(catRes["id"])
+
+	dayGroup := queryInt(e.a.DB, "SELECT id FROM spending_groups WHERE name='Day-to-day'")
+	if queryInt(e.a.DB, "SELECT spending_group_id FROM categories WHERE id=?", cid) != dayGroup {
+		t.Fatalf("expected category to have spending_group_id=%d", dayGroup)
+	}
+
+	listRes := e.req(t, 1, "/api/categories?page=0&page_size=100&id="+strconv.FormatInt(cid, 10), "GET", nil)
+	status(t, listRes, 200)
+	var listData map[string]any
+	json.NewDecoder(listRes.Body).Decode(&listData)
+	items := listData["items"].([]any)
+	if len(items) == 0 {
+		t.Fatal("created category not found in list")
+	}
+	item := items[0].(map[string]any)
+	if num(item["spending_group_id"]) != dayGroup || item["spending_group_name"] != "Day-to-day" {
+		t.Fatalf("unexpected category spending group data: %+v", item)
+	}
+
+	recGroup := queryInt(e.a.DB, "SELECT id FROM spending_groups WHERE name='Recurring'")
+	ver := queryInt(e.a.DB, "SELECT version FROM categories WHERE id=?", cid)
+	status(t, e.req(t, 1, "/api/categories/"+strconv.FormatInt(cid, 10), "PUT", map[string]any{"name": "Coffee & Treats", "archived": false, "spending_group_id": recGroup, "version": ver}), 200)
+	if queryInt(e.a.DB, "SELECT spending_group_id FROM categories WHERE id=?", cid) != recGroup {
+		t.Fatal("category spending group was not updated")
+	}
+
+	pver := queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1")
+	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{
+		"version": pver,
+		"merge":   true,
+		"targets": []map[string]any{
+			{"category_id": cid, "amount_cents": 45000},
+		},
+	}), 200)
+
+	gtGroup := queryInt(e.a.DB, "SELECT spending_group_id FROM group_targets WHERE period_id=1 AND category_id=?", cid)
+	if gtGroup != recGroup {
+		t.Fatalf("expected budget target to inherit spending_group_id=%d, got %d", recGroup, gtGroup)
+	}
+}
+

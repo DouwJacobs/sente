@@ -1,0 +1,13 @@
+import {useEffect,useState} from 'react'
+import {api,money} from './api'
+import {GroupDot} from './Choices'
+import {Modal,Pagination} from './ui'
+import {DashboardTransactions} from './DashboardTransactions'
+import type {PageProps,Row} from './App'
+export function IncomeBucket({value,account,revision,notify}:{value:Row;account:string;revision:number;notify:PageProps['notify']}){
+ const[page,setPage]=useState(0),[categories,setCategories]=useState<Row[]>(value.income_categories||[]),[loading,setLoading]=useState(false),[selected,setSelected]=useState<Row|null>(null)
+ useEffect(()=>{setPage(0)},[value.period.id,account])
+ useEffect(()=>{if(page===0){setCategories(value.income_categories||[]);return}let alive=true;setLoading(true);api('/dashboard?period='+value.period.id+'&account='+account+'&income_page='+page+'&category_page=0&balance_page=0').then(v=>alive&&setCategories(v.income_categories)).catch(e=>notify(e.message,true)).finally(()=>alive&&setLoading(false));return()=>{alive=false}},[value,page,account,revision])
+ const figure=(amount:number)=><span className="budget-actual"><span className="budget-figure"><small>Received</small><strong>{money(amount)}</strong></span></span>
+ return <details className="spending-bucket income-bucket"><summary><span className="bucket-name"><GroupDot color="teal"/><span><strong>Income</strong><small>{value.income_category_total||0} categories · Transfers excluded</small></span></span>{figure(value.income_cents)}</summary><div className="bucket-categories" aria-busy={loading}>{!categories.length?<p className="footnote">No income in this period yet.</p>:categories.map(c=><button type="button" className="bucket-category" key={c.id} aria-label={c.name+' income transactions'} aria-haspopup="dialog" onClick={()=>setSelected(c)}><span className="bucket-category-name"><strong>{c.name}</strong></span>{figure(c.income_cents)}</button>)}<Pagination page={page} total={value.income_category_total||0} loading={loading} onChange={setPage}/></div>{selected&&<Modal size="wide" title={selected.name+' · Income'} onClose={()=>setSelected(null)}><section className="spending-detail-overview" aria-label="Category summary"><div className="spending-detail-heading"><h3>Category summary</h3><span className="muted">{value.period.name}</span></div>{figure((categories.find(c=>c.id===selected.id)||selected).income_cents)}</section><h3 className="spending-transactions-heading">Transactions</h3><DashboardTransactions scope={{income:true,period:String(value.period.id),account,category:selected.id?String(selected.id):'uncategorized'}} revision={revision} notify={notify}/></Modal>}</details>
+}

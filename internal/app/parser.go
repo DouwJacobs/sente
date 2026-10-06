@@ -18,6 +18,7 @@ import (
 )
 
 type SourceRow struct {
+	TransactionID         int64                `json:"transaction_id,omitempty"`
 	SourceBankRow         int                  `json:"source_bank_row,omitempty"`
 	SourceComponent       string               `json:"source_component,omitempty"`
 	SourceBankDescription string               `json:"source_bank_description,omitempty"`
@@ -35,12 +36,15 @@ type SourceRow struct {
 	FITID                 string               `json:"fitid,omitempty"`
 	Balance               *int64               `json:"balance_cents,omitempty"`
 	CategoryID            *int64               `json:"category_id,omitempty"`
+	MerchantID            *int64               `json:"merchant_id,omitempty"`
+	MerchantName          string               `json:"merchant_name,omitempty"`
 	Suggestion            string               `json:"suggestion,omitempty"`
 	Error                 string               `json:"error,omitempty"`
 	Duplicate             string               `json:"duplicate,omitempty"`
 	Candidates            []map[string]any     `json:"candidates,omitempty"`
 }
 type ParsedFile struct {
+	AccountName           string            `json:"account_name,omitempty"`
 	RunID                 string            `json:"run_id,omitempty"`
 	Coverage              *FNBCoverage      `json:"coverage,omitempty"`
 	ClassificationVersion string            `json:"classification_version,omitempty"`

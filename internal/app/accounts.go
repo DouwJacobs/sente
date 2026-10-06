@@ -13,9 +13,9 @@ const accessSQL = "(a.sync_hidden=0 AND (a.household=1 AND ?=1 OR EXISTS(SELECT 
 func (a *App) accounts(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
 	if r.URL.Query().Has("page") {
-		return a.metadataPage(w, r, "SELECT a.*,EXISTS(SELECT 1 FROM fnb_discoveries d WHERE d.account_id=a.id AND d.bank_id=a.bank_id AND d.user_id="+strconv.FormatInt(u.ID, 10)+" AND d.hidden=0) fnb_connected,CASE WHEN a.household=1 AND ?=1 THEN 'editor' ELSE (SELECT role FROM grants WHERE user_id=? AND account_id=a.id) END role FROM accounts a WHERE a.sync_hidden=0 AND "+accessSQL, []any{u.Member, u.ID, u.Member, u.ID}, "name", "name,id")
+		return a.metadataPage(w, r, "SELECT a.*,COALESCE((SELECT json_extract(i.data,'$.account_type') FROM imports i WHERE i.account_id=a.id AND COALESCE(json_extract(i.data,'$.account_type'),'')!='' AND COALESCE(json_extract(i.data,'$.error'),'')='' ORDER BY i.id DESC LIMIT 1),'') account_type,EXISTS(SELECT 1 FROM fnb_discoveries d WHERE d.account_id=a.id AND d.bank_id=a.bank_id AND d.user_id="+strconv.FormatInt(u.ID, 10)+" AND d.hidden=0) fnb_connected,CASE WHEN a.household=1 AND ?=1 THEN 'editor' ELSE (SELECT role FROM grants WHERE user_id=? AND account_id=a.id) END role FROM accounts a WHERE a.sync_hidden=0 AND "+accountAccessSQL(u), []any{u.Member, u.ID, u.Member, u.ID}, "name", "name,id")
 	}
-	v, err := data(a.DB, "SELECT a.*,EXISTS(SELECT 1 FROM fnb_discoveries d WHERE d.account_id=a.id AND d.bank_id=a.bank_id AND d.user_id="+strconv.FormatInt(u.ID, 10)+" AND d.hidden=0) fnb_connected,CASE WHEN a.household=1 AND ?=1 THEN 'editor' ELSE (SELECT role FROM grants WHERE user_id=? AND account_id=a.id) END role FROM accounts a WHERE a.sync_hidden=0 AND "+accessSQL+" ORDER BY a.name,a.id LIMIT 100", u.Member, u.ID, u.Member, u.ID)
+	v, err := data(a.DB, "SELECT a.*,COALESCE((SELECT json_extract(i.data,'$.account_type') FROM imports i WHERE i.account_id=a.id AND COALESCE(json_extract(i.data,'$.account_type'),'')!='' AND COALESCE(json_extract(i.data,'$.error'),'')='' ORDER BY i.id DESC LIMIT 1),'') account_type,EXISTS(SELECT 1 FROM fnb_discoveries d WHERE d.account_id=a.id AND d.bank_id=a.bank_id AND d.user_id="+strconv.FormatInt(u.ID, 10)+" AND d.hidden=0) fnb_connected,CASE WHEN a.household=1 AND ?=1 THEN 'editor' ELSE (SELECT role FROM grants WHERE user_id=? AND account_id=a.id) END role FROM accounts a WHERE a.sync_hidden=0 AND "+accountAccessSQL(u)+" ORDER BY a.name,a.id LIMIT 100", u.Member, u.ID, u.Member, u.ID)
 	if err != nil {
 		return err
 	}
@@ -203,9 +203,23 @@ func (a *App) grant(w http.ResponseWriter, r *http.Request) error {
 func (a *App) categories(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
 	if r.URL.Query().Has("page") {
-		return a.metadataPage(w, r, "SELECT c.*,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND "+accessSQL+") usage_count FROM categories c", []any{u.Member, u.ID}, "name", "kind,name,id")
+		query := "SELECT c.*,s.name spending_group_name,s.color spending_group_color,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND " + accountAccessSQL(u) + ") usage_count FROM categories c LEFT JOIN spending_groups s ON s.id=c.spending_group_id WHERE 1=1"
+		if r.URL.Query().Get("kind") == "expense" {
+			query += " AND c.kind='expense'"
+		}
+		if r.URL.Query().Get("active") == "1" {
+			query += " AND c.archived=0"
+		}
+		if g := r.URL.Query().Get("spending_group"); g != "" {
+			if g == "0" || g == "unassigned" {
+				query += " AND c.spending_group_id IS NULL"
+			} else if gid, err := strconv.ParseInt(g, 10, 64); err == nil && gid > 0 {
+				query += " AND c.spending_group_id=" + strconv.FormatInt(gid, 10)
+			}
+		}
+		return a.metadataPage(w, r, query, []any{u.Member, u.ID}, "name", "kind,name,id")
 	}
-	v, err := data(a.DB, "SELECT c.*,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND "+accessSQL+") usage_count FROM categories c ORDER BY c.kind,c.name,c.id LIMIT 100", u.Member, u.ID)
+	v, err := data(a.DB, "SELECT c.*,s.name spending_group_name,s.color spending_group_color,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND "+accountAccessSQL(u)+") usage_count FROM categories c LEFT JOIN spending_groups s ON s.id=c.spending_group_id ORDER BY c.kind,c.name,c.id LIMIT 100", u.Member, u.ID)
 	if err != nil {
 		return err
 	}
@@ -216,35 +230,77 @@ func (a *App) createCategory(w http.ResponseWriter, r *http.Request) error {
 	if err := requireMember(Current(r)); err != nil {
 		return err
 	}
-	var b struct {
-		Name  string `json:"name"`
-		Group string `json:"group_name"`
-		Kind  string `json:"kind"`
-	}
+	var b categoryInput
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	if strings.TrimSpace(b.Name) == "" || len(b.Name) > 80 || (b.Kind != "expense" && b.Kind != "income") {
-		return fail(400, "Provide a category name and expense/income type")
-	}
 	var id int64
-	err := a.write(func(tx *sql.Tx) error {
-		if queryInt(tx, "SELECT COUNT(*) FROM categories WHERE lower(name)=lower(?)", strings.TrimSpace(b.Name)) > 0 {
-			return fail(409, "Category already exists")
-		}
-		res, err := tx.Exec("INSERT INTO categories(name,group_name,kind) VALUES(?,'',?)", strings.TrimSpace(b.Name), b.Kind)
-		if err != nil {
-			return err
-		}
-		id, _ = res.LastInsertId()
-		return nil
-	})
+	err := a.write(func(tx *sql.Tx) error { var err error; id, err = createCategoryTx(tx, Current(r), b); return err })
 	if err != nil {
 		return err
 	}
 	send(w, map[string]any{"id": id})
 	return nil
 }
+
+type categoryInput struct {
+	Name              string `json:"name"`
+	Group             string `json:"group_name,omitempty"`
+	Kind              string `json:"kind"`
+	SpendingGroupID   *int64 `json:"spending_group_id,omitempty"`
+	SpendingGroupName string `json:"spending_group_name,omitempty"`
+}
+
+func createCategoryTx(tx *sql.Tx, u User, b categoryInput) (int64, error) {
+	if err := requireMember(u); err != nil {
+		return 0, err
+	}
+	if strings.TrimSpace(b.Name) == "" || len(b.Name) > 80 || (b.Kind != "expense" && b.Kind != "income") {
+		return 0, fail(400, "Provide a category name and expense/income type")
+	}
+	if queryInt(tx, "SELECT COUNT(*) FROM categories WHERE finance_normalize(name)=finance_normalize(?)", strings.TrimSpace(b.Name)) > 0 {
+		return 0, fail(409, "Category already exists")
+	}
+	var groupID *int64
+	if b.SpendingGroupID != nil && *b.SpendingGroupID > 0 {
+		if queryInt(tx, "SELECT COUNT(*) FROM spending_groups WHERE id=?", *b.SpendingGroupID) != 1 {
+			return 0, fail(400, "Choose a valid spending group")
+		}
+		groupID = b.SpendingGroupID
+	} else if strings.TrimSpace(b.SpendingGroupName) != "" {
+		var gid int64
+		err := tx.QueryRow("SELECT id FROM spending_groups WHERE name=? COLLATE NOCASE", strings.TrimSpace(b.SpendingGroupName)).Scan(&gid)
+		if err == nil {
+			groupID = &gid
+		} else if err != sql.ErrNoRows {
+			return 0, err
+		}
+	}
+	if groupID == nil {
+		if b.Kind == "income" {
+			var gid int64
+			if err := tx.QueryRow("SELECT id FROM spending_groups WHERE name='Income'").Scan(&gid); err == nil {
+				groupID = &gid
+			}
+		} else {
+			var gid int64
+			if err := tx.QueryRow("SELECT id FROM spending_groups WHERE name='Day-to-day'").Scan(&gid); err == nil {
+				groupID = &gid
+			}
+		}
+	}
+	res, err := tx.Exec("INSERT INTO categories(name,group_name,kind,spending_group_id) VALUES(?,'',?,?)", strings.TrimSpace(b.Name), b.Kind, groupID)
+	if err != nil {
+		return 0, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	b.SpendingGroupID = groupID
+	return id, audit(tx, u, nil, "category", id, "created", b)
+}
+
 func (a *App) manageAccounts(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
 	if err := requireAdmin(u); err != nil {
@@ -286,6 +342,9 @@ func (a *App) changePassword(w http.ResponseWriter, r *http.Request) error {
 	cookie, _ := r.Cookie("finance_session")
 	err = a.write(func(tx *sql.Tx) error {
 		if _, err := tx.Exec("UPDATE users SET password=? WHERE id=?", string(digest), u.ID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec("DELETE FROM mcp_tokens WHERE user_id=?", u.ID); err != nil {
 			return err
 		}
 		_, err := tx.Exec("DELETE FROM sessions WHERE user_id=? AND token!=?", u.ID, hash(cookie.Value))
@@ -334,6 +393,9 @@ func (a *App) updateUser(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if b.Disabled {
+			if _, err := tx.Exec("DELETE FROM mcp_tokens WHERE user_id=?", id); err != nil {
+				return err
+			}
 			if _, err := tx.Exec("DELETE FROM sessions WHERE user_id=?", id); err != nil {
 				return err
 			}

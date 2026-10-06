@@ -10,11 +10,11 @@ type ruleInput struct {
 	AccountID       int64  `json:"account_id"`
 	Pattern         string `json:"pattern"`
 	CategoryID      int64  `json:"category_id"`
-	SpendingGroupID *int64 `json:"spending_group_id"`
-	Direction       string `json:"direction"`
-	Priority        int    `json:"priority"`
-	Enabled         *bool  `json:"enabled"`
-	Version         int64  `json:"version"`
+	SpendingGroupID *int64 `json:"spending_group_id,omitempty"`
+	Direction       string `json:"direction,omitempty"`
+	Priority        int    `json:"priority,omitempty"`
+	Enabled         *bool  `json:"enabled,omitempty"`
+	Version         int64  `json:"version,omitempty"`
 }
 
 func (b *ruleInput) validate(q queryer) error {
@@ -27,6 +27,9 @@ func (b *ruleInput) validate(q queryer) error {
 	}
 	if b.Direction != "any" && b.Direction != "debit" && b.Direction != "credit" {
 		return fail(400, "Choose any, debit or credit direction")
+	}
+	if b.active() && queryInt(q, "SELECT archived FROM categories WHERE id=?", b.CategoryID) == 1 {
+		return fail(400, "Restore the category before enabling a rule")
 	}
 	if queryInt(q, "SELECT COUNT(*) FROM categories WHERE id=?", b.CategoryID) == 0 {
 		return fail(400, "Choose a category")
@@ -48,7 +51,7 @@ func (a *App) rules(w http.ResponseWriter, r *http.Request) error {
 		return a.rulePages(w, r)
 	}
 	u := Current(r)
-	v, err := data(a.DB, "SELECT rules.*,c.name category_name,a.name account_name,s.name spending_group_name FROM rules JOIN accounts a ON a.id=rules.account_id JOIN categories c ON c.id=rules.category_id LEFT JOIN spending_groups s ON s.id=rules.spending_group_id WHERE "+accessSQL+" ORDER BY priority DESC,rules.id LIMIT 100", u.Member, u.ID)
+	v, err := data(a.DB, "SELECT rules.*,c.name category_name,a.name account_name,s.name spending_group_name FROM rules JOIN accounts a ON a.id=rules.account_id JOIN categories c ON c.id=rules.category_id LEFT JOIN spending_groups s ON s.id=rules.spending_group_id WHERE "+accountAccessSQL(u)+" ORDER BY priority DESC,rules.id LIMIT 100", u.Member, u.ID)
 	if err != nil {
 		return err
 	}
@@ -126,7 +129,7 @@ func (a *App) writeRule(tx *sql.Tx, u User, idRef *int64, input *ruleInput) erro
 
 type ruleBatchItem struct {
 	ID      int64     `json:"id"`
-	Version int64     `json:"version"`
+	Version int64     `json:"version,omitempty"`
 	Rule    ruleInput `json:"rule"`
 }
 
@@ -149,7 +152,7 @@ func (a *App) batchRules(w http.ResponseWriter, r *http.Request) error {
 			}
 			input := b.Rules[0].Rule
 			b.Rules = nil
-			accounts, err := data(tx, "SELECT a.id FROM accounts a WHERE "+accessSQL+" AND (a.household=1 AND ?=1 OR EXISTS(SELECT 1 FROM grants g WHERE g.account_id=a.id AND g.user_id=? AND g.role='editor')) ORDER BY a.id", u.Member, u.ID, u.Member, u.ID)
+			accounts, err := data(tx, "SELECT a.id FROM accounts a WHERE "+accountAccessSQL(u)+" AND (a.household=1 AND ?=1 OR EXISTS(SELECT 1 FROM grants g WHERE g.account_id=a.id AND g.user_id=? AND g.role='editor')) ORDER BY a.id", u.Member, u.ID, u.Member, u.ID)
 			if err != nil {
 				return err
 			}
@@ -211,7 +214,7 @@ func (a *App) deleteRule(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
 	id := parseID(r)
 	var b struct {
-		Version int64 `json:"version"`
+		Version int64 `json:"version,omitempty"`
 	}
 	if err := decode(r, &b); err != nil {
 		return err
@@ -249,10 +252,10 @@ type classificationRule struct {
 	Pattern           string `json:"pattern"`
 	CategoryID        int64  `json:"category_id"`
 	CategoryName      string `json:"category_name"`
-	SpendingGroupID   *int64 `json:"spending_group_id"`
+	SpendingGroupID   *int64 `json:"spending_group_id,omitempty"`
 	SpendingGroupName string `json:"spending_group_name"`
-	Direction         string `json:"direction"`
-	Priority          int    `json:"priority"`
+	Direction         string `json:"direction,omitempty"`
+	Priority          int    `json:"priority,omitempty"`
 }
 
 func loadRules(q queryer, account int64) ([]classificationRule, error) {
@@ -330,28 +333,27 @@ func classify(row *SourceRow, rules []classificationRule) {
 type rulePreviewInput struct {
 	AccountID   int64      `json:"account_id"`
 	Description string     `json:"description"`
-	Direction   string     `json:"direction"`
+	Direction   string     `json:"direction,omitempty"`
 	Draft       *ruleInput `json:"draft"`
 	ReplaceID   int64      `json:"replace_id"`
 	AllCurrent  bool       `json:"all_current"`
 }
 
-func (a *App) previewRuleRow(tx *sql.Tx, u User, b rulePreviewInput) (SourceRow, error) {
-	var row SourceRow
-	if !ruleAccess(tx, a, u, b.AccountID) {
-		return SourceRow{}, fail(403, "Account editor access required")
+func (a *App) previewRuleSet(tx *sql.Tx, u User, b rulePreviewInput, editor bool) ([]classificationRule, error) {
+	if !a.can(tx, u, b.AccountID, editor) || queryInt(tx, "SELECT COUNT(*) FROM accounts WHERE id=? AND sync_hidden=0", b.AccountID) != 1 {
+		return nil, fail(403, "Account editor access required")
 	}
 	rules, err := loadRules(tx, b.AccountID)
 	if err != nil {
-		return SourceRow{}, err
+		return nil, err
 	}
 	if b.ReplaceID != 0 {
 		if b.ReplaceID < 0 {
 			if queryInt(tx, "SELECT COUNT(*) FROM builtin_rules WHERE id=?", -b.ReplaceID) != 1 {
-				return SourceRow{}, fail(404, "Rule not found")
+				return nil, fail(404, "Rule not found")
 			}
 		} else if queryInt(tx, "SELECT COUNT(*) FROM rules WHERE id=? AND account_id=?", b.ReplaceID, b.AccountID) != 1 {
-			return SourceRow{}, fail(400, "Preview the rule in its saved account")
+			return nil, fail(400, "Preview the rule in its saved account")
 		}
 		filtered := rules[:0]
 		for _, v := range rules {
@@ -363,10 +365,10 @@ func (a *App) previewRuleRow(tx *sql.Tx, u User, b rulePreviewInput) (SourceRow,
 	}
 	if b.Draft != nil && b.Draft.active() {
 		if b.Draft.AccountID != b.AccountID {
-			return SourceRow{}, fail(400, "Draft account does not match")
+			return nil, fail(400, "Draft account does not match")
 		}
 		if err := b.Draft.validate(tx); err != nil {
-			return SourceRow{}, err
+			return nil, err
 		}
 		v := classificationRule{Builtin: b.ReplaceID < 0, ID: b.ReplaceID, Pattern: b.Draft.Pattern, CategoryID: b.Draft.CategoryID, SpendingGroupID: b.Draft.SpendingGroupID, Direction: b.Draft.Direction, Priority: b.Draft.Priority}
 		tx.QueryRow("SELECT name FROM categories WHERE id=?", v.CategoryID).Scan(&v.CategoryName)
@@ -385,13 +387,22 @@ func (a *App) previewRuleRow(tx *sql.Tx, u User, b rulePreviewInput) (SourceRow,
 		copy(rules[at+1:], rules[at:])
 		rules[at] = v
 	}
-	row = SourceRow{Description: b.Description, Amount: -1}
+	return rules, nil
+}
+
+func (a *App) previewRuleRow(tx *sql.Tx, u User, b rulePreviewInput) (SourceRow, error) {
+	rules, err := a.previewRuleSet(tx, u, b, true)
+	if err != nil {
+		return SourceRow{}, err
+	}
+	row := SourceRow{Description: b.Description, Amount: -1}
 	if b.Direction == "credit" {
 		row.Amount = 1
 	}
 	classify(&row, rules)
 	return row, nil
 }
+
 func (a *App) previewRule(w http.ResponseWriter, r *http.Request) error {
 	var b rulePreviewInput
 	if err := decode(r, &b); err != nil {
@@ -411,7 +422,7 @@ func (a *App) previewRule(w http.ResponseWriter, r *http.Request) error {
 		if b.Draft == nil || b.ReplaceID > 0 {
 			return fail(400, "Choose a new or built-in rule to check across accounts")
 		}
-		accounts, err := data(tx, "SELECT a.id FROM accounts a WHERE "+accessSQL+" AND (a.household=1 AND ?=1 OR EXISTS(SELECT 1 FROM grants g WHERE g.account_id=a.id AND g.user_id=? AND g.role='editor')) ORDER BY a.id", u.Member, u.ID, u.Member, u.ID)
+		accounts, err := data(tx, "SELECT a.id FROM accounts a WHERE "+accountAccessSQL(u)+" AND (a.household=1 AND ?=1 OR EXISTS(SELECT 1 FROM grants g WHERE g.account_id=a.id AND g.user_id=? AND g.role='editor')) ORDER BY a.id", u.Member, u.ID, u.Member, u.ID)
 		if err != nil {
 			return err
 		}
