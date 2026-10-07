@@ -1,7 +1,7 @@
 import { ListStatus, ListNavigation, PagedSelect } from "../../PagedList";
 import { Plus, Pencil } from "lucide-react";
 import { api } from "../../api";
-import { Button, Field, Form, Badge } from "../../ui";
+import { ActionMenu, Button, Field, Form, Badge } from "../../ui";
 import { useTask } from "../../shared/useTask";
 import { type Row } from "../../shared/types";
 import type { useUserAccess } from "./useUserAccess";
@@ -22,30 +22,9 @@ export function UserAccessSettings({
   busy: boolean;
   run: ReturnType<typeof useTask>["run"];
 }) {
-  const {
-    userList,
-    grantList,
-    editUser,
-    setEditUser,
-    addUser,
-    setAddUser,
-    username,
-    setUsername,
-    password,
-    setPassword,
-    member,
-    setMember,
-    admin,
-    setAdmin,
-    grantUser,
-    setGrantUser,
-    grantAccount,
-    setGrantAccount,
-    role,
-    setRole,
-    userNameError,
-    setUserNameError,
-  } = access;
+  const { userList, grantList, setEditUser, setAddUser,
+    grantUser, setGrantUser, grantAccount, setGrantAccount, role, setRole,
+    currentUserID, setSecurityUser } = access;
   return (
     <>
       <section className="panel">
@@ -71,13 +50,30 @@ export function UserAccessSettings({
               >
                 <Pencil size={16} />
               </Button>
+              {u.id !== currentUserID && (
+                <ActionMenu label={"Actions for user " + u.username}>
+                  <Button
+                    variant="quiet" disabled={busy}
+                    onClick={() => setSecurityUser({ user: { ...u }, action: "password" })}
+                  >
+                    Reset password
+                  </Button>
+                  <Button
+                    variant="danger" disabled={busy}
+                    onClick={() => setSecurityUser({ user: { ...u }, action: "delete" })}
+                  >
+                    Delete user
+                  </Button>
+                </ActionMenu>
+              )}
             </div>
           </div>
         ))}
         <ListNavigation list={userList} />
         <p className="footnote">
-          Household members can edit shared accounts and budgets. Recover a
-          password using the offline administrator command.
+          Household members can edit shared accounts and budgets. Use a user’s
+          actions to reset their password or delete their access. Change your own
+          password in Security.
         </p>
       </section>
       <section className="panel">

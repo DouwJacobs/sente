@@ -2,7 +2,6 @@ package app
 
 import (
 	"database/sql"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -105,44 +104,6 @@ func (a *App) updateAccount(w http.ResponseWriter, r *http.Request) error {
 	success(w)
 	return nil
 }
-func (a *App) users(w http.ResponseWriter, r *http.Request) error {
-	if err := requireAdmin(Current(r)); err != nil {
-		return err
-	}
-	if r.URL.Query().Has("page") {
-		return a.metadataPage(w, r, "SELECT id,username,admin,budget_member,disabled,version FROM users", []any{}, "username", "username,id")
-	}
-	v, err := data(a.DB, "SELECT id,username,admin,budget_member,disabled,version FROM users ORDER BY username LIMIT 100")
-	if err != nil {
-		return err
-	}
-	send(w, v)
-	return nil
-}
-func (a *App) createUser(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
-	if err := requireAdmin(u); err != nil {
-		return err
-	}
-	var b struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Admin    bool   `json:"admin"`
-		Member   bool   `json:"budget_member"`
-	}
-	if err := decode(r, &b); err != nil {
-		return err
-	}
-	id, err := a.CreateUser(b.Username, b.Password, b.Admin, b.Member)
-	if err != nil {
-		return err
-	}
-	if err := audit(a.DB, u, nil, "user", id, "created", map[string]any{"username": b.Username, "admin": b.Admin, "budget_member": b.Member}); err != nil {
-		return err
-	}
-	send(w, map[string]int64{"id": id})
-	return nil
-}
 func (a *App) grants(w http.ResponseWriter, r *http.Request) error {
 	if err := requireAdmin(Current(r)); err != nil {
 		return err
@@ -174,7 +135,7 @@ func (a *App) grant(w http.ResponseWriter, r *http.Request) error {
 		return fail(400, "Role must be viewer or editor, or empty to revoke")
 	}
 	err := a.write(func(tx *sql.Tx) error {
-		if queryInt(tx, "SELECT COUNT(*) FROM users WHERE id=?", b.UserID) == 0 || queryInt(tx, "SELECT COUNT(*) FROM accounts WHERE id=?", b.AccountID) == 0 {
+		if queryInt(tx, "SELECT COUNT(*) FROM users WHERE id=? AND deleted_at IS NULL", b.UserID) == 0 || queryInt(tx, "SELECT COUNT(*) FROM accounts WHERE id=?", b.AccountID) == 0 {
 			return fail(404, "User or account not found")
 		}
 		var household bool
@@ -290,99 +251,6 @@ func (a *App) manageAccounts(w http.ResponseWriter, r *http.Request) error {
 	send(w, v)
 	return nil
 }
-func (a *App) changePassword(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
-	var b struct {
-		Old string `json:"old_password"`
-		New string `json:"new_password"`
-	}
-	if err := decode(r, &b); err != nil {
-		return err
-	}
-	if len(b.New) < 12 || len(b.New) > 72 {
-		return fail(400, "New password must be 12–72 bytes")
-	}
-	var old string
-	if err := a.DB.QueryRow("SELECT password FROM users WHERE id=?", u.ID).Scan(&old); err != nil {
-		return err
-	}
-	if bcrypt.CompareHashAndPassword([]byte(old), []byte(b.Old)) != nil {
-		return fail(400, "Current password is incorrect")
-	}
-	digest, err := bcrypt.GenerateFromPassword([]byte(b.New), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	cookie, _ := r.Cookie("finance_session")
-	err = a.write(func(tx *sql.Tx) error {
-		if _, err := tx.Exec("UPDATE users SET password=? WHERE id=?", string(digest), u.ID); err != nil {
-			return err
-		}
-		if _, err := tx.Exec("DELETE FROM mcp_tokens WHERE user_id=?", u.ID); err != nil {
-			return err
-		}
-		_, err := tx.Exec("DELETE FROM sessions WHERE user_id=? AND token!=?", u.ID, hash(cookie.Value))
-		return err
-	})
-	if err != nil {
-		return err
-	}
-	success(w)
-	return nil
-}
-
-func (a *App) updateUser(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
-	if err := requireAdmin(u); err != nil {
-		return err
-	}
-	id := parseID(r)
-	var b struct {
-		Username string `json:"username"`
-		Admin    bool   `json:"admin"`
-		Member   bool   `json:"budget_member"`
-		Disabled bool   `json:"disabled"`
-		Version  int64  `json:"version"`
-	}
-	if err := decode(r, &b); err != nil {
-		return err
-	}
-	b.Username = strings.TrimSpace(b.Username)
-	if len(b.Username) < 2 || len(b.Username) > 80 {
-		return fail(400, "Username must be 2–80 characters")
-	}
-	err := a.write(func(tx *sql.Tx) error {
-		var wasAdmin bool
-		if err := tx.QueryRow("SELECT admin FROM users WHERE id=?", id).Scan(&wasAdmin); err != nil {
-			return fail(404, "User not found")
-		}
-		if wasAdmin && (!b.Admin || b.Disabled) && queryInt(tx, "SELECT COUNT(*) FROM users WHERE admin=1 AND disabled=0 AND id!=?", id) == 0 {
-			return fail(400, "Keep at least one enabled administrator")
-		}
-		res, err := tx.Exec("UPDATE users SET username=?,admin=?,budget_member=?,disabled=?,version=version+1 WHERE id=? AND version=?", b.Username, b.Admin, b.Member, b.Disabled, id, b.Version)
-		if err != nil {
-			return fail(409, "Username already exists")
-		}
-		if err := affected(res); err != nil {
-			return err
-		}
-		if b.Disabled {
-			if _, err := tx.Exec("DELETE FROM mcp_tokens WHERE user_id=?", id); err != nil {
-				return err
-			}
-			if _, err := tx.Exec("DELETE FROM sessions WHERE user_id=?", id); err != nil {
-				return err
-			}
-		}
-		return audit(tx, u, nil, "user", id, "updated", b)
-	})
-	if err != nil {
-		return err
-	}
-	success(w)
-	return nil
-}
-
 func (a *App) accountVisibility(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
 	if err := requireAdmin(u); err != nil {

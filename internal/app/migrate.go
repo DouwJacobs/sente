@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const schemaVersion = 19
+const schemaVersion = 20
 
 func migrate(db *sql.DB) error {
 	if _, err := db.Exec("PRAGMA foreign_keys=ON;PRAGMA journal_mode=WAL;PRAGMA busy_timeout=5000"); err != nil {
@@ -18,6 +18,7 @@ func migrate(db *sql.DB) error {
 	}
 	// Upgrade the initial development schema without replacing any source data.
 	for _, column := range []struct{ table, name, definition string }{
+		{"users", "deleted_at", "TEXT"},
 		{"imports", "committed_at", "TEXT"},
 		{"merchants", "logo_data", "TEXT NOT NULL DEFAULT ''"},
 		{"merchants", "version", "INTEGER NOT NULL DEFAULT 1"},

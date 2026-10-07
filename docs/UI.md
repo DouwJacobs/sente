@@ -374,3 +374,6 @@ Automated synthetic responsive and keyboard checks are the verification method u
 Shared modal focus: Field marks an explicitly autofocus control; Modal focuses it after showModal opens the dialog. Direct controls such as search use the same data-autofocus marker. Captured dialog cleanup closes the native overlay and preserves focus restoration.
 
 2026-10-07: Product branding is Sente on onboarding, sign-in, sidebar, OAuth consent and browser metadata. Configurable household names remain separate; signed-in titles use `<household> · Sente`. Existing theme/controls remain unchanged.
+
+
+2026-10-07 user security: Users & access provides per-user Reset password/Delete user actions for other users. Reset opens a shared dialog with new password and dependent confirmation and explains session/agent revocation. Delete explains permanent access removal and retained financial history/attribution, and requires the exact saved username in a validated field. Cancel is non-destructive; closing during a request is blocked. Own password changes remain in Security with current/new/confirmation fields and explicit copy that the current session stays active while other sessions and agent connections are revoked. Errors use shared inline fields or overlay toasts. Deleted usernames stay reserved for historical attribution; deleting oneself requires a different administrator.

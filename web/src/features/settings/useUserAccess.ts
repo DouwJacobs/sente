@@ -5,6 +5,7 @@ export function useUserAccess(data: PageProps["data"], revision: number) {
   const userList = usePagedList(data.user.admin ? "/users" : "", revision);
   const grantList = usePagedList(data.user.admin ? "/grants" : "", revision);
   const [editUser, setEditUser] = useState<Row | null>(null);
+  const [securityUser, setSecurityUser] = useState<{ user: Row; action: "password" | "delete" } | null>(null);
   const [addUser, setAddUser] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +17,9 @@ export function useUserAccess(data: PageProps["data"], revision: number) {
   const [userNameError, setUserNameError] = useState("");
   useEffect(() => setUserNameError(""), [addUser, editUser?.id]);
   return {
+    currentUserID: data.user.id,
+    securityUser,
+    setSecurityUser,
     userList,
     grantList,
     editUser,
