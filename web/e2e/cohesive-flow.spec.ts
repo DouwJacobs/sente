@@ -41,7 +41,8 @@ test('clean export automatically opens out-of-period transactions for review and
  await page.locator('input[type=file]').setInputFiles({name:'synthetic-cohesive.csv',mimeType:'text/csv',buffer:Buffer.from(csv)})
  await page.getByRole('button',{name:'Import statement',exact:true}).click();await expect(page.getByRole('tab',{name:'All transactions',exact:true})).toHaveAttribute('aria-selected','true')
  await expect(page.getByLabel('Budget period',{exact:true})).toHaveValue('')
- const entry=page.locator('.transaction-detail').filter({hasText:description});await expect(entry).toContainText('Accepted');await expect(entry).toContainText('Unseen')
+ const entry=page.locator('.transaction-detail').filter({hasText:description});await expect(entry).toContainText('Unseen');await expect(entry).not.toContainText('Needs category')
+ const saved=await page.evaluate(async(description)=>{const rows=await fetch('/api/transactions?query='+encodeURIComponent(description)).then(r=>r.json());return rows.items.find((row:{description:string})=>row.description===description)},description);expect(saved.review_state).toBe('approved');expect(saved.seen).toBeFalsy()
  await page.getByRole('tab',{name:/Needs review/}).click();await expect(entry).toHaveCount(0)
 
 })
@@ -55,10 +56,15 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`empty st
  await nav.getByRole('button',{name:'Transactions',exact:true}).click()
  for(const tab of ['All transactions','Needs review']){
   await page.getByRole('tab',{name:new RegExp(tab)}).click();await expect(page.locator('.empty-description')).toContainText('7 imports need attention.')
-  const text=await page.locator('.empty-description').boundingBox(),button=await page.locator('.empty-actions').getByRole('button',{name:'Resolve import issues'}).boundingBox();expect(button!.y-text!.y-text!.height).toBeGreaterThanOrEqual(15)
+  await expect.poll(async()=>page.evaluate(()=>{
+   const text=document.querySelector('.empty-description')
+   const button=Array.from(document.querySelectorAll('.empty-actions button')).find(b=>b.textContent?.includes('Resolve import issues'))
+   if(!text||!button||!text.getClientRects().length||!button.getClientRects().length)return -1
+   return button.getBoundingClientRect().y-text.getBoundingClientRect().bottom
+  })).toBeGreaterThanOrEqual(15)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  }
- await nav.getByRole('button',{name:'Accounts',exact:true}).click();await page.getByRole('button',{name:'Add account',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible()
+ await nav.getByRole('button',{name:'Accounts',exact:true}).click();await page.getByLabel('Account management',{exact:true}).click();await page.getByRole('button',{name:'Add account',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible()
  expect(await page.getByRole('dialog').evaluate(el=>getComputedStyle(el,'::backdrop').backgroundColor)).toBe('rgba(16, 18, 23, 0.48)')
 })
 

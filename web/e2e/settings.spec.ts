@@ -8,6 +8,7 @@ for(const width of [1440,360])test(`settings navigation keeps account views clea
  async function navigate(name:string){if(width===360&&name!=='Accounts'){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name,exact:true}).click()}else await page.getByRole('navigation',{name:width===360?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name,exact:true}).click()}
  await navigate('Accounts')
  await expect(page.getByRole('heading',{name:'FNB connection',exact:true})).toHaveCount(0)
+ await page.getByLabel('Account management',{exact:true}).click()
  await expect(page.getByRole('button',{name:'Add account',exact:true})).toBeVisible()
  await page.getByRole('button',{name:'Bank connection',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible()
@@ -32,7 +33,7 @@ for(const width of [1440,360])test(`settings navigation keeps account views clea
  await expect(page.getByRole('button',{name:'Change appearance',exact:true})).toHaveCount(0)
 })
 
-test('ordinary users see only General and Security without management requests',async({page})=>{
+test('ordinary users see General, MCP and Security without management requests',async({page})=>{
  const management:string[]=[]
  page.on('request',request=>{if(/\/api\/(users|grants|backups|accounts\/manage|fnb)(?:$|\?)/.test(new URL(request.url()).pathname))management.push(request.url())})
  await page.route('**/api/me',async route=>{const response=await route.fetch();if(response.status()===200){const body=await response.json();await route.fulfill({response,json:{...body,user:{...body.user,admin:false}}})}else await route.fulfill({response})})
@@ -41,7 +42,8 @@ test('ordinary users see only General and Security without management requests',
  await page.getByRole('button',{name:'Sign in',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
  await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()
- await expect(page.getByRole('tab')).toHaveCount(2)
+ await expect(page.getByRole('tab')).toHaveCount(3)
+ await expect(page.getByRole('tab',{name:'MCP',exact:true})).toBeVisible()
  await expect(page.getByRole('tab',{name:'Banking',exact:true})).toHaveCount(0)
  await page.getByRole('tab',{name:'Security',exact:true}).click()
  await expect(page.getByLabel('Current password',{exact:true})).toBeVisible()

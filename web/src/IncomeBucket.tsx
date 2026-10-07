@@ -3,7 +3,7 @@ import {api,money} from './api'
 import {GroupDot} from './Choices'
 import {Modal,Pagination} from './ui'
 import {DashboardTransactions} from './DashboardTransactions'
-import type {PageProps,Row} from './App'
+import type {PageProps,Row} from './shared/types'
 export function IncomeBucket({value,account,revision,notify}:{value:Row;account:string;revision:number;notify:PageProps['notify']}){
  const[page,setPage]=useState(0),[categories,setCategories]=useState<Row[]>(value.income_categories||[]),[loading,setLoading]=useState(false),[selected,setSelected]=useState<Row|null>(null)
  useEffect(()=>{setPage(0)},[value.period.id,account])

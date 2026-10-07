@@ -4,7 +4,8 @@ import {Plus,Pencil,Trash2} from 'lucide-react'
 import {api} from './api'
 import {Button,Field,Form,Badge,Empty,Modal,validateFields,Pagination,Loading} from './ui'
 import {CreateCategory} from './Choices'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 
 function groupedRules(rules:Row[]){
  const groups=new Map<string,Row[]>()

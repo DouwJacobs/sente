@@ -2,7 +2,8 @@ import {useRef,useState} from 'react'
 import {api} from './api'
 import {Button,Field,Form,Modal,Loading} from './ui'
 import {parseAccountDiscovery,accountNameError,accountNumberError} from './account-discovery'
-import {useTask,type PageProps} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps} from './shared/types'
 
 type Draft={name:string;bank_id:string;household:boolean;imported:boolean;error:string}
 export function AccountDiscovery({data,refresh,notify}:PageProps){

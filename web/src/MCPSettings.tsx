@@ -3,7 +3,8 @@ import {useTransactionAccess} from './TransactionAccess'
 import {useEffect,useState} from 'react'
 import {api} from './api'
 import {Button,Field,Loading,Empty,Badge,Form,Modal} from './ui'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 import {MCPPermissionFields,PermissionSummary,capabilityLabels} from './MCPPermissions'
 
 export function MCPSettings({notify}:Pick<PageProps,'notify'|'refresh'>){

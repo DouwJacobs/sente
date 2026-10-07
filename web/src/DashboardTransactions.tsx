@@ -3,7 +3,7 @@ import {useEffect,useRef,useState} from 'react'
 import {api,money} from './api'
 import {Button,Empty,Loading,Pagination} from './ui'
 import {useTransactionAccess,type TransactionScope} from './TransactionAccess'
-import type {PageProps,Row} from './App'
+import type {PageProps,Row} from './shared/types'
 
 // Reads allocation spending in exactly the scope shown by its dashboard branch.
 export function DashboardTransactions({scope,revision,notify}:{scope:TransactionScope;revision:number;notify:PageProps['notify']}){
