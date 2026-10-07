@@ -1,6 +1,6 @@
 # Project instructions
 
-Implementation is authorized. Use the accepted MVP behavior in docs/PLAN.md. Do not treat superseded planning proposals as current requirements.
+Implementation is authorized. Use current product behavior in docs/PLAN.md. docs/README.md maps the active guides; docs/archive contains historical records, not current requirements.
 
 For every application change, check whether MCP tools, input schemas, output allowlists, permissions, proposal previews/audits, shared services, tests and docs/MCP.md also need updating. New fields must not become accidental disclosures or silently expand existing connection consent. Record either the corresponding MCP update or the reason a feature remains browser-only in the handover/verification notes.
 
@@ -22,12 +22,12 @@ Do not commit real financial data, uploaded CSVs, credentials, database files, o
 
 For local iteration, use make dev and http://127.0.0.1:5173: Vite hot reload and the watched Go backend avoid Docker rebuilds. Development has its own persistent database; do not copy production financial data into it implicitly. Use Docker builds for production verification/deployment, not routine local UI edits.
 
-Keep scope aligned with the MVP. Record open product questions instead of silently choosing financial behavior.
+Keep scope aligned with docs/PLAN.md. Record open product questions instead of silently choosing financial behavior.
 
 Use shared overlay toasts for transient success/error feedback. Never insert notification cards/banners into the page or modal flow that shift layout. Toasts must appear above dialogs, announce status/errors accessibly, support dismissal and pause expiry during hover/focus. Keep field-validation errors inline below their fields. Persistent connection status and review/preview content remain part of their settings/workflows. Give buttons consistent space from helper text above/below; use shared spacing conventions.
 
 
-2026-10-04 owner acceptance/seen policy: supersedes mandatory approval and save-only pending behavior. Complete categorized allocations automatically accept ledger entries on import, edit and transaction-created rule application; explicit transfers retain their category exemption. Missing categories (including incomplete splits and rule conflicts) stay in Needs review. Saving an edit marks its current version seen for the editing user. Imports/rule-applied targets begin unseen. Seen/unseen is personal per user and transaction version, independent of acceptance/reporting, with authorized atomic 1–100 selection actions and ledger seen filters. Later transaction changes invalidate old seen markers; opening a dialog alone does not mark seen. Existing explicit approved reviewers retain seen markers on migration; existing categorized pending rows are accepted without claiming human review, and acceptance changes are audited. Migration 10 is once-only and preserves money, allocations, groups, private account access and financial source data. Private accounts remain outside shared budgeting. UI uses Accepted/Needs category and Mark seen/unseen rather than manual approval; Save changes is the single editor save action.
+Current acceptance/seen policy: Complete categorized allocations automatically accept ledger entries on import, edit and transaction-created rule application; explicit transfers retain their category exemption. Missing categories (including incomplete splits and rule conflicts) stay in Needs review. Saving an edit marks its current version seen for the editing user. Imports/rule-applied targets begin unseen. Seen/unseen is personal per user and transaction version, independent of acceptance/reporting, with authorized atomic 1–100 selection actions and ledger seen filters. Later transaction changes invalidate old seen markers; opening a dialog alone does not mark seen. Existing explicit approved reviewers retain seen markers on migration; existing categorized pending rows are accepted without claiming human review, and acceptance changes are audited. Migration 10 is once-only and preserves money, allocations, groups, private account access and financial source data. Private accounts remain outside shared budgeting. UI uses Accepted/Needs category and Mark seen/unseen rather than manual approval; Save changes is the single editor save action.
 
 
 ## UI separators
