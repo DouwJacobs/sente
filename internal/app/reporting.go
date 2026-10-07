@@ -384,7 +384,7 @@ func (a *App) rebalanceState(tx *sql.Tx, u User, id int64, b rebalanceInput) ([]
 	}
 	out := []map[string]any{}
 	for _, key := range [][2]int64{{b.FromGroup, b.FromCategory}, {b.ToGroup, b.ToCategory}} {
-		rows, e := data(tx, "SELECT gt.amount_cents,gt.carry_forward,c.name category_name,COALESCE(g.name,'No spending group') group_name FROM group_targets gt JOIN categories c ON c.id=gt.category_id LEFT JOIN spending_groups g ON g.id=gt.spending_group_id WHERE period_id=? AND COALESCE(spending_group_id,0)=? AND category_id=? AND included=1", id, key[0], key[1])
+		rows, e := data(tx, "SELECT gt.amount_cents,gt.carry_forward,c.name category_name,COALESCE(g.name,'No spending group') group_name FROM group_targets gt JOIN categories c ON c.id=gt.category_id LEFT JOIN spending_groups g ON g.id=gt.spending_group_id WHERE gt.period_id=? AND COALESCE(gt.spending_group_id,0)=? AND gt.category_id=? AND gt.included=1", id, key[0], key[1])
 		if e != nil {
 			return nil, e
 		}

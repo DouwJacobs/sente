@@ -68,12 +68,11 @@ export function CategoryChoice({data,value,onChange,refresh,notify,label='Catego
   }
  }:undefined} create={data.user.budget_member&&!disabled?(name,done)=><CreateCategory name={name} done={id=>{refresh();done(id)}} notify={notify}/>:undefined}/>
 }
-export function CreateCategory({name:initial,group:initialGroup,done,notify,expenseOnly=false}:{name:string;group?:number;done:(id:number,name?:string)=>void;notify:PageProps['notify'];expenseOnly?:boolean}){
- const[name,setName]=useState(initial.trim()),[kind,setKind]=useState('expense'),[group,setGroup]=useState<number|null>(initialGroup??null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
- return <Form onSubmit={async()=>{setBusy(true);try{const body:Record<string,unknown>={name,kind};if(group)body.spending_group_id=group;const v=await api('/categories','POST',body);done(v.id,name)}catch(e){const message=(e as Error).message;if(message==='Category already exists')setError(message);else notify(message,true)}finally{setBusy(false)}}}>
+export function CreateCategory({name:initial,done,notify,expenseOnly=false}:{name:string;done:(id:number,name?:string)=>void;notify:PageProps['notify'];expenseOnly?:boolean}){
+ const[name,setName]=useState(initial.trim()),[kind,setKind]=useState('expense'),[error,setError]=useState(''),[busy,setBusy]=useState(false)
+ return <Form onSubmit={async()=>{setBusy(true);try{const body={name,kind};const v=await api('/categories','POST',body);done(v.id,name)}catch(e){const message=(e as Error).message;if(message==='Category already exists')setError(message);else notify(message,true)}finally{setBusy(false)}}}>
  <Field label="Category name" serverError={error} validate={value=>!value.trim()?'Enter a category name.':new TextEncoder().encode(value).length>80?'Use a shorter category name.':''}><input autoFocus required maxLength={80} value={name} onChange={e=>{setName(e.target.value);setError('')}}/></Field>
- <Field label="Type"><select disabled={expenseOnly} value={kind} onChange={e=>{setKind(e.target.value as 'expense'|'income');if(e.target.value==='income')setGroup(null)}}><option value="expense">Expense</option><option value="income">Income</option></select></Field>
- {kind==='expense'&&<ChoiceField label="Spending group" source="/spending-groups" options={[]} value={group} empty="Default (Day-to-day)" onChange={id=>setGroup(id)} onError={message=>notify(message,true)} hint="Organizes this category into spending buckets with drill-down on Dashboard and Budgets."/>}
+ <Field label="Type"><select disabled={expenseOnly} value={kind} onChange={e=>{setKind(e.target.value as 'expense'|'income')}}><option value="expense">Expense</option><option value="income">Income</option></select></Field>
  <Button variant="primary" type="submit" loading={busy} disabled={busy}>Create category</Button>
  </Form>
 }

@@ -35,15 +35,16 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 
 	// 1. Categories
 	cats, err := data(a.DB, `
-		SELECT c.id, c.name, c.kind, c.archived, c.version,
-		       s.id spending_group_id, s.name spending_group_name, s.color spending_group_color
+		SELECT c.id, c.name, c.kind, c.archived, c.version
 		FROM categories c
-		LEFT JOIN spending_groups s ON s.id=c.spending_group_id
 		WHERE finance_normalize(c.name) LIKE finance_normalize(?)
 		ORDER BY c.kind, c.name
 		LIMIT 10
 	`, pattern)
-	if err == nil && cats != nil {
+	if err != nil {
+		return err
+	}
+	if cats != nil {
 		res.Categories = cats
 	}
 
@@ -55,7 +56,10 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 		ORDER BY s.name
 		LIMIT 10
 	`, pattern)
-	if err == nil && groups != nil {
+	if err != nil {
+		return err
+	}
+	if groups != nil {
 		res.SpendingGroups = groups
 	}
 
@@ -73,7 +77,7 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 		LEFT JOIN allocations l ON l.transaction_id=t.id
 		LEFT JOIN categories c ON c.id=l.category_id
 		LEFT JOIN merchants m ON m.id=t.merchant_id
-		LEFT JOIN spending_groups s ON s.id=COALESCE(t.spending_group_id, c.spending_group_id)
+		LEFT JOIN spending_groups s ON s.id=t.spending_group_id
 		WHERE ` + accountAccessSQL(u) + ` AND (
 		  finance_normalize(t.description) LIKE finance_normalize(?)
 		  OR (m.name IS NOT NULL AND finance_normalize(m.name) LIKE finance_normalize(?))
@@ -87,7 +91,10 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 	txQuery += `) GROUP BY t.id ORDER BY t.date DESC, t.id DESC LIMIT 15`
 
 	txs, err := data(a.DB, txQuery, txArgs...)
-	if err == nil && txs != nil {
+	if err != nil {
+		return err
+	}
+	if txs != nil {
 		res.Transactions = txs
 	}
 
@@ -112,7 +119,10 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 		ORDER BY mr.priority DESC, mr.id ASC
 		LIMIT 10
 	`, u.Member, u.ID, pattern, pattern, pattern)
-	if err == nil && mRules != nil {
+	if err != nil {
+		return err
+	}
+	if mRules != nil {
 		res.MerchantRules = mRules
 	}
 
@@ -142,7 +152,10 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 		ORDER BY builtin ASC, priority DESC, id ASC
 		LIMIT 10
 	`, u.Member, u.ID, pattern, pattern, pattern)
-	if err == nil && rules != nil {
+	if err != nil {
+		return err
+	}
+	if rules != nil {
 		res.Rules = rules
 	}
 

@@ -201,25 +201,22 @@ func (a *App) grant(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func (a *App) categories(w http.ResponseWriter, r *http.Request) error {
+	if r.URL.Query().Has("spending_group") || r.URL.Query().Has("spending_group_id") {
+		return fail(400, "Categories are flat; filter transaction or budget groups instead")
+	}
 	u := Current(r)
 	if r.URL.Query().Has("page") {
-		query := "SELECT c.*,s.name spending_group_name,s.color spending_group_color,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND " + accountAccessSQL(u) + ") usage_count FROM categories c LEFT JOIN spending_groups s ON s.id=c.spending_group_id WHERE 1=1"
+		query := "SELECT c.id,c.name,c.group_name,c.kind,c.archived,c.version,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND " + accountAccessSQL(u) + ") usage_count FROM categories c WHERE 1=1"
 		if r.URL.Query().Get("kind") == "expense" {
 			query += " AND c.kind='expense'"
 		}
 		if r.URL.Query().Get("active") == "1" {
 			query += " AND c.archived=0"
 		}
-		if g := r.URL.Query().Get("spending_group"); g != "" {
-			if g == "0" || g == "unassigned" {
-				query += " AND c.spending_group_id IS NULL"
-			} else if gid, err := strconv.ParseInt(g, 10, 64); err == nil && gid > 0 {
-				query += " AND c.spending_group_id=" + strconv.FormatInt(gid, 10)
-			}
-		}
+
 		return a.metadataPage(w, r, query, []any{u.Member, u.ID}, "name", "kind,name,id")
 	}
-	v, err := data(a.DB, "SELECT c.*,s.name spending_group_name,s.color spending_group_color,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND "+accountAccessSQL(u)+") usage_count FROM categories c LEFT JOIN spending_groups s ON s.id=c.spending_group_id ORDER BY c.kind,c.name,c.id LIMIT 100", u.Member, u.ID)
+	v, err := data(a.DB, "SELECT c.id,c.name,c.group_name,c.kind,c.archived,c.version,(SELECT COUNT(DISTINCT l.transaction_id) FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id WHERE l.category_id=c.id AND "+accountAccessSQL(u)+") usage_count FROM categories c ORDER BY c.kind,c.name,c.id LIMIT 100", u.Member, u.ID)
 	if err != nil {
 		return err
 	}
@@ -244,52 +241,30 @@ func (a *App) createCategory(w http.ResponseWriter, r *http.Request) error {
 }
 
 type categoryInput struct {
-	Name              string `json:"name"`
-	Group             string `json:"group_name,omitempty"`
-	Kind              string `json:"kind"`
-	SpendingGroupID   *int64 `json:"spending_group_id,omitempty"`
-	SpendingGroupName string `json:"spending_group_name,omitempty"`
+	Name  string `json:"name"`
+	Group string `json:"group_name,omitempty"`
+	Kind  string `json:"kind"`
 }
 
 func createCategoryTx(tx *sql.Tx, u User, b categoryInput) (int64, error) {
+	return createCategoryRecordTx(tx, u, b, "", false)
+}
+
+// Import preserves historical category identity without creating spending-group ownership.
+func createCategoryRecordTx(tx *sql.Tx, u User, b categoryInput, legacy string, imported bool) (int64, error) {
 	if err := requireMember(u); err != nil {
 		return 0, err
 	}
-	if strings.TrimSpace(b.Name) == "" || len(b.Name) > 80 || (b.Kind != "expense" && b.Kind != "income") {
+	if strings.TrimSpace(b.Name) == "" || (!imported && len(b.Name) > 80) || (imported && len([]rune(b.Name)) > 100) || (b.Kind != "expense" && b.Kind != "income") {
 		return 0, fail(400, "Provide a category name and expense/income type")
 	}
-	if queryInt(tx, "SELECT COUNT(*) FROM categories WHERE finance_normalize(name)=finance_normalize(?)", strings.TrimSpace(b.Name)) > 0 {
+	if !imported && queryInt(tx, "SELECT COUNT(*) FROM categories WHERE finance_normalize(name)=finance_normalize(?)", strings.TrimSpace(b.Name)) > 0 {
 		return 0, fail(409, "Category already exists")
 	}
-	var groupID *int64
-	if b.SpendingGroupID != nil && *b.SpendingGroupID > 0 {
-		if queryInt(tx, "SELECT COUNT(*) FROM spending_groups WHERE id=?", *b.SpendingGroupID) != 1 {
-			return 0, fail(400, "Choose a valid spending group")
-		}
-		groupID = b.SpendingGroupID
-	} else if strings.TrimSpace(b.SpendingGroupName) != "" {
-		var gid int64
-		err := tx.QueryRow("SELECT id FROM spending_groups WHERE name=? COLLATE NOCASE", strings.TrimSpace(b.SpendingGroupName)).Scan(&gid)
-		if err == nil {
-			groupID = &gid
-		} else if err != sql.ErrNoRows {
-			return 0, err
-		}
+	if len(legacy) > 100 {
+		return 0, fail(400, "Historical category key is too long")
 	}
-	if groupID == nil {
-		if b.Kind == "income" {
-			var gid int64
-			if err := tx.QueryRow("SELECT id FROM spending_groups WHERE name='Income'").Scan(&gid); err == nil {
-				groupID = &gid
-			}
-		} else {
-			var gid int64
-			if err := tx.QueryRow("SELECT id FROM spending_groups WHERE name='Day-to-day'").Scan(&gid); err == nil {
-				groupID = &gid
-			}
-		}
-	}
-	res, err := tx.Exec("INSERT INTO categories(name,group_name,kind,spending_group_id) VALUES(?,'',?,?)", strings.TrimSpace(b.Name), b.Kind, groupID)
+	res, err := tx.Exec("INSERT INTO categories(name,group_name,kind) VALUES(?,?,?)", strings.TrimSpace(b.Name), legacy, b.Kind)
 	if err != nil {
 		return 0, err
 	}
@@ -297,8 +272,7 @@ func createCategoryTx(tx *sql.Tx, u User, b categoryInput) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	b.SpendingGroupID = groupID
-	return id, audit(tx, u, nil, "category", id, "created", b)
+	return id, audit(tx, u, nil, "category", id, "created", map[string]any{"name": strings.TrimSpace(b.Name), "kind": b.Kind, "group_name": legacy})
 }
 
 func (a *App) manageAccounts(w http.ResponseWriter, r *http.Request) error {

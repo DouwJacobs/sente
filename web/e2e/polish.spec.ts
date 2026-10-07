@@ -34,12 +34,9 @@ for(const width of [1440,900,360])for(const theme of ['light','dark'])test(`whol
  expect(await page.locator('.panel').first().evaluate(el=>getComputedStyle(el).borderRadius)).toBe('14px')
  const cards=await page.locator('.stats .stat').evaluateAll(elements=>elements.map(el=>{const box=el.getBoundingClientRect();return {width:box.width,top:box.top,bottom:box.bottom}}))
  expect(cards).toHaveLength(4)
- for(const card of cards)expect(Math.abs(card.width-cards[0].width)).toBeLessThan(1)
+ if(width===1440){expect(cards[0].width).toBeGreaterThan(cards[1].width);for(const card of cards.slice(1))expect(Math.abs(card.width-cards[1].width)).toBeLessThan(1)}
+ else for(const card of cards)expect(Math.abs(card.width-cards[0].width)).toBeLessThan(1)
  for(let i=0;i<cards.length;i+=width===1440?4:2){const row=cards.slice(i,i+(width===1440?4:2));for(const card of row){expect(Math.abs(card.top-row[0].top)).toBeLessThan(1);expect(Math.abs(card.bottom-row[0].bottom)).toBeLessThan(1)}}
- const canvas=page.locator('.pixel-scene')
- await expect(canvas).toBeVisible()
- const pixels=await canvas.evaluate(el=>Array.from((el as HTMLCanvasElement).getContext('2d')!.getImageData(0,0,128,64).data).filter((value,index)=>index%4===3&&value>0).length)
- expect(pixels).toBeGreaterThan(300)
  const contrast=await page.locator('.page-head .muted,.stat-heading>span:first-child,.stat>strong,.footnote').evaluateAll(elements=>elements.map(element=>{
   const rgb=(value:string)=>value.match(/[\d.]+/g)!.slice(0,3).map(Number)
   const luminance=(color:number[])=>color.map(value=>{value/=255;return value<=.04045?value/12.92:((value+.055)/1.055)**2.4}).reduce((sum,value,index)=>sum+value*[.2126,.7152,.0722][index],0)
@@ -49,13 +46,8 @@ for(const width of [1440,900,360])for(const theme of ['light','dark'])test(`whol
   return (Math.max(foreground,backdrop)+.05)/(Math.min(foreground,backdrop)+.05)
  }))
  for(const ratio of contrast)expect(ratio).toBeGreaterThanOrEqual(4.5)
- const initial=await canvas.evaluate(el=>(el as HTMLCanvasElement).toDataURL())
- const art=(await canvas.boundingBox())!
- await page.mouse.move(art.x+art.width-2,art.y+art.height/2)
- await expect.poll(()=>canvas.evaluate(el=>(el as HTMLCanvasElement).toDataURL())).not.toBe(initial)
  await page.emulateMedia({reducedMotion:'reduce'})
  await expect.poll(()=>page.locator('.button').first().evaluate(el=>getComputedStyle(el).transitionDuration)).toBe('0s')
- await expect.poll(()=>canvas.evaluate(el=>(el as HTMLCanvasElement).toDataURL())).toBe(initial)
  await page.emulateMedia({reducedMotion:'no-preference'})
  await fit(page)
  // Heading precedes content without a permanent blank loading row.
@@ -82,6 +74,7 @@ for(const width of [1440,900,360])for(const theme of ['light','dark'])test(`whol
  await page.locator('.skip-link').focus();await expect(page.locator('.skip-link')).toBeInViewport()
  await page.keyboard.press('Enter');await expect(page.locator('#main-content')).toBeFocused()
  await navigate(page,'Budgets',mobile)
+ await page.getByLabel(/Actions for/).first().click()
  await page.getByRole('button',{name:'Edit dates',exact:true}).first().click()
  const dialog=page.getByRole('dialog')
  await expect(dialog).toBeVisible();await fit(page)
@@ -95,15 +88,15 @@ for(const width of [1440,900,360])for(const theme of ['light','dark'])test(`whol
  // Empty content keeps the same panel tracks and usable page navigation.
  await page.route('**/api/dashboard?**',async route=>{
   const response=await route.fetch(),body=await response.json()
-  await route.fulfill({json:{...body,categories:[],category_total:0,balances:[],balance_total:0,uncategorized_count:0}})
+  await route.fulfill({json:{...body,categories:[],category_total:0,spending_groups:[],group_total:0,income_categories:[],income_category_total:0,balances:[],balance_total:0,uncategorized_count:0}})
  })
  await navigate(page,'Dashboard',mobile)
- await expect(page.getByRole('heading',{name:'No category spending yet',exact:true})).toBeVisible()
+ await expect(page.getByRole('heading',{name:'No spending yet',exact:true})).toBeVisible()
  await expect(page.getByRole('heading',{name:'No balances for these accounts',exact:true})).toBeVisible()
  await fit(page)
  await page.route('**/api/transactions?**',route=>route.fulfill({json:{items:[],total:0,more:false,list_version:'synthetic-empty'}}))
  await navigate(page,'Review',mobile)
- await expect(page.getByRole('heading',{name:'Nothing awaiting review',exact:true})).toBeVisible()
+ await expect(page.getByRole('heading',{name:'No transactions found',exact:true})).toBeVisible()
  await fit(page)
  await navigate(page,'Transactions',mobile)
  await expect(page.getByRole('heading',{name:'No transactions found',exact:true})).toBeVisible()

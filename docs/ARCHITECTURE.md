@@ -255,3 +255,14 @@ reporting.go uses read snapshots and allocation-based expense/refund totals with
 
 
 2026-10-05 UI/MCP review: shared ActionMenu extends the existing native account menu system; outside interaction and Escape dismiss it, and selection returns focus to the trigger before opening a dialog. validateFields reveals closed details before focusing invalid fields. Filter collapse changes presentation only; persisted React filter state still drives shared server queries. Budget reports mount in their own tab, health detail is collapsed, and optional editor fields stay mounted to retain drafts. mcp.go adds account-health/report adapters over existing authorized read handlers and explicit allowlisted archive/group budget/report fields; generic health labels strip account nicknames. No write capability or privacy-boundary expansion; docs/MCP.md records outstanding schema-16 operation gaps.
+
+
+## Audit repairs — 2026-10-07
+
+Grouped limit proposals canonicalize explicit group scopes to IDs and capture exact group membership/versions, target cents, inclusion and recurrence before/after in the proposal. Apply validates both within the serialized transaction and records actual evidence. Category/rule metadata is never a budget scope resolver. The rebalance query qualifies joined budget columns. Legacy ungrouped requests reject ambiguous named scopes.
+
+Category create/update services preserve flat semantics and historical storage IDs. Shared SpendingGroupEditor and Modal/Form/Field/Loading/Button enforce the search and Categories workflow contracts. Search query errors propagate instead of returning empty results.
+
+Ruleset CLI/version-2 exports and imports use a snapshot read/atomic application transaction, explicit operator/account mapping and shared group/category/merchant/custom/built-in rule writers with optimistic versions/audits. Python scripts delegate to the CLI. See RULESETS.md for exact format, bounds, supported scopes and compatibility constraints. These offline tools add no HTTP/MCP endpoint or connection grants.
+
+The final partial-limit regression restored the period-copy compatibility rule for aggregate-only legacy limits: convert undistributed rows to No spending group within the budget write transaction before recomputing aggregates, retain existing canonical/inactive entries, audit preservation, and include legacy rows in exact MCP before evidence. No category metadata chooses the group.

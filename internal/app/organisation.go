@@ -309,13 +309,7 @@ func (a *App) updateCategory(w http.ResponseWriter, r *http.Request) error {
 	if e := requireMember(u); e != nil {
 		return e
 	}
-	var b struct {
-		Name               string `json:"name"`
-		Archived           bool   `json:"archived"`
-		SpendingGroupID    *int64 `json:"spending_group_id,omitempty"`
-		ClearSpendingGroup bool   `json:"clear_spending_group,omitempty"`
-		Version            int64  `json:"version,omitempty"`
-	}
+	var b categoryUpdateInput
 	if e := decode(r, &b); e != nil {
 		return e
 	}
@@ -325,57 +319,58 @@ func (a *App) updateCategory(w http.ResponseWriter, r *http.Request) error {
 	}
 	id := parseID(r)
 	e := a.write(func(tx *sql.Tx) error {
-		var oldName string
-		var oldArchived int
-		var oldGroup sql.NullInt64
-		var version int64
-		if tx.QueryRow("SELECT name,archived,spending_group_id,version FROM categories WHERE id=?", id).Scan(&oldName, &oldArchived, &oldGroup, &version) != nil {
-			return fail(404, "Category not found")
-		}
-		if version != b.Version {
-			return fail(409, "Category changed; reload it")
-		}
-		if queryInt(tx, "SELECT COUNT(*) FROM categories WHERE id!=? AND finance_normalize(name)=finance_normalize(?)", id, b.Name) > 0 {
-			return fail(409, "Category name already exists")
-		}
-		if b.Archived && oldArchived == 0 {
-			deps, e := categoryDeps(tx, id)
-			if e != nil {
-				return e
-			}
-			if deps["active_rules"].(int64) > 0 || len(deps["carry_forward_periods"].([]map[string]any)) > 0 {
-				return fail(409, "Replace or pause active rules and stop budget carry-forward before archiving")
-			}
-		}
-		var newGroup any
-		if b.ClearSpendingGroup {
-			newGroup = nil
-		} else if b.SpendingGroupID != nil {
-			if *b.SpendingGroupID > 0 {
-				if queryInt(tx, "SELECT COUNT(*) FROM spending_groups WHERE id=?", *b.SpendingGroupID) != 1 {
-					return fail(400, "Choose a valid spending group")
-				}
-				newGroup = *b.SpendingGroupID
-			} else {
-				newGroup = nil
-			}
-		} else if oldGroup.Valid {
-			newGroup = oldGroup.Int64
-		}
-		res, e := tx.Exec("UPDATE categories SET name=?,archived=?,spending_group_id=?,version=version+1 WHERE id=? AND version=?", b.Name, b.Archived, newGroup, id, b.Version)
-		if e != nil {
-			return e
-		}
-		if e = affected(res); e != nil {
-			return e
-		}
-		return audit(tx, u, nil, "category", id, "updated", map[string]any{"before": map[string]any{"name": oldName, "archived": oldArchived, "spending_group_id": oldGroup.Int64}, "after": b})
+		return updateCategoryTx(tx, u, id, b)
 	})
 	if e != nil {
 		return e
 	}
 	success(w)
 	return nil
+}
+
+type categoryUpdateInput struct {
+	Name     string `json:"name"`
+	Archived bool   `json:"archived"`
+	Version  int64  `json:"version,omitempty"`
+}
+
+func updateCategoryTx(tx *sql.Tx, u User, id int64, b categoryUpdateInput) error {
+	if err := requireMember(u); err != nil {
+		return err
+	}
+	b.Name = strings.TrimSpace(b.Name)
+	if utf8.RuneCountInString(b.Name) < 1 || utf8.RuneCountInString(b.Name) > 100 {
+		return fail(400, "Use a category name of 1–100 characters")
+	}
+	var oldName string
+	var oldArchived int
+	var version int64
+	if tx.QueryRow("SELECT name,archived,version FROM categories WHERE id=?", id).Scan(&oldName, &oldArchived, &version) != nil {
+		return fail(404, "Category not found")
+	}
+	if version != b.Version {
+		return fail(409, "Category changed; reload it")
+	}
+	if b.Name != oldName && queryInt(tx, "SELECT COUNT(*) FROM categories WHERE id!=? AND finance_normalize(name)=finance_normalize(?)", id, b.Name) > 0 {
+		return fail(409, "Category name already exists")
+	}
+	if b.Archived && oldArchived == 0 {
+		deps, e := categoryDeps(tx, id)
+		if e != nil {
+			return e
+		}
+		if deps["active_rules"].(int64) > 0 || len(deps["carry_forward_periods"].([]map[string]any)) > 0 {
+			return fail(409, "Replace or pause active rules and stop budget carry-forward before archiving")
+		}
+	}
+	res, e := tx.Exec("UPDATE categories SET name=?,archived=?,version=version+1 WHERE id=? AND version=?", b.Name, b.Archived, id, b.Version)
+	if e != nil {
+		return e
+	}
+	if e = affected(res); e != nil {
+		return e
+	}
+	return audit(tx, u, nil, "category", id, "updated", map[string]any{"before": map[string]any{"name": oldName, "archived": oldArchived}, "after": b})
 }
 
 type merchantRuleInput struct {

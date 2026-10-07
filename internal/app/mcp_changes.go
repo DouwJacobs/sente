@@ -56,6 +56,7 @@ type mcpExactChange struct {
 	Transactions      []mcpExactEdit `json:"transactions,omitempty"`
 	SeenStates        []mcpSeenState `json:"seen_states,omitempty"`
 	Before            any            `json:"before,omitempty"`
+	BudgetAfter       any            `json:"budget_after,omitempty"`
 }
 type mcpProposalID struct {
 	ProposalID string `json:"proposal_id"`
@@ -162,7 +163,16 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 			}
 		}
 		if err == nil && in.Operation == "update_budget" {
-			exact.Before, err = data(tx, "SELECT t.category_id,c.name,t.amount_cents FROM targets t JOIN categories c ON c.id=t.category_id WHERE t.period_id=? ORDER BY c.name,c.id", in.ID)
+			if in.Budget == nil {
+				err = fail(400, "Provide budget")
+			} else {
+				var canonical targetsInput
+				canonical, err = canonicalTargetsTx(tx, in.ID, *in.Budget)
+				if err == nil {
+					exact.Change.Budget = &canonical
+					exact.Before, err = budgetEvidenceTx(tx, in.ID)
+				}
+			}
 		}
 		if err == nil && (in.Operation == "save_rule" || in.Operation == "delete_rule") && in.ID != 0 {
 			table, id := "rules", in.ID
@@ -177,6 +187,9 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 		}
 		if err == nil {
 			_, err = a.executeMCPChange(tx, identity, exact, "")
+			if err == nil && in.Operation == "update_budget" {
+				exact.BudgetAfter, err = budgetEvidenceTx(tx, in.ID)
+			}
 		}
 		tx.Rollback()
 	}
@@ -370,6 +383,20 @@ func (a *App) executeMCPChange(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	case "update_budget":
 		if b.Budget == nil {
 			return nil, fail(400, "Provide budget")
+		}
+		if proposal != "" {
+			if exact.BudgetAfter == nil {
+				return nil, fail(409, "Prepare this budget proposal again with explicit groups")
+			}
+			before, err := budgetEvidenceTx(tx, b.ID)
+			if err != nil {
+				return nil, err
+			}
+			expected, _ := json.Marshal(exact.Before)
+			current, _ := json.Marshal(before)
+			if string(expected) != string(current) {
+				return nil, fail(409, "Budget changed; prepare the proposal again")
+			}
 		}
 		if err := updateTargetsTx(tx, u, b.ID, *b.Budget); err != nil {
 			return nil, err
@@ -633,7 +660,7 @@ func (a *App) mcpAuditEvidence(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 		}
 	case "create_category":
 		id := result["id"].(int64)
-		after, err := data(tx, "SELECT c.id,c.name,c.kind,c.spending_group_id,COALESCE(s.name,'') spending_group_name FROM categories c LEFT JOIN spending_groups s ON s.id=c.spending_group_id WHERE c.id=?", id)
+		after, err := data(tx, "SELECT id,name,kind FROM categories WHERE id=?", id)
 		if err != nil {
 			return nil, err
 		}
@@ -657,11 +684,33 @@ func (a *App) mcpAuditEvidence(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 		}
 		evidence = append(evidence, map[string]any{"entity": "rule", "id": id, "before": exact.Before, "after": after})
 	case "update_budget":
-		after, err := data(tx, "SELECT t.category_id,c.name,t.amount_cents FROM targets t JOIN categories c ON c.id=t.category_id WHERE t.period_id=? ORDER BY c.name,c.id", b.ID)
+		after, err := budgetEvidenceTx(tx, b.ID)
 		if err != nil {
 			return nil, err
+		}
+		approved, _ := json.Marshal(exact.BudgetAfter)
+		actual, _ := json.Marshal(after)
+		if string(approved) != string(actual) {
+			return nil, fail(409, "Budget effects changed; prepare the proposal again")
 		}
 		evidence = append(evidence, map[string]any{"entity": "budget_limits", "id": b.ID, "before": map[string]any{"version": b.Budget.Version, "targets": exact.Before}, "after": map[string]any{"version": queryInt(tx, "SELECT version FROM periods WHERE id=?", b.ID), "targets": after}})
 	}
 	return evidence, nil
+}
+
+// budgetEvidenceTx records exact independent scopes, including membership and copy behaviour.
+func budgetEvidenceTx(tx *sql.Tx, id int64) (map[string]any, error) {
+	groups, err := data(tx, "SELECT COALESCE(b.spending_group_id,0) group_id,COALESCE(g.name,'No spending group') group_name,COALESCE(g.version,0) group_version FROM budget_groups b LEFT JOIN spending_groups g ON g.id=b.spending_group_id WHERE b.period_id=? ORDER BY COALESCE(b.spending_group_id,0)", id)
+	if err != nil {
+		return nil, err
+	}
+	targets, err := data(tx, "SELECT COALESCE(t.spending_group_id,0) group_id,t.category_id,c.name category_name,t.amount_cents,t.carry_forward,t.included FROM group_targets t JOIN categories c ON c.id=t.category_id WHERE t.period_id=? ORDER BY COALESCE(t.spending_group_id,0),t.category_id", id)
+	if err != nil {
+		return nil, err
+	}
+	legacy, err := data(tx, "SELECT t.category_id,c.name category_name,t.amount_cents FROM targets t JOIN categories c ON c.id=t.category_id WHERE t.period_id=? AND NOT EXISTS(SELECT 1 FROM group_targets g WHERE g.period_id=t.period_id AND g.category_id=t.category_id) ORDER BY t.category_id", id)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"groups": groups, "targets": targets, "legacy_targets": legacy}, nil
 }

@@ -79,7 +79,7 @@ Align adjacent field labels and inputs at the top; helper text and errors must n
 
 Dialog headings must wrap within available space while the close button remains visible. Lock background scrolling while a dialog is open, preserving dialog scrolling and the page's scrollbar gutter. Stack user names above role controls on mobile. Between 761px and 1000px, use two summary columns and stacked period/account filters so currency decimals remain intact.
 
-The recorded computer-vision audit is in [UI-VALIDATION.md](UI-VALIDATION.md).
+The recorded computer-vision audit is in [VERIFICATION.md](VERIFICATION.md).
 
 2026-10-02: Dropdown text and arrow use matching 12px outside insets. Reserve additional space between text and the arrow, keep the native select interaction, use a theme-aware chevron, and retain the native arrow in forced-colors mode.
 
@@ -359,3 +359,16 @@ MCP permission editor groups read/account scope, categorized change grants and a
 - Merchant rules display associated category and spending group dot in the subtitle.
 - MCP permission modal reorders sections into: Permission level, Read access & Account scope, Custom allowed changes, Restrictions (account/operation constraints with clear inline error feedback), and Auto-approval.
 - Merchant logo display: smart aspect-ratio fitting. Square logos (~1:1) fill the round avatar edge-to-edge (`object-fit: cover`) without inner padding or white backgrounds. Wide wordmark logos (e.g. Amazon, Makro, Checkers, aspect ratio >= 1.25 or <= 0.8) automatically use `object-fit: contain` with inset padding on a clean white badge background (`.merchant-avatar-contain`), ensuring full wordmark visibility, legibility, and no side clipping.
+
+
+## Audit correction — 2026-10-07
+
+Categories stay flat: create with name/type, edit name/archive, and present no category-owned spending group. Historical category metadata stays in storage without being promoted to current UI ownership. Transactions, classification rules, merchant defaults and chosen budget entries retain independent category/group selections.
+
+Global search uses the shared Modal, accessible Loading, Button and theme roles. Its input is a labelled combobox with a named results list and a valid active descendant only for the current loaded results. Navigation keys apply to the input; Clear, Retry and Close keep ordinary button keyboard behavior. Failed requests show a shared toast and an explicit retry state, separate from empty results. Closing/resetting or changing a query discards old asynchronous results. Search controls and results keep 44px targets at mobile widths.
+
+SpendingGroupEditor is shared by Categories and search and uses Modal/Form/Field/Button, first-blur/live inline validation, trimmed Unicode name bounds, focus management and toast request failures. Selected search rows use accent-soft; unselected hover uses interaction-hover. Search uses shared modal layout/scroll behavior and has no independent dialog palette or decorative separator.
+
+Automated synthetic responsive and keyboard checks are the verification method under the current owner instruction. No manual/computer-use visual sign-off is implied.
+
+Shared modal focus: Field marks an explicitly autofocus control; Modal focuses it after showModal opens the dialog. Direct controls such as search use the same data-autofocus marker. Captured dialog cleanup closes the native overlay and preserves focus restoration.

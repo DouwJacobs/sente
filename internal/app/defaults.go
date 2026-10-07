@@ -119,3 +119,24 @@ func (a *App) deleteBuiltinRule(tx *sql.Tx, u User, id, version int64) error {
 	}
 	return audit(tx, u, nil, "builtin_rule", -id, "deleted", nil)
 }
+
+func (a *App) createBuiltinRule(tx *sql.Tx, u User, id *int64, b ruleInput) error {
+	if err := requireMember(u); err != nil {
+		return err
+	}
+	if b.AccountID != 0 {
+		return fail(400, "Built-in rules apply to all enabled accounts")
+	}
+	if err := b.validate(tx); err != nil {
+		return err
+	}
+	res, err := tx.Exec("INSERT INTO builtin_rules(pattern,category_id,spending_group_id,direction,priority,enabled) VALUES(?,?,?,?,?,?)", b.Pattern, b.CategoryID, b.SpendingGroupID, b.Direction, b.Priority, b.active())
+	if err != nil {
+		return err
+	}
+	*id, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	return audit(tx, u, nil, "builtin_rule", *id, "created", b)
+}

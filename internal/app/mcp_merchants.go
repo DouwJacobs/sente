@@ -14,6 +14,8 @@ import (
 )
 
 type mcpMerchantInput struct {
+	ClearCategory   bool    `json:"-"`
+	ClearGroup      bool    `json:"-"`
 	Account         int64   `json:"account_id"`
 	Name            string  `json:"name"`
 	Version         int64   `json:"version,omitempty"`
@@ -112,6 +114,18 @@ func (a *App) saveMCPMerchant(tx *sql.Tx, u User, id int64, b *mcpMerchantInput)
 	if utf8.RuneCountInString(name) < 2 || utf8.RuneCountInString(name) > 100 {
 		return 0, fail(400, "Use a merchant name of 2–100 characters")
 	}
+	if !merchantScopeAccess(tx, a, u, b.Account) {
+		return 0, fail(403, "Merchant access required")
+	}
+	if id != 0 && queryInt(tx, "SELECT COUNT(*) FROM merchants WHERE id=? AND COALESCE(account_id,0)=?", id, b.Account) != 1 {
+		return 0, fail(400, "Merchant scope cannot change")
+	}
+	if b.CategoryID != nil && queryInt(tx, "SELECT COUNT(*) FROM categories WHERE id=?", *b.CategoryID) != 1 {
+		return 0, fail(400, "Choose an existing category")
+	}
+	if b.SpendingGroupID != nil && queryInt(tx, "SELECT COUNT(*) FROM spending_groups WHERE id=?", *b.SpendingGroupID) != 1 {
+		return 0, fail(400, "Choose an existing spending group")
+	}
 	if id == 0 {
 		if queryInt(tx, "SELECT COUNT(*) FROM merchants WHERE COALESCE(account_id,0)=? AND finance_normalize(name)=finance_normalize(?)", b.Account, name) > 0 {
 			return 0, fail(409, "Merchant already exists; use its ID and version")
@@ -121,7 +135,7 @@ func (a *App) saveMCPMerchant(tx *sql.Tx, u User, id int64, b *mcpMerchantInput)
 		if err != nil {
 			return 0, err
 		}
-		if b.CategoryID != nil || b.SpendingGroupID != nil {
+		if b.CategoryID != nil || b.SpendingGroupID != nil || b.ClearCategory || b.ClearGroup {
 			var catID, groupID any
 			if b.CategoryID != nil {
 				catID = *b.CategoryID
@@ -138,7 +152,7 @@ func (a *App) saveMCPMerchant(tx *sql.Tx, u User, id int64, b *mcpMerchantInput)
 				return 0, err
 			}
 		}
-		return id, nil
+		return id, audit(tx, u, nullableAccount(b.Account), "merchant", id, "metadata_saved", map[string]any{"category_id": b.CategoryID, "spending_group_id": b.SpendingGroupID, "logo_changed": b.Logo != nil})
 	}
 	if queryInt(tx, "SELECT COUNT(*) FROM merchants WHERE id!=? AND COALESCE(account_id,0)=? AND finance_normalize(name)=finance_normalize(?)", id, b.Account, name) > 0 {
 		return 0, fail(409, "Merchant name already exists")
@@ -148,7 +162,7 @@ func (a *App) saveMCPMerchant(tx *sql.Tx, u User, id int64, b *mcpMerchantInput)
 			return 0, err
 		}
 		bversion := b.Version + 1
-		res, err := tx.Exec("UPDATE merchants SET name=?,category_id=COALESCE(?,category_id),spending_group_id=COALESCE(?,spending_group_id) WHERE id=? AND version=?", name, b.CategoryID, b.SpendingGroupID, id, bversion)
+		res, err := tx.Exec("UPDATE merchants SET name=?,category_id=CASE WHEN ? THEN NULL ELSE COALESCE(?,category_id) END,spending_group_id=CASE WHEN ? THEN NULL ELSE COALESCE(?,spending_group_id) END WHERE id=? AND version=?", name, b.ClearCategory, b.CategoryID, b.ClearGroup, b.SpendingGroupID, id, bversion)
 		if err != nil {
 			return 0, err
 		}
@@ -156,7 +170,7 @@ func (a *App) saveMCPMerchant(tx *sql.Tx, u User, id int64, b *mcpMerchantInput)
 			return 0, err
 		}
 	} else {
-		res, err := tx.Exec("UPDATE merchants SET name=?,category_id=COALESCE(?,category_id),spending_group_id=COALESCE(?,spending_group_id),version=version+1 WHERE id=? AND version=?", name, b.CategoryID, b.SpendingGroupID, id, b.Version)
+		res, err := tx.Exec("UPDATE merchants SET name=?,category_id=CASE WHEN ? THEN NULL ELSE COALESCE(?,category_id) END,spending_group_id=CASE WHEN ? THEN NULL ELSE COALESCE(?,spending_group_id) END,version=version+1 WHERE id=? AND version=?", name, b.ClearCategory, b.CategoryID, b.ClearGroup, b.SpendingGroupID, id, b.Version)
 		if err != nil {
 			return 0, err
 		}
@@ -164,7 +178,7 @@ func (a *App) saveMCPMerchant(tx *sql.Tx, u User, id int64, b *mcpMerchantInput)
 			return 0, err
 		}
 	}
-	return id, audit(tx, u, nullableAccount(b.Account), "merchant", id, "updated", map[string]any{"name": name, "logo_changed": b.Logo != nil})
+	return id, audit(tx, u, nullableAccount(b.Account), "merchant", id, "updated", map[string]any{"name": name, "logo_changed": b.Logo != nil, "category_id": b.CategoryID, "spending_group_id": b.SpendingGroupID, "clear_category": b.ClearCategory, "clear_group": b.ClearGroup})
 }
 func (a *App) prepareMCPMerchantAssignments(tx *sql.Tx, i mcpIdentity, b mcpChange) ([]mcpExactEdit, error) {
 	if len(b.MerchantItems) < 1 || len(b.MerchantItems) > 100 {

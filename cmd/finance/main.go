@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -57,6 +58,35 @@ func run() error {
 		command = os.Args[1]
 	}
 	dbPath := env("DATABASE_PATH", "data/finance.sqlite")
+	if command == "export-ruleset" || command == "import-ruleset" {
+		if len(os.Args) > 3 {
+			return fmt.Errorf("usage: finance %s [FILE|-]", command)
+		}
+		if os.Getenv("DATABASE_PATH") == "" || os.Getenv("FINANCE_RULESET_USER") == "" {
+			return fmt.Errorf("ruleset commands require explicit DATABASE_PATH and FINANCE_RULESET_USER")
+		}
+		if info, err := os.Stat(dbPath); err != nil || info.IsDir() {
+			return fmt.Errorf("ruleset database must already exist")
+		}
+		if command == "export-ruleset" && len(os.Args) == 3 && os.Args[2] != "-" {
+			source, err := filepath.Abs(dbPath)
+			if err != nil {
+				return err
+			}
+			target, err := filepath.Abs(os.Args[2])
+			if err != nil {
+				return err
+			}
+			if source == target {
+				return fmt.Errorf("ruleset export must not overwrite the database")
+			}
+			if sourceInfo, err := os.Stat(source); err == nil {
+				if targetInfo, err := os.Stat(target); err == nil && os.SameFile(sourceInfo, targetInfo) {
+					return fmt.Errorf("ruleset export must not overwrite the database")
+				}
+			}
+		}
+	}
 	backupDir := env("BACKUP_DIR", "backups")
 	if command == "restore" {
 		if len(os.Args) != 3 {
@@ -99,6 +129,23 @@ func run() error {
 		return a.ResetPassword(os.Args[2], p)
 	case "reset-network":
 		return a.ResetNetworkSettings()
+	case "export-ruleset":
+		target := "-"
+		if len(os.Args) > 2 {
+			target = os.Args[2]
+		}
+		return a.ExportRulesetToFile(target)
+	case "import-ruleset":
+		source := "-"
+		if len(os.Args) > 2 {
+			source = os.Args[2]
+		}
+		summary, err := a.ImportRulesetFromFile(source)
+		if err != nil {
+			return err
+		}
+		fmt.Println(summary)
+		return nil
 	case "backup":
 		path, err := a.Backup()
 		if err == nil {
@@ -149,6 +196,6 @@ func run() error {
 		}
 		return nil
 	default:
-		return fmt.Errorf("commands: serve, create-admin, reset-password, backup, restore, reset-network")
+		return fmt.Errorf("commands: serve, create-admin, reset-password, backup, restore, reset-network, export-ruleset, import-ruleset")
 	}
 }

@@ -154,58 +154,48 @@ func TestSpendingGroupMigrationPreservesLedger(t *testing.T) {
 func TestFlatCategoryCreation(t *testing.T) {
 	e := setup(t)
 	status(t, e.req(t, 1, "/api/categories", "POST", map[string]any{"name": "Eating Out", "kind": "expense"}), 200)
-	if queryInt(e.a.DB, "SELECT COUNT(*) FROM categories WHERE name='Eating Out' AND group_name=''") != 1 {
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM categories WHERE name='Eating Out' AND group_name='' AND spending_group_id IS NULL") != 1 {
 		t.Fatal("category should not require or acquire a group")
+	}
+	status(t, e.req(t, 1, "/api/categories", "POST", map[string]any{"name": "Synthetic income", "kind": "income"}), 200)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM categories WHERE name='Synthetic income' AND spending_group_id IS NULL") != 1 {
+		t.Fatal("income category acquired ownership")
 	}
 	status(t, e.req(t, 1, "/api/categories", "POST", map[string]any{"name": "groceries", "kind": "expense", "group_name": "Another group"}), 409)
 	status(t, e.req(t, 3, "/api/categories", "POST", map[string]any{"name": "Restricted", "kind": "expense"}), 403)
 }
 
-func TestCategorySpendingGroupAndBudgetInheritance(t *testing.T) {
+func TestFlatCategoryIndependentBudgetGroups(t *testing.T) {
 	e := setup(t)
-	res := e.req(t, 1, "/api/categories", "POST", map[string]any{"name": "Coffee & Treats", "kind": "expense", "spending_group_name": "Day-to-day"})
+	res := e.req(t, 1, "/api/categories", "POST", map[string]any{"name": "Coffee & Treats", "kind": "expense"})
 	status(t, res, 200)
-	var catRes map[string]any
-	json.NewDecoder(res.Body).Decode(&catRes)
-	cid := num(catRes["id"])
-
-	dayGroup := queryInt(e.a.DB, "SELECT id FROM spending_groups WHERE name='Day-to-day'")
-	if queryInt(e.a.DB, "SELECT spending_group_id FROM categories WHERE id=?", cid) != dayGroup {
-		t.Fatalf("expected category to have spending_group_id=%d", dayGroup)
+	cid := num(workflowJSON(t, res.Body.Bytes())["id"])
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM categories WHERE id=? AND spending_group_id IS NULL", cid) != 1 {
+		t.Fatal("category acquired ownership")
 	}
-
-	listRes := e.req(t, 1, "/api/categories?page=0&page_size=100&id="+strconv.FormatInt(cid, 10), "GET", nil)
-	status(t, listRes, 200)
-	var listData map[string]any
-	json.NewDecoder(listRes.Body).Decode(&listData)
-	items := listData["items"].([]any)
-	if len(items) == 0 {
-		t.Fatal("created category not found in list")
+	// Imported historical metadata cannot reroute limits.
+	if _, err := e.a.DB.Exec("UPDATE categories SET spending_group_id=1 WHERE id=?", cid); err != nil {
+		t.Fatal(err)
 	}
-	item := items[0].(map[string]any)
-	if num(item["spending_group_id"]) != dayGroup || item["spending_group_name"] != "Day-to-day" {
-		t.Fatalf("unexpected category spending group data: %+v", item)
+	list := e.req(t, 1, "/api/categories?page=0&page_size=100&id="+strconv.FormatInt(cid, 10), "GET", nil)
+	status(t, list, 200)
+	var result struct{ Items []map[string]any }
+	if err := json.Unmarshal(list.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
 	}
-
-	recGroup := queryInt(e.a.DB, "SELECT id FROM spending_groups WHERE name='Recurring'")
-	ver := queryInt(e.a.DB, "SELECT version FROM categories WHERE id=?", cid)
-	status(t, e.req(t, 1, "/api/categories/"+strconv.FormatInt(cid, 10), "PUT", map[string]any{"name": "Coffee & Treats", "archived": false, "spending_group_id": recGroup, "version": ver}), 200)
-	if queryInt(e.a.DB, "SELECT spending_group_id FROM categories WHERE id=?", cid) != recGroup {
-		t.Fatal("category spending group was not updated")
+	if _, ok := result.Items[0]["spending_group_id"]; ok {
+		t.Fatal("flat category list exposes ownership")
 	}
-
-	pver := queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1")
-	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{
-		"version": pver,
-		"merge":   true,
-		"targets": []map[string]any{
-			{"category_id": cid, "amount_cents": 45000},
-		},
-	}), 200)
-
-	gtGroup := queryInt(e.a.DB, "SELECT spending_group_id FROM group_targets WHERE period_id=1 AND category_id=?", cid)
-	if gtGroup != recGroup {
-		t.Fatalf("expected budget target to inherit spending_group_id=%d, got %d", recGroup, gtGroup)
+	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{"version": queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1"), "merge": true, "targets": []any{map[string]any{"category_id": cid, "amount_cents": 45000}}}), 200)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM group_targets WHERE period_id=1 AND category_id=? AND spending_group_id IS NULL AND amount_cents=45000", cid) != 1 {
+		t.Fatal("omitted legacy group inherited category metadata")
+	}
+	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{"version": queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1"), "merge": true, "targets": []any{map[string]any{"category_id": cid, "amount_cents": 100, "group_id": 2}}}), 200)
+	// Null + named scope and sole named scope both require an explicit write scope.
+	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{"version": queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1"), "merge": true, "targets": []any{map[string]any{"category_id": cid, "amount_cents": 999}}}), 400)
+	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{"version": queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1"), "targets": []any{map[string]any{"category_id": cid, "amount_cents": 999}}}), 400)
+	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{"version": queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1"), "group_id": 0, "targets": []any{map[string]any{"category_id": cid, "amount_cents": 200}}}), 200)
+	if queryInt(e.a.DB, "SELECT amount_cents FROM group_targets WHERE period_id=1 AND category_id=? AND spending_group_id=2", cid) != 100 {
+		t.Fatal("explicit ungrouped replacement changed another group")
 	}
 }
-

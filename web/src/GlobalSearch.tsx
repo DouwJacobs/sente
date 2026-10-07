@@ -1,5 +1,6 @@
-import {useState,useEffect,useRef} from 'react'
-import {createPortal} from 'react-dom'
+import {useState,useEffect,useRef,useId} from 'react'
+import {Button,Loading,Modal} from './ui'
+import {SpendingGroupEditor} from './SpendingGroupEditor'
 import {Search,X} from 'lucide-react'
 import {api,money} from './api'
 import {GroupDot} from './Choices'
@@ -50,7 +51,9 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const dialogRef = useRef<HTMLDialogElement>(null)
+  const resultId = useId()
+  const [error,setError] = useState('')
+  const [retry,setRetry] = useState(0)
 
   // Specific entity editors opened from search
   const [editingCategory, setEditingCategory] = useState<Row | null>(null)
@@ -60,26 +63,27 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
 
   useEffect(() => {
     if (open) {
-      dialogRef.current?.showModal()
       setQuery('')
       setSelectedIndex(0)
       setResults({categories: [], spending_groups: [], transactions: [], merchant_rules: [], rules: []})
-      setTimeout(() => inputRef.current?.focus(), 30)
-    } else {
-      dialogRef.current?.close()
+      setError('')
+      setLoading(false)
     }
   }, [open])
 
   // Debounced API search
   useEffect(() => {
     const trimmed = query.trim()
-    if (trimmed.length < 2) {
+    if (!open || trimmed.length < 2) {
+      setError('')
       setResults({categories: [], spending_groups: [], transactions: [], merchant_rules: [], rules: []})
       setLoading(false)
       return
     }
     let active = true
     setLoading(true)
+    setError('')
+    setResults({categories: [], spending_groups: [], transactions: [], merchant_rules: [], rules: []})
     const timer = setTimeout(() => {
       api('/search?q=' + encodeURIComponent(trimmed))
         .then((res: SearchResults) => {
@@ -93,14 +97,15 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
           })
           setSelectedIndex(0)
         })
-        .catch(() => {
+        .catch((err:Error) => {
           if (!active) return
-          setResults({categories: [], spending_groups: [], transactions: [], merchant_rules: [], rules: []})
+          setError(err.message)
+          notify(err.message,true)
         })
         .finally(() => { if (active) setLoading(false) })
     }, 180)
     return () => { active = false; clearTimeout(timer) }
-  }, [query])
+  }, [open,query,retry])
 
   // Flatten into a single list grouped by section
   const flatItems: FlatItem[] = []
@@ -109,8 +114,7 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
     flatItems.push({
       id: `cat-${c.id}`, section: 'Categories',
       label: c.name,
-      detail: [c.kind === 'expense' ? 'Expense' : 'Income', c.spending_group_name].filter(Boolean).join(' · '),
-      groupDot: c.spending_group_color || undefined,
+      detail: c.kind === 'expense' ? 'Expense' : 'Income',
       onSelect: () => { onClose(); setEditingCategory(c) },
     })
   }
@@ -197,54 +201,55 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
   })
 
   return <>
-    {open && createPortal(
-      <dialog
-        ref={dialogRef}
-        className="global-search-modal"
-        aria-label="Search"
-        onCancel={e => { e.preventDefault(); onClose() }}
-        onClick={e => { if (e.target === dialogRef.current) onClose() }}
-      >
-        <div className="global-search-container" onKeyDown={handleKeyDown}>
+    {open && <Modal title="Search workspace" onClose={onClose}>
+        <div className="global-search-container">
           <div className="global-search-header">
             <div className="global-search-input-box">
               <Search size={15} className="search-icon-decor" aria-hidden="true" />
               <input
                 ref={inputRef}
+                autoFocus
+                data-autofocus="true"
+                role="combobox"
+                aria-label="Search workspace"
+                aria-expanded={hasQuery&&!loading&&!error}
+                onKeyDown={handleKeyDown}
                 type="text"
                 className="global-search-input"
                 placeholder="Search…"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 aria-autocomplete="list"
-                aria-controls="global-search-results"
-                aria-activedescendant={flatItems[selectedIndex]?.id}
+                aria-controls={resultId}
+                aria-activedescendant={!loading&&!error&&flatItems[selectedIndex]?resultId+flatItems[selectedIndex].id:undefined}
               />
               {query && (
-                <button
+                <Button variant="quiet"
                   type="button"
                   className="search-clear-btn"
                   onClick={() => { setQuery(''); inputRef.current?.focus() }}
-                  aria-label="Clear"
+                  aria-label="Clear search"
                 >
                   <X size={14} />
-                </button>
+                </Button>
               )}
             </div>
           </div>
 
-          <div id="global-search-results" ref={listRef} className="global-search-body" role="listbox">
+          <div id={resultId} ref={listRef} className="global-search-body" role="listbox" aria-label="Search results" aria-busy={loading}>
             {!hasQuery ? (
               <div className="search-empty-state">
                 <p className="search-shortcut-hint">Search categories, groups, transactions and rules.</p>
               </div>
             ) : loading ? (
               <div className="search-empty-state">
-                <p className="search-shortcut-hint">Searching…</p>
+                <Loading>Searching…</Loading>
               </div>
+            ) : error ? (
+              <div className="search-empty-state"><p>Search could not be completed.</p><Button onClick={()=>setRetry(v=>v+1)}>Retry search</Button></div>
             ) : flatItems.length === 0 ? (
               <div className="search-empty-state">
-                <p className="search-shortcut-hint">No results for "{query}"</p>
+                <p role="status" className="search-shortcut-hint">No results for "{query}"</p>
               </div>
             ) : (
               sections.map(section => (
@@ -253,9 +258,9 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
                   {section.items.map(item => {
                     const isSelected = item.globalIndex === selectedIndex
                     return (
-                      <div
+                      <button type="button" tabIndex={-1}
                         key={item.id}
-                        id={item.id}
+                        id={resultId+item.id}
                         data-index={item.globalIndex}
                         role="option"
                         aria-selected={isSelected}
@@ -278,7 +283,7 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
                             {money(item.amount)}
                           </strong>
                         )}
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
@@ -286,9 +291,7 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
             )}
           </div>
         </div>
-      </dialog>,
-      document.body
-    )}
+      </Modal>}
 
     {editingCategory && (
       <CategoryEditor
@@ -331,61 +334,4 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
       />
     )}
   </>
-}
-
-function SpendingGroupEditor({group, notify, onClose, onDone}: {group: Row; notify: PageProps['notify']; onClose: () => void; onDone: () => void}) {
-  const [name, setName] = useState(group.name)
-  const [color, setColor] = useState(group.color)
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  return createPortal(
-    <dialog
-      className="modal-dialog"
-      ref={el => { if (el && !el.open) el.showModal() }}
-      onCancel={e => { e.preventDefault(); onClose() }}
-    >
-      <div className="modal-panel">
-        <div className="modal-head">
-          <h2>Edit spending group · {group.name}</h2>
-          <button type="button" className="modal-close" aria-label="Close" onClick={onClose}><X size={18} /></button>
-        </div>
-        <form className="form" onSubmit={async e => {
-          e.preventDefault()
-          if (busy) return
-          setBusy(true)
-          try {
-            await api('/spending-groups/' + group.id, 'PUT', {name, color, version: group.version})
-            notify('Spending group saved')
-            onDone()
-          } catch (err) {
-            const message = (err as Error).message
-            if (message === 'Spending group already exists') setError(message)
-            else notify(message, true)
-          } finally {
-            setBusy(false)
-          }
-        }}>
-          <div className="field">
-            <label className="field-label">Name</label>
-            <input className="field-input" autoFocus required minLength={2} maxLength={80} value={name} onChange={e => { setName(e.target.value); setError('') }} />
-            {error && <span className="field-error" role="alert">{error}</span>}
-          </div>
-          <div className="field">
-            <label className="field-label">Color</label>
-            <select className="field-input" value={color} onChange={e => setColor(e.target.value)}>
-              {['blue', 'amber', 'purple', 'orange', 'teal', 'slate', 'rose'].map(c => (
-                <option value={c} key={c}>{c[0].toUpperCase() + c.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <div className="editor-actions">
-            <button type="submit" className="button primary" disabled={busy}>{busy ? 'Saving…' : 'Save spending group'}</button>
-            <button type="button" className="button secondary" onClick={onClose}>Cancel</button>
-          </div>
-        </form>
-      </div>
-    </dialog>,
-    document.body
-  )
 }

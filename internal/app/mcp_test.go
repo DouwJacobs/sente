@@ -437,7 +437,7 @@ func TestMCPProposalRejectionExpiryAndTokenIsolation(t *testing.T) {
 	}
 }
 
-func TestMCPCategorySpendingGroupDrillDown(t *testing.T) {
+func TestMCPFlatCategoryExplicitSpendingGroupBudget(t *testing.T) {
 	e := setup(t)
 	token := mcpToken(t, e, 1, true)
 
@@ -445,9 +445,8 @@ func TestMCPCategorySpendingGroupDrillDown(t *testing.T) {
 	change := map[string]any{
 		"operation": "create_category",
 		"category": map[string]any{
-			"name":                "Solar Power",
-			"kind":                "expense",
-			"spending_group_name": "Utilities",
+			"name": "Solar Power",
+			"kind": "expense",
 		},
 	}
 	id := mcpPrepare(t, e, token, change)
@@ -458,8 +457,8 @@ func TestMCPCategorySpendingGroupDrillDown(t *testing.T) {
 	}
 
 	cid := queryInt(e.a.DB, "SELECT id FROM categories WHERE name='Solar Power'")
-	if queryInt(e.a.DB, "SELECT spending_group_id FROM categories WHERE id=?", cid) != utilGroup {
-		t.Fatalf("expected Solar Power to have spending_group_id=%d", utilGroup)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM categories WHERE id=? AND spending_group_id IS NULL", cid) != 1 {
+		t.Fatal("MCP category acquired ownership")
 	}
 
 	cats, failed := mcpCall(t, e, token, "list_categories", map[string]any{"filters": map[string]string{"id": fmt.Sprint(cid)}})
@@ -471,8 +470,8 @@ func TestMCPCategorySpendingGroupDrillDown(t *testing.T) {
 		t.Fatal("category not found via MCP list_categories")
 	}
 	cItem := items[0].(map[string]any)
-	if cItem["spending_group_name"] != "Utilities" || num(cItem["spending_group_id"]) != utilGroup {
-		t.Fatalf("unexpected MCP category item: %+v", cItem)
+	if _, ok := cItem["spending_group_id"]; ok {
+		t.Fatal("MCP category exposes spending group ownership")
 	}
 
 	pver := queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1")
@@ -483,7 +482,7 @@ func TestMCPCategorySpendingGroupDrillDown(t *testing.T) {
 			"version": pver,
 			"merge":   true,
 			"targets": []any{
-				map[string]any{"category_id": cid, "amount_cents": 85000},
+				map[string]any{"category_id": cid, "amount_cents": 85000, "spending_group_name": "Utilities"},
 			},
 		},
 	}
@@ -516,5 +515,92 @@ func TestMCPCategorySpendingGroupDrillDown(t *testing.T) {
 	}
 	if !foundUtil {
 		t.Fatal("Utilities spending group not found in get_budget_summary")
+	}
+}
+
+func TestMCPBudgetFreezesExactGroupScope(t *testing.T) {
+	e := setup(t)
+	token := mcpToken(t, e, 1, true)
+	// Category/rule defaults are deliberately unrelated to the requested limit.
+	// A partial proposal also previews/preserves undistributed legacy limits.
+	if _, err := e.a.DB.Exec("INSERT INTO targets VALUES(1,1,500)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.a.DB.Exec("UPDATE categories SET spending_group_id=1 WHERE id=1"); err != nil {
+		t.Fatal(err)
+	}
+	version := queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1")
+	id := mcpPrepare(t, e, token, map[string]any{"operation": "update_budget", "id": 1, "budget": map[string]any{"version": version, "merge": true, "targets": []any{map[string]any{"category_id": 1, "amount_cents": 12345, "spending_group_name": "Exceptions"}}}})
+	mcpApprove(t, e, 1, id)
+	if _, err := e.a.DB.Exec("UPDATE categories SET spending_group_id=2 WHERE id=1"); err != nil {
+		t.Fatal(err)
+	}
+	result, failed := mcpCall(t, e, token, "apply_change", map[string]any{"proposal_id": id})
+	if failed {
+		t.Fatal(result)
+	}
+	if queryInt(e.a.DB, "SELECT amount_cents FROM group_targets WHERE period_id=1 AND category_id=1 AND spending_group_id=4") != 12345 {
+		t.Fatal("approved proposal rerouted")
+	}
+	if queryInt(e.a.DB, "SELECT amount_cents FROM group_targets WHERE period_id=1 AND category_id=1 AND spending_group_id IS NULL") != 500 {
+		t.Fatal("exact proposal lost legacy limit")
+	}
+	// Retry cannot repeat the write.
+	result, failed = mcpCall(t, e, token, "apply_change", map[string]any{"proposal_id": id})
+	if failed {
+		t.Fatal(result)
+	}
+	if queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1") != version+1 {
+		t.Fatal("proposal replay rewrote budget")
+	}
+	// A new group version invalidates an approved preview, even without changing period version.
+	id = mcpPrepare(t, e, token, map[string]any{"operation": "update_budget", "id": 1, "budget": map[string]any{"version": version + 1, "merge": true, "group_id": 4, "targets": []any{map[string]any{"category_id": 1, "amount_cents": 999}}}})
+	mcpApprove(t, e, 1, id)
+	status(t, e.req(t, 1, "/api/spending-groups/4", "PUT", map[string]any{"name": "Exceptions renamed", "color": "orange", "version": 1}), 200)
+	if _, failed = mcpCall(t, e, token, "apply_change", map[string]any{"proposal_id": id}); !failed {
+		t.Fatal("changed exact grouped state was applied")
+	}
+	if queryInt(e.a.DB, "SELECT amount_cents FROM group_targets WHERE period_id=1 AND category_id=1 AND spending_group_id=4") != 12345 {
+		t.Fatal("stale proposal changed finances")
+	}
+	// Older proposals lack the exact effect snapshot and require a fresh preparation.
+	legacy := mcpPrepare(t, e, token, map[string]any{"operation": "update_budget", "id": 1, "budget": map[string]any{"version": version + 1, "merge": true, "group_id": 4, "targets": []any{map[string]any{"category_id": 1, "amount_cents": 500}}}})
+	mcpApprove(t, e, 1, legacy)
+	var payload string
+	if err := e.a.DB.QueryRow("SELECT payload FROM mcp_proposals WHERE id=?", legacy).Scan(&payload); err != nil {
+		t.Fatal(err)
+	}
+	var old map[string]any
+	if err := json.Unmarshal([]byte(payload), &old); err != nil {
+		t.Fatal(err)
+	}
+	delete(old, "budget_after")
+	raw, err := json.Marshal(old)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = e.a.DB.Exec("UPDATE mcp_proposals SET payload=? WHERE id=?", string(raw), legacy); err != nil {
+		t.Fatal(err)
+	}
+	if _, failed = mcpCall(t, e, token, "apply_change", map[string]any{"proposal_id": legacy}); !failed {
+		t.Fatal("old unresolved proposal applied")
+	}
+	if queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1") != version+1 {
+		t.Fatal("legacy proposal changed financial state")
+	}
+
+}
+func TestBudgetExplicitEmptyGroupsAndRecurrence(t *testing.T) {
+	e := setup(t)
+	if _, err := e.a.DB.Exec("INSERT INTO group_targets(period_id,category_id,amount_cents,carry_forward) VALUES(1,1,500,0) ON CONFLICT DO UPDATE SET carry_forward=0"); err != nil {
+		t.Fatal(err)
+	}
+	version := queryInt(e.a.DB, "SELECT version FROM periods WHERE id=1")
+	status(t, e.req(t, 1, "/api/targets/1", "PUT", map[string]any{"version": version, "groups": []any{map[string]any{"group_id": 3, "targets": []any{}}, map[string]any{"group_id": 0, "targets": []any{map[string]any{"category_id": 1, "amount_cents": 100}}}}}), 200)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM budget_groups WHERE period_id=1 AND spending_group_id=3") != 1 {
+		t.Fatal("explicit empty group disappeared")
+	}
+	if queryInt(e.a.DB, "SELECT carry_forward FROM group_targets WHERE period_id=1 AND category_id=1 AND spending_group_id IS NULL") != 0 {
+		t.Fatal("replacement restarted stopped recurrence")
 	}
 }

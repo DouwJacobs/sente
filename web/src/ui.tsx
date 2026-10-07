@@ -59,7 +59,7 @@ export function Field({label,children,hint,validate,serverError}: {label:string;
   if(!isValidElement(child)||typeof child.type!=='string'||!['input','select','textarea'].includes(child.type))return child
   const element=child as ReactElement<Record<string,any>>
   return cloneElement(element,{
-   id,ref:(el:Control|null)=>{control.current=el;const ref=element.props.ref;if(typeof ref==='function')ref(el);else if(ref)ref.current=el},
+   id,'data-autofocus':element.props.autoFocus?'true':undefined,ref:(el:Control|null)=>{control.current=el;const ref=element.props.ref;if(typeof ref==='function')ref(el);else if(ref)ref.current=el},
    'aria-invalid':message?true:undefined,
    'aria-describedby':[element.props['aria-describedby'],hint?id+'-hint':'',message?id+'-error':''].filter(Boolean).join(' ')||undefined,
    onChange:(event:ChangeEvent<Control>)=>{element.props.onChange?.(event);check(event.currentTarget)},
@@ -72,7 +72,11 @@ export function Empty({title,children}: {title:string;children?:ReactNode}){cons
 export function Badge({children,tone='neutral'}: {children:ReactNode;tone?:'neutral'|'pending'|'good'|'bad'}){return <span className={'badge '+tone}>{children}</span>}
 export function Modal({title,children,onClose,size='medium',stable=false}: {title:string;children:ReactNode;onClose:()=>void;size?:'compact'|'medium'|'wide';stable?:boolean}){
  const ref=useRef<HTMLDialogElement>(null)
- useEffect(()=>{ref.current?.showModal();return()=>{ref.current?.close()}},[])
+ useEffect(()=>{
+  const dialog=ref.current,opener=document.activeElement instanceof HTMLElement?document.activeElement:null
+  dialog?.showModal();dialog?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+  return()=>{dialog?.close();if(opener?.isConnected)opener.focus()}
+ },[])
  return createPortal(<dialog ref={ref} className={'modal modal-'+size+(stable?' modal-stable':'')} aria-label={title} onCancel={event=>{event.preventDefault();event.stopPropagation();onClose()}}><div className="modal-head"><h2>{title}</h2><Button variant="quiet" aria-label="Close" onClick={onClose}><X size={20}/></Button></div><div className="modal-body">{children}</div></dialog>,document.body)
 }
 export function Toast({message,error,onDismiss,autoDismiss=true}:{message:string;error:boolean;onDismiss:()=>void;autoDismiss?:boolean}){
