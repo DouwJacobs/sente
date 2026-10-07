@@ -148,7 +148,7 @@ func TestMCPContextUpgradePreservesExistingDataAndConsent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.a.DB.Exec("DROP TABLE mcp_user_context; DELETE FROM migrations WHERE version=22; INSERT OR IGNORE INTO migrations VALUES(21)"); err != nil {
+	if _, err := e.a.DB.Exec("DROP TABLE mcp_user_context; DELETE FROM migrations WHERE version>=22; INSERT OR IGNORE INTO migrations VALUES(21)"); err != nil {
 		t.Fatal(err)
 	}
 	if err := migrate(e.a.DB); err != nil {
@@ -167,7 +167,7 @@ func TestMCPContextUpgradePreservesExistingDataAndConsent(t *testing.T) {
 	if err != nil || p.ReadContext {
 		t.Fatal("migration expanded consent", p, err)
 	}
-	if queryInt(e.a.DB, "SELECT MAX(version) FROM migrations") != 22 {
+	if queryInt(e.a.DB, "SELECT MAX(version) FROM migrations") != schemaVersion {
 		t.Fatal("schema migration missing")
 	}
 	saved, err := readPersonalMCPContext(e.a.DB, 1)

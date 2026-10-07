@@ -14,7 +14,7 @@ Frontend workflows live in `web/src/features/<feature>`. App composes session, n
 
 ## Persistence and authorization
 
-Embedded `internal/app/schema.sql` and ordered migrations initialize SQLite. The current schema is 22. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
+The ordered registry in `internal/app/migrate.go` initializes and upgrades SQLite. The current schema is 23. Its one-time compatibility bridge uses the frozen version-22 `schema.sql` snapshot and preserves sparse legacy version history; subsequent upgrades append named, consecutive migrations. Schema/data changes and version records commit in one transaction, with a pinned connection and foreign-key integrity checking for table rebuilds. Current-version startup does not reapply schema or backfills. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
 
 Budget membership grants editor access to household accounts. Private accounts require explicit grants, including for administrators, and do not participate in shared budgets. Administrative account-management metadata excludes financial records. Hidden accounts are excluded before ordinary reads/aggregates and connector work. Access checks precede search, count, paging, history and aggregates.
 

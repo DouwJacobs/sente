@@ -1,5 +1,4 @@
--- Frozen version-22 schema snapshot for the version-23 compatibility bridge.
--- Add future schema changes through the ordered registry in migrate.go.
+-- Frozen historical schema from b50c0de; synthetic data is supplied by tests.
 CREATE TABLE IF NOT EXISTS workspace_branding (id INTEGER PRIMARY KEY CHECK(id=1), display_name TEXT NOT NULL DEFAULT 'Household', version INTEGER NOT NULL DEFAULT 1);
 INSERT OR IGNORE INTO workspace_branding(id) VALUES(1);
 CREATE TABLE IF NOT EXISTS migrations(version INTEGER PRIMARY KEY);
@@ -25,6 +24,7 @@ CREATE TABLE IF NOT EXISTS allocations(id INTEGER PRIMARY KEY,transaction_id INT
 CREATE TABLE IF NOT EXISTS transfer_links(left_id INTEGER NOT NULL UNIQUE REFERENCES transactions(id),right_id INTEGER NOT NULL UNIQUE REFERENCES transactions(id),CHECK(left_id<>right_id));
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY,user_id INTEGER REFERENCES users(id),account_id INTEGER REFERENCES accounts(id),entity TEXT NOT NULL,entity_id INTEGER,action TEXT NOT NULL,details TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS backups(id INTEGER PRIMARY KEY,path TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO migrations VALUES(1);
 
 CREATE TABLE IF NOT EXISTS fnb_connections(user_id INTEGER PRIMARY KEY REFERENCES users(id),secret BLOB NOT NULL,interval_hours INTEGER NOT NULL DEFAULT 0,state TEXT NOT NULL DEFAULT 'ready',last_attempt TEXT,last_success TEXT,next_due INTEGER,last_error TEXT NOT NULL DEFAULT '',last_skipped INTEGER NOT NULL DEFAULT 0,debug_browser INTEGER NOT NULL DEFAULT 0,last_diagnostics TEXT NOT NULL DEFAULT '{}',version INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS fnb_discoveries(user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,bank_id TEXT NOT NULL,name TEXT NOT NULL,balance_cents INTEGER,balance_date TEXT,hidden INTEGER NOT NULL DEFAULT 0,account_id INTEGER REFERENCES accounts(id),PRIMARY KEY(user_id,bank_id));
@@ -77,3 +77,5 @@ CREATE TABLE IF NOT EXISTS configuration_previews (
 );
 
 CREATE TABLE IF NOT EXISTS mcp_user_context(user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,content TEXT NOT NULL DEFAULT '',version INTEGER NOT NULL DEFAULT 1 CHECK(version>0));
+
+INSERT OR IGNORE INTO migrations VALUES(22);

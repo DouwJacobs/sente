@@ -219,7 +219,7 @@ func TestMCPProposalResultSchemaUpgrade(t *testing.T) {
 	seedMCPTransactions(t, e)
 	batchID := mcpPrepare(t, e, token, map[string]any{"operation": "edit_transactions", "edits": []any{map[string]any{"id": 1, "version": 1, "category_id": 1}, map[string]any{"id": 2, "version": 1, "category_id": 1}}})
 	mcpApprove(t, e, 1, batchID)
-	if _, err := e.a.DB.Exec("ALTER TABLE mcp_proposals DROP COLUMN result"); err != nil {
+	if _, err := e.a.DB.Exec("ALTER TABLE mcp_proposals DROP COLUMN result; DELETE FROM migrations WHERE version>=23; INSERT OR IGNORE INTO migrations VALUES(22)"); err != nil {
 		t.Fatal(err)
 	}
 	if err := migrate(e.a.DB); err != nil {
@@ -248,7 +248,7 @@ func TestMCPProposalLookupDatabaseFailure(t *testing.T) {
 	token := mcpToken(t, e, 1, true)
 	id := mcpPrepare(t, e, token, map[string]any{"operation": "create_category", "category": map[string]any{"name": "Lookup failure category", "kind": "expense"}})
 	mcpApprove(t, e, 1, id)
-	if _, err := e.a.DB.Exec("ALTER TABLE mcp_proposals DROP COLUMN result"); err != nil {
+	if _, err := e.a.DB.Exec("ALTER TABLE mcp_proposals DROP COLUMN result; DELETE FROM migrations WHERE version>=23; INSERT OR IGNORE INTO migrations VALUES(22)"); err != nil {
 		t.Fatal(err)
 	}
 	result, failed := mcpCall(t, e, token, "apply_change", map[string]any{"proposal_id": id})
