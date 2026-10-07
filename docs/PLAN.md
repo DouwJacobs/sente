@@ -69,3 +69,10 @@ Other banks, custom mappings, external AI classification, FX conversion, investm
 ## Application information
 
 The sidebar and Settings → About show the backend's application build version and available revision details. Every signed-in user can access About, repository/documentation/issue links and a Report an issue link. Report prefills contain only public application build metadata, with user review and submission on GitHub. No financial, account or personal details are prefilled.
+
+
+## Personal MCP context and aggregate reads
+
+Each user can save personal context in Settings → MCP and explicitly allow individual connections to read it. Context is shared as written during authenticated initialization and through a refresh tool for later conversations. Existing connections start with sharing off. It grants neither financial access nor approval. Users can edit/clear it; concurrent edits reject without losing browser drafts.
+
+Agents can request server-side spending/income/cashflow summaries and saved-period comparisons using authorized account/date/category/merchant filters. Spending uses allocations and refunds; cashflow counts parent movement once. Shared period summaries exclude private accounts unless an accessible private account is explicitly selected. Existing budget tools remain the source for budget status.

@@ -90,7 +90,7 @@ func TestMCPPrivacyAndTransport(t *testing.T) {
 		t.Fatal(initialized)
 	}
 	list := mcpRPC(t, e, token, "tools/list", map[string]any{})
-	if len(list["tools"].([]any)) != 19 {
+	if len(list["tools"].([]any)) != 22 {
 		t.Fatal(list)
 	}
 	result, err := mcpCall(t, e, token, "list_transactions", map[string]any{})

@@ -33,6 +33,10 @@ export function SettingsPage({
   onSectionChange: (v: string) => void;
 }) {
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [mcpVisited, setMCPVisited] = useState(section === "mcp");
+  useEffect(() => {
+    if (section === "mcp") setMCPVisited(true);
+  }, [section]);
   const [startDay, setStartDay] = useState("20"),
     [users, setUsers] = useState<Row[]>([]),
     [backups, setBackups] = useState<Row>({ items: [] }),
@@ -118,7 +122,9 @@ export function SettingsPage({
         />
       </div>
       <div {...panel("mcp")}>
-        {active === "mcp" && <MCPSettings notify={notify} refresh={refresh} />}
+        {(mcpVisited || active === "mcp") && (
+          <MCPSettings notify={notify} refresh={refresh} />
+        )}
       </div>
       <div {...panel("security")}>
         <SecuritySettings busy={busy} run={run} />

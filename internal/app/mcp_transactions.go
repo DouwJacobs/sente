@@ -205,12 +205,12 @@ func (a *App) mcpReviewQueueTool(ctx context.Context, _ *mcp.CallToolRequest, in
 	if more {
 		items = items[:limit]
 	}
+	allocations, err := mcpReviewAllocations(tx, items)
+	if err != nil {
+		return mcpFailure(err)
+	}
 	for _, item := range items {
-		allocations, err := data(tx, "SELECT l.id,l.category_id,l.amount_cents,c.name category_name,c.kind FROM allocations l LEFT JOIN categories c ON c.id=l.category_id WHERE l.transaction_id=? ORDER BY l.id", num(item["id"]))
-		if err != nil {
-			return mcpFailure(err)
-		}
-		item["allocations"] = allocations
+		item["allocations"] = allocations[num(item["id"])]
 		item["currency"] = "ZAR"
 	}
 	next := ""
@@ -222,4 +222,30 @@ func (a *App) mcpReviewQueueTool(ctx context.Context, _ *mcp.CallToolRequest, in
 		}
 	}
 	return mcpResult(map[string]any{"items": mcpSafe(items), "total": total, "more": more, "next_cursor": next, "list_version": version}), nil, nil
+}
+
+// Load only the already authorized page, in the same read snapshot. The lookahead
+// entry is excluded and empty pages issue no allocation query.
+func mcpReviewAllocations(q queryer, items []map[string]any) (map[int64][]map[string]any, error) {
+	grouped := make(map[int64][]map[string]any, len(items))
+	if len(items) == 0 {
+		return grouped, nil
+	}
+	placeholders := make([]string, len(items))
+	args := make([]any, len(items))
+	for i, item := range items {
+		id := num(item["id"])
+		placeholders[i], args[i] = "?", id
+		grouped[id] = []map[string]any{}
+	}
+	rows, err := data(q, "SELECT l.transaction_id,l.id,l.category_id,l.amount_cents,c.name category_name,c.kind FROM allocations l LEFT JOIN categories c ON c.id=l.category_id WHERE l.transaction_id IN ("+strings.Join(placeholders, ",")+") ORDER BY l.transaction_id,l.id", args...)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		id := num(row["transaction_id"])
+		delete(row, "transaction_id")
+		grouped[id] = append(grouped[id], row)
+	}
+	return grouped, nil
 }

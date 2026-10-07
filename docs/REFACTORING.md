@@ -52,3 +52,7 @@ Add work beside its domain owner; extract by responsibility when a module accumu
 Verify with the documented WSL Go/Node runtimes: `go test -race ./... -timeout=30m`, `go vet ./...`, frontend `npm test` and `npm run build`, and isolated synthetic Playwright workflows. Domain financial tests live beside their implementation; browser/MCP authorization, stale-write and rollback tests remain in app. Do not inspect production data or imply visual/live-bank verification from synthetic results.
 
 Build information belongs to `internal/buildinfo`; the browser adapter is `internal/app/build_info.go`. The frontend contract/hook and report-link builder live in `shared/buildInfo.ts`, with About owned by `features/settings/AboutSettings.tsx`.
+
+MCP `mcp_aggregates.go` owns filtered aggregate read adapters; `mcp_context.go` owns context storage/browser writes/session delivery; queue hydration remains in `mcp_transactions.go`. Frontend `features/mcp` owns the personal-context form/draft; shared consent fields remain usable by OAuth and Settings.
+
+MCP Settings composes `features/mcp/MCPConnectionCard.tsx` and `MCPProposalCard.tsx` for connection summaries and exact change presentation; parent request locks, selection and permission drafts remain in MCPSettings.

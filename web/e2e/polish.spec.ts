@@ -67,7 +67,7 @@ for(const width of [1440,900,360])for(const theme of ['light','dark'])test(`whol
  }
  await page.getByRole('tab',{name:'General',exact:true}).focus()
  await page.keyboard.press('End')
- await expect(page.getByRole('tab',{name:'Security',exact:true})).toBeFocused()
+ await expect(page.getByRole('tab',{name:'About',exact:true})).toBeFocused()
  await page.keyboard.press('Home')
  await expect(page.getByRole('tab',{name:'General',exact:true})).toBeFocused()
  // Skip navigation is available to keyboard users and moves to real content.

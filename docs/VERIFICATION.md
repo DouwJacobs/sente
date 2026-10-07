@@ -1,5 +1,23 @@
 # Verification
 
+## MCP tools, personal context and CI — 7 October 2026
+
+Scope: issues #6–#8 plus owner-requested MCP page/permission clarity and personal context with independent per-connection sharing consent. Schema 22 adds only personal context storage. No financial/source records are rewritten.
+
+Completed with synthetic fixtures:
+
+- Full backend race suite passed (app 73.476 seconds), with TMPDIR and GOTMPDIR set to /dev/shm; Go vet passed. Aggregate tests cover splits, refunds, transfers, category/merchant/date/search filters, scoped/hidden/private accounts, period ordering, paging and invalid inputs, exact month labels, and overflow.
+- Context tests cover browser authentication/CSRF, current actor authorization, user isolation, optimistic concurrency, Unicode size limits, disabled default consent, explicit read-only sharing, fresh initialization/tool delivery, concurrent connections without instruction leakage, revocation, public setup exclusion, audit rollback/content exclusion, deletion and schema-21 upgrade preservation.
+- Queue tests verify one allocation query for 100 authorized entries, zero for empty pages, stable ordering and subset isolation. A synthetic benchmark measured 100-entry batch hydration at 185302 ns/op versus 1356876 ns/op for per-entry hydration (about 7.3 times faster); timings are local measurements.
+- All 10 frontend unit tests and the production TypeScript/Vite build passed. Python browser-runner syntax checks passed.
+- All 39 browser spec files passed across isolated runs after fixture/selector repairs; all 10 focused MCP Chromium workflows passed at 1440px/360px in light/dark. They exercise OAuth read/proposal permissions, exact budget proposals, apply-after-approval, connection revocation, context first-blur/live validation, tab-preserved drafts, save/version conflict/reload, sharing/revocation delivery and modal focus/escape behavior.
+- Playwright-generated synthetic screenshots of the MCP page and custom permissions were visually inspected at desktop/mobile sizes, including light/dark states. Four final captures have no horizontal page overflow. Long modal content scrolls. No computer-use control or real account data was used.
+
+CI adds race/vet, frontend tests/build and synthetic Chromium workflows, with fresh databases for each spec and one shared backend build. Intermediate broad runs exposed outdated fixtures/selectors: spending cards included income, fresh onboarding assumed a built-in group, keyboard End assumed Security was the last tab, and ledger rows assumed redundant Accepted badges. Tests now scope spending, explicitly create their onboarding group, expect About, and verify acceptance through the authorized ledger response. Additional historical selectors now open filter/rule disclosures, exercise account editing rather than removed manual account creation and Settings banking navigation, allow editor height to follow content while checking width/scroll/focus, and verify the current Needs review acceptance/search reset. The final workflow also uses exact password-field labels to avoid visibility-button ambiguity. Shared financial behavior was not altered for these repairs.
+
+MCP impact: three typed tools added (22 total), explicit aggregate DTO outputs, independent read_context consent defaulting false, per-user initialization delivery and immediate consent rechecks. Existing financial redaction/allowlists, proposals/automatic approval and shared money services remain in force. Context is intentionally verbatim and client use/refresh cannot be guaranteed. GitHub Actions passed backend race/vet, frontend build/tests and the first 21 browser specs, then exposed an onboarding test reopening a different period after asynchronous list reordering. The fixture now names the created period, waits for its saved total and reopens that exact card; no retries or product changes mask the failure. Live external MCP clients, Docker packaging, banking and production deployment remain unverified locally.
+
+
 ## Portable configuration — 7 October 2026
 
 Scope: issues #10–#14 and #28, expanded to multiple repository/file sources, optional default configuration, manual pulls and browser export. Schema 21 adds source tracking and expiring configuration previews. Existing financial records/configuration remain; fresh databases contain no classification catalogue. The generic `sente-config` repository and release `v1.0.0` were created with public non-personal fixtures.

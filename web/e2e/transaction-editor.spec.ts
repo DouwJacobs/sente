@@ -31,8 +31,12 @@ for(const mobile of [false,true])for(const theme of ['light','dark'])test(`trans
  await picker.getByLabel('Search category',{exact:true}).press('Enter')
  await expect(picker).not.toBeVisible()
  await expect(editor.getByLabel('Category',{exact:true})).toBeFocused()
- expect(await editor.boundingBox()).toEqual(before)
+ // The newly selected category reveals rule guidance; retain horizontal alignment.
+ const afterSelection=(await editor.boundingBox())!
+ expect(afterSelection.x).toBe(before!.x)
+ expect(afterSelection.width).toBe(before!.width)
  expect(await editor.locator('.modal-body').evaluate(el=>el.scrollTop)).toBe(scroll)
+ await editor.locator('summary').filter({hasText:'Automatically categorize similar transactions'}).click()
  await expect(editor.getByRole('heading',{name:'Proposed automatic rule'})).toBeVisible()
  await editor.getByLabel('Spending group',{exact:true}).scrollIntoViewIfNeeded()
  const groupScroll=await editor.locator('.modal-body').evaluate(el=>el.scrollTop)
