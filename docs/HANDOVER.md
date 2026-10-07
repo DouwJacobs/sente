@@ -57,3 +57,7 @@ Integration before merge (2026-10-07): incorporated main’s PR #43 documentatio
 Owner-requested refinement: sidebar version is a single quiet label; About now uses Sente branding, grouped project links, a prominent report action and inset build details. Production frontend build and 8 focused synthetic desktop/mobile/light/dark workflows passed; no manual visual sign-off. The existing dev server at 5173 hot-reloads these changes. MCP/build/report data contracts are unchanged.
 
 The sidebar version now uses plain footer text styling with zero spacing and no hover surface, at the owner's request. Focus remains visible. Final frontend build and light/dark synthetic structural checks passed; no MCP changes.
+
+## Portable configuration final integration
+
+Ready for main after owner acceptance: card spacing matches the active theme on desktop/mobile, current account-security/About features are preserved, and portable configuration uses schema 21. Full backend race tests, Go vet, 10 frontend unit tests, production build, live public starter pull and all 10 focused integrated browser workflows passed; see VERIFICATION.md. The development server at 127.0.0.1:5173 is running from the portable worktree. The config repository's main branch has the expanded starter and three optional packs; Gifts received and personal transaction rules are excluded from public packs. The bundled offline snapshot remains the original release snapshot. MCP contracts and consent are unchanged.

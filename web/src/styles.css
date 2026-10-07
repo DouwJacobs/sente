@@ -2797,7 +2797,7 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
 }
 
 .configuration-source-forms { margin-bottom: var(--space-5); }
-@media (max-width: 760px) { .configuration-source-forms { margin-bottom: var(--space-4); } }
+@media (max-width: 760px) { .configuration-source-forms { margin-bottom: 20px; } }
 .configuration-source { margin-top: 1.5rem; overflow-wrap: anywhere; }
 [aria-label="Configuration import preview"] details { margin-block: .75rem; overflow-wrap: anywhere; }
 [aria-label="Configuration import preview"] dd { margin-inline-start: 1rem; }
