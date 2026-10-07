@@ -372,3 +372,5 @@ SpendingGroupEditor is shared by Categories and search and uses Modal/Form/Field
 Automated synthetic responsive and keyboard checks are the verification method under the current owner instruction. No manual/computer-use visual sign-off is implied.
 
 Shared modal focus: Field marks an explicitly autofocus control; Modal focuses it after showModal opens the dialog. Direct controls such as search use the same data-autofocus marker. Captured dialog cleanup closes the native overlay and preserves focus restoration.
+
+2026-10-07: Product branding is Sente on onboarding, sign-in, sidebar, OAuth consent and browser metadata. Configurable household names remain separate; signed-in titles use `<household> · Sente`. Existing theme/controls remain unchanged.

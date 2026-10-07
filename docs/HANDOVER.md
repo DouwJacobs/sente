@@ -1,4 +1,4 @@
-# Finance tracker handover
+# Sente handover
 
 Current source handover, updated 7 October 2026. Work directly in Ubuntu WSL at /home/douw/finance-tracker; the Windows project links to that source. Preserve existing uncommitted work. No production deployment was performed during the latest audit repair or module refactor.
 
@@ -67,3 +67,9 @@ MCP impact: the existing shared services reach the extracted domain logic; route
 
 
 Refactor verification: 168 distinct backend tests passed with race detection across the main run and its one remaining-test follow-up; the external FNB sample test skipped as expected. All final packages compiled and vet passed. Frontend build and 8 unit tests passed; 55 distinct synthetic browser workflows passed across main/focused runs, including settings draft retention, session feedback and nested editing. Historical browser expectations were repaired without changing the application UI. The main backend run hit its 30-minute process limit, and the complete 140-test historical browser suite was not rerun; VERIFICATION.md records exact coverage. No production deployment or live banking check.
+
+## Sente README and demo branch — 2026-10-07
+
+Issues #3 and #18 are paired on `codex/sente-readme-demo` in `/home/douw/sente-readme-demo`, based on main. The issues #1/#2 refactor was merged into main as PR #42 before this branch was integrated; branding now follows the extracted auth/workspace components. README is user-focused; runtime/development notes are in dedicated docs. Product names use Sente; existing binary, key path, module and volume identifiers remain compatible. Docker destination is douwjacobs/sente with latest/development tags. Synthetic SQL and exclusive new-database tooling support shared local demo data. MCP impact: public product/resource names change only; offline demo tooling introduces no MCP endpoint, financial schema/allowlist, capability or consent change. Screenshots and live FNB compatibility are not claimed.
+
+Integrated with main after PR #42; current production build, unit/demo/MCP/OAuth checks, vet and both synthetic handover browser workflows passed. See VERIFICATION.md for the unavailable Docker repeat check and publishing credential requirement.

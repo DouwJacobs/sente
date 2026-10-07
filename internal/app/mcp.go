@@ -215,7 +215,7 @@ func (a *App) mcpHandler() http.Handler {
 
 // This text contains only public configuration, never user/session/financial data.
 func (a *App) mcpSetupInstructions() string {
-	return fmt.Sprintf(`Finance Tracker — agent connection instructions
+	return fmt.Sprintf(`Sente — agent connection instructions
 
 Connect this server using your client's remote MCP integration:
 Name: finance-tracker
@@ -235,7 +235,7 @@ Authorization server: %s/.well-known/oauth-authorization-server
 Use the discovered registration, authorization and token endpoints. Request
 finance:read for read-only access; also request finance:propose when the user wants
 help making changes. Use the MCP endpoint as the OAuth resource. Open the browser
-authorization flow and let the user sign in to Finance Tracker and approve the
+authorization flow and let the user sign in to Sente and approve the
 connection. The user chooses read-only or proposal access. Keep issued credentials
 in your client's secure credential store. Never ask for passwords, bank details
 or manually copied tokens in chat. Do not bypass authentication.

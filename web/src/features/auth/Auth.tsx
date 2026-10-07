@@ -23,11 +23,11 @@ export function Setup({
         <span className="brand-mark">
           <PixelMark />
         </span>
-        Finance tracker
+        Sente
       </div>
       <div className="login-panel">
         <h1>Create admin account</h1>
-        <p className="muted">Set up your finance tracker.</p>
+        <p className="muted">Set up Sente for your household.</p>
         <Form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -128,11 +128,11 @@ export function Login({
         <span className="brand-mark">
           <PixelMark />
         </span>
-        Finance tracker
+        Sente
       </div>
       <div className="login-panel">
         <h1>Welcome back</h1>
-        <p className="muted">Sign in to your finance tracker.</p>
+        <p className="muted">Sign in to Sente.</p>
         <Form
           onSubmit={async (e) => {
             e.preventDefault();

@@ -79,7 +79,7 @@ export function WorkspaceShell({
             <span title={data.branding.display_name}>
               {data.branding.display_name}
             </span>
-            <small>Finance tracker</small>
+            <small>Sente</small>
           </div>
         </div>
         <nav aria-label="Main navigation">

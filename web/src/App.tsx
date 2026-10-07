@@ -128,8 +128,8 @@ export default function App() {
   useEffect(() => {
     document.title =
       user && data
-        ? data.branding.display_name + " · Finance tracker"
-        : "Finance tracker";
+        ? data.branding.display_name + " · Sente"
+        : "Sente";
   }, [user, data?.branding.display_name]);
   if (!ready || startupError || setup || !user)
     return (

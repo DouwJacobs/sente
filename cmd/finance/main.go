@@ -186,7 +186,7 @@ func run() error {
 		}()
 		a.StartBackups()
 		a.StartFNBScheduler()
-		log.Printf("Finance tracker listening on port %d", port)
+		log.Printf("Sente listening on port %d", port)
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			return err
 		}

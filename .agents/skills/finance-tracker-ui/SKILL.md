@@ -3,11 +3,11 @@ name: finance-tracker-ui
 description: Create, change, or review the finance-tracker interface using its maintained UI guide, responsive workflows, money display, and transaction review conventions. Applies only to this project.
 ---
 
-# Finance Tracker UI
+# Sente UI
 
 Read the repository's docs/UI.md before UI work. Read relevant requirements in docs/PLAN.md for import, review, splitting, periods, and permissions.
 
-Use this skill and the current conventions in docs/UI.md as the baseline for every Finance Tracker UI change. The latest accepted modern finance direction takes precedence over historical retro/theme trials in the guide. Preserve the existing design unless the owner requests a specific change. Once shared tokens and components exist, extend them instead of introducing independent screen styles. Keep proposed choices distinct from accepted conventions.
+Use this skill and the current conventions in docs/UI.md as the baseline for every Sente UI change. The latest accepted modern finance direction takes precedence over historical retro/theme trials in the guide. Preserve the existing design unless the owner requests a specific change. Once shared tokens and components exist, extend them instead of introducing independent screen styles. Keep proposed choices distinct from accepted conventions.
 
 Start from the existing shared components and tokens: neutral page/chrome/card/input surfaces in both themes, restrained teal primary/selected/focus accents, and semantic financial colors. Keep theme changes synchronized through App state and the saved finance-theme preference; retain the navbar theme toggle and Settings Light/Dark/Follow device choices. Extend shared roles rather than introducing page-specific palettes or parallel control styles.
 
