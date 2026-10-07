@@ -1,5 +1,5 @@
 import {useEffect,useRef,useId,useState,Children,cloneElement,isValidElement,type ReactNode,type ButtonHTMLAttributes,type ReactElement,type FormHTMLAttributes,type ChangeEvent,type FocusEvent,type InvalidEvent,type Ref} from 'react'
-import {X,Menu,Eye,EyeOff} from 'lucide-react'
+import {X,Menu,Eye,EyeOff,CircleCheck,CircleAlert,Info,type LucideIcon} from 'lucide-react'
 import {createPortal} from 'react-dom'
 export function Spinner(){return <span className="spinner" aria-hidden="true"/>}
 export function Loading({children='Loading'}:{children?:ReactNode}){return <span className="loading-status" role="status"><Spinner/>{children}</span>}
@@ -7,7 +7,7 @@ export function Button({children,variant='secondary',loading=false,type='button'
 export function PageHeader({title,description,workspace,loading=false}:{title:string;description:string;workspace:string;loading?:boolean}){
  return <div className="page-head">
   <div><p className="eyebrow">{workspace} finances</p><h1 id="page-title">{title}</h1><p className="muted">{description}</p></div>
-  <div className="page-head-meta">{loading&&<Loading>Refreshing workspace</Loading>}<Badge>ZAR</Badge></div>
+  <div className="page-head-meta">{loading&&<Loading>Refreshing workspace</Loading>}<span className="currency-label">ZAR</span></div>
  </div>
 }
 export function Pagination({page,total,size=20,loading,onChange,range=false}:{page:number;total:number;size?:number;loading?:boolean;range?:boolean;onChange:(page:number)=>void}){
@@ -90,13 +90,31 @@ export function Field({label,children,hint,validate,serverError}: {label:string;
  })}{hint&&<small id={id+'-hint'}>{hint}</small>}{message?<small className="field-error" id={id+'-error'} role="alert">{message}</small>:<span className="field-error-space" aria-hidden="true"/>}</div>
 }
 export function Empty({title,children}: {title:string;children?:ReactNode}){const content=Children.toArray(children),actions=content.filter(child=>isValidElement(child)&&child.type===Button),description=content.filter(child=>!actions.includes(child));return <div className="empty"><h3>{title}</h3>{description.length>0&&<div className="empty-description">{description}</div>}{actions.length>0&&<div className="empty-actions">{actions}</div>}</div>}
-export function Badge({children,tone='neutral'}: {children:ReactNode;tone?:'neutral'|'pending'|'good'|'bad'}){return <span className={'badge '+tone}>{children}</span>}
+export function StatusIcon({label,icon:Icon,tone='neutral'}: {label:string;icon:LucideIcon;tone?:'neutral'|'pending'|'good'|'bad'}) {
+ return <span className={'status-icon '+tone} role="img" aria-label={label} title={label}><Icon size={16} aria-hidden="true"/></span>
+}
+// Keep explanatory statuses readable, with an icon instead of a pill surface.
+export function Badge({children,tone='neutral'}: {children:ReactNode;tone?:'neutral'|'pending'|'good'|'bad'}) {
+ const Icon=tone==='good'?CircleCheck:tone==='bad'||tone==='pending'?CircleAlert:Info
+ return <span className={'status-label '+tone}><Icon size={14} aria-hidden="true"/><span>{children}</span></span>
+}
 export function Modal({title,children,onClose,size='medium',stable=false}: {title:string;children:ReactNode;onClose:()=>void;size?:'compact'|'medium'|'wide';stable?:boolean}){
  const ref=useRef<HTMLDialogElement>(null)
  useEffect(()=>{
   const dialog=ref.current,opener=document.activeElement instanceof HTMLElement?document.activeElement:null
   dialog?.showModal();dialog?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
-  return()=>{dialog?.close();if(opener?.isConnected)opener.focus()}
+  const viewport=window.visualViewport
+  const resize=()=>{
+   dialog?.style.setProperty('--modal-viewport-height',`${viewport?.height ?? window.innerHeight}px`)
+   dialog?.style.setProperty('--modal-viewport-top',`${viewport?.offsetTop ?? 0}px`)
+  }
+  resize();viewport?.addEventListener('resize',resize);viewport?.addEventListener('scroll',resize)
+  window.addEventListener('resize',resize)
+  return()=>{
+   viewport?.removeEventListener('resize',resize);viewport?.removeEventListener('scroll',resize)
+   window.removeEventListener('resize',resize)
+   dialog?.close();if(opener?.isConnected)opener.focus()
+  }
  },[])
  return createPortal(<dialog ref={ref} className={'modal modal-'+size+(stable?' modal-stable':'')} aria-label={title} onCancel={event=>{event.preventDefault();event.stopPropagation();onClose()}}><div className="modal-head"><h2>{title}</h2><Button variant="quiet" aria-label="Close" onClick={onClose}><X size={20}/></Button></div><div className="modal-body">{children}</div></dialog>,document.body)
 }

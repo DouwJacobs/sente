@@ -243,8 +243,10 @@ input[type=file]:not(:disabled)::file-selector-button:hover { background:var(--i
  .dashboard-overview .stat:nth-child(n+3) { border-top:1px solid var(--border); }
 }
 @media(max-width:760px) {
- .dashboard-overview .stat { padding:18px 14px; }
- .dashboard-overview .stat>strong,.dashboard-overview .stat.budget>strong { font-size:clamp(17px,5vw,22px); letter-spacing:-.6px; }
+ .dashboard-overview .stat { padding:12px; }
+ .dashboard-overview .stat-heading { margin-bottom:8px; font-size:12px; }
+ .dashboard-overview .stat>strong,.dashboard-overview .stat.budget>strong { font-size:clamp(16px,4.4vw,20px); letter-spacing:-.3px; }
+ .dashboard-overview .stat small { font-size:11px; margin-top:6px; }
 }
 
 .spending-panel .spending-bucket>summary { background:var(--surface-soft); border-radius:var(--control-radius); margin-top:12px; }

@@ -1,9 +1,10 @@
 import { buildLabel, useBuildInfo } from "../../shared/buildInfo";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   LayoutDashboard,
   ArrowLeftRight,
   Wallet,
+  ListChecks,
   ChartNoAxesCombined,
   Tags,
   Settings,
@@ -48,6 +49,8 @@ export function WorkspaceShell({
   onSignOut,
   onSearch,
   onAbout,
+  onReview,
+  reviewActive,
   children,
 }: {
   user: Row;
@@ -63,14 +66,59 @@ export function WorkspaceShell({
   onSignOut: () => void;
   onSearch: () => void;
   onAbout: () => void;
+  onReview: () => void;
+  reviewActive: boolean;
   children: ReactNode;
 }) {
   const { info } = useBuildInfo();
+  const shellRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const measure = () => shellRef.current?.style.setProperty(
+      "--mobile-nav-height", `${nav.getBoundingClientRect().height}px`,
+    );
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    measure();
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    if (!more) return;
+    moreRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+    const dismiss = (event: Event) => {
+      if (event.target instanceof Node && !moreRef.current?.contains(event.target)
+          && !moreButtonRef.current?.contains(event.target)) setMore(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMore(false);
+        moreButtonRef.current?.focus();
+      }
+    };
+    const resize = () => {
+      if (window.innerWidth > 760) setMore(false);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("focusin", dismiss);
+    document.addEventListener("keydown", escape);
+    window.addEventListener("resize", resize);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("focusin", dismiss);
+      document.removeEventListener("keydown", escape);
+      window.removeEventListener("resize", resize);
+    };
+  }, [more, setMore]);
   const visibleNav = nav.filter(
     (n) => user.budget_member || !["Dashboard", "Budgets"].includes(n.name),
   );
   return (
-    <div className="shell">
+    <div className="shell" ref={shellRef}>
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
@@ -121,15 +169,14 @@ export function WorkspaceShell({
           <span className="desktop-label">Personal finance</span>
           <div className="top-actions">
             <Button
-              variant="secondary"
-              className="topbar-search-btn"
+              variant="quiet"
+              className="topbar-search-btn topbar-icon"
               onClick={() => onSearch()}
               aria-label="Search workspace"
             >
-              <Search size={15} aria-hidden="true" />
-              <span>Search</span>
+              <Search size={18} aria-hidden="true" />
             </Button>
-            <span className="username">{user.username}</span>
+            <span className="username" title={user.username}>{user.username}</span>
             <Button
               variant="quiet"
               className="topbar-icon"
@@ -173,37 +220,47 @@ export function WorkspaceShell({
           {children}
         </main>
       </div>
-      <nav className="mobile-nav" aria-label="Mobile navigation">
+      <nav ref={navRef} className="mobile-nav" aria-label="Mobile navigation">
         {visibleNav
           .filter((n) =>
-            ["Dashboard", "Transactions", "Accounts"].includes(n.name),
+            ["Dashboard", "Transactions"].includes(n.name),
           )
           .map((n) => (
             <button
               key={n.name}
-              className={current === n.name ? "active" : ""}
+              className={current === n.name && !reviewActive ? "active" : ""}
               onClick={() => go(n.name)}
-              aria-current={current === n.name ? "page" : undefined}
+              aria-current={current === n.name && !reviewActive ? "page" : undefined}
             >
               <n.icon size={21} />
               <span>{n.name}</span>
             </button>
           ))}
-        <button onClick={() => setMore(!more)} aria-expanded={more}>
+        <button
+          className={reviewActive ? "active" : ""}
+          aria-current={reviewActive ? "page" : undefined}
+          onClick={onReview}
+        >
+          <ListChecks size={21} />
+          <span>Review</span>
+        </button>
+        <button ref={moreButtonRef} onClick={() => setMore(!more)} aria-expanded={more}
+          aria-controls="mobile-more-pages"
+          className={!["Dashboard", "Transactions"].includes(current) ? "active" : ""}>
           <Menu size={21} />
           <span>More</span>
         </button>
       </nav>
       {more && (
-        <div className="mobile-more">
+        <div className="mobile-more" id="mobile-more-pages" ref={moreRef}>
           <nav aria-label="More pages">
             {visibleNav
               .filter(
                 (n) =>
-                  !["Dashboard", "Transactions", "Accounts"].includes(n.name),
+                  !["Dashboard", "Transactions"].includes(n.name),
               )
               .map((n) => (
-                <button key={n.name} onClick={() => go(n.name)}>
+                <button key={n.name} aria-current={current === n.name ? "page" : undefined} onClick={() => go(n.name)}>
                   <n.icon size={19} />
                   {n.name}
                 </button>

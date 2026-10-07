@@ -1,7 +1,8 @@
 import {useEffect,useState} from 'react'
 import {api} from './api'
+import {CircleCheck,Pause} from 'lucide-react'
 import {MerchantAvatar,MerchantLogoField} from './MerchantAvatar'
-import {Button,Field,Form,Modal,Badge,Loading,Pagination,ActionMenu} from './ui'
+import {Button,Field,Form,Modal,StatusIcon,Loading,Pagination,ActionMenu} from './ui'
 import {ChoiceField,CategoryChoice,GroupDot} from './Choices'
 import {PagedSelect,usePagedList,ListStatus,ListNavigation} from './PagedList'
 import {BulkEditor} from './CoreWorkflows'
@@ -28,7 +29,35 @@ export function MerchantRules(props:PageProps){
  const[edit,setEdit]=useState<Row|null>(null),[preview,setPreview]=useState<Row|null>(null),[selection,setSelection]=useState<Record<number,Row>>({}),[bulk,setBulk]=useState(false),[page,setPage]=useState(0)
  const openEditor=(rule?:Row)=>setEdit(rule?{...rule,account_id:rule.account_id??0}:{account_id:data.user.budget_member?0:data.accounts.find(a=>a.role==='editor')?.id||'',merchant_id:null,pattern:'',direction:'any',priority:0,enabled:true})
  const loadPreview=(id:number,nextPage=0)=>run(async()=>{setPreview({...await api('/merchant-rules/'+id+'/preview?page='+nextPage,'POST'),rule_id:id});setPage(nextPage)})
- return <section className="panel"><div className="section-head"><div><h2>Merchant naming rules</h2><p className="muted">Recognize merchants across accounts, with an optional account scope.</p></div><Button onClick={()=>openEditor()}>Add merchant rule</Button></div><ListStatus list={list}/>{list.items.map(rule=><div className="line" key={rule.id}><div className="merchant-identity"><MerchantAvatar name={rule.merchant_name} logo={rule.merchant_logo}/><div><strong>{rule.merchant_name}</strong><small>{rule.account_name} · contains "{rule.pattern}" · {rule.direction} · priority {rule.priority}{rule.category_name?' · '+rule.category_name:''}{rule.spending_group_name?<span> · <GroupDot color={rule.spending_group_color}/>{rule.spending_group_name}</span>:null}</small></div></div><div className="toolbar-actions"><Badge>{rule.enabled?'Active':'Paused'}</Badge><ActionMenu label={'Actions for merchant rule '+rule.merchant_name}><Button variant="quiet" onClick={()=>openEditor(rule)}>Edit</Button>{rule.enabled&&<Button variant="quiet" onClick={()=>{setSelection({});loadPreview(rule.id)}}>Preview unnamed transactions</Button>}</ActionMenu></div></div>)}<ListNavigation list={list}/>
+ return <section className="panel">
+  <div className="section-head">
+   <div><h2>Merchant naming rules</h2><p className="muted">Recognize merchants across accounts, with an optional account scope.</p></div>
+   <Button onClick={()=>openEditor()}>Add merchant rule</Button>
+  </div>
+  <ListStatus list={list}/>
+  {list.items.map(rule=>(
+   <div className="line rule-list-row merchant-rule-row" key={rule.id}>
+    <div className="merchant-identity">
+     <MerchantAvatar name={rule.merchant_name} logo={rule.merchant_logo}/>
+     <div className="rule-list-content">
+      <strong>{rule.merchant_name}</strong>
+      {(rule.category_name||rule.spending_group_name)&&<small>
+       {rule.category_name}{rule.category_name&&rule.spending_group_name?' · ':''}
+       {rule.spending_group_name&&<span className="group-label"><GroupDot color={rule.spending_group_color}/>{rule.spending_group_name}</span>}
+      </small>}
+     </div>
+    </div>
+    <div className="rule-list-actions">
+     <StatusIcon label={rule.enabled?'Active':'Paused'} icon={rule.enabled?CircleCheck:Pause} tone={rule.enabled?'good':'neutral'}/>
+     <ActionMenu label={'Actions for merchant rule '+rule.merchant_name}>
+      <Button variant="quiet" disabled={busy} onClick={()=>openEditor(rule)}>Edit</Button>
+      {rule.enabled&&<Button variant="quiet" disabled={busy} onClick={()=>{setSelection({});loadPreview(rule.id)}}>Preview unnamed transactions</Button>}
+     </ActionMenu>
+    </div>
+   </div>
+  ))}
+  <ListNavigation list={list}/>
+
  {edit&&<MerchantRuleEditor rule={edit} data={data} notify={notify} refresh={refresh} onClose={()=>setEdit(null)}/>}
  {preview&&<Modal title="Matching unnamed transactions" size="wide" onClose={()=>setPreview(null)}><p>{preview.total} matches. Select up to 100 to apply explicitly.</p>{preview.items.map((t:Row)=><label key={t.id} className="line"><input type="checkbox" checked={!!selection[t.id]} disabled={!selection[t.id]&&Object.keys(selection).length>=100} onChange={e=>setSelection(old=>{const next={...old};if(e.target.checked)next[t.id]=t;else delete next[t.id];return next})}/><span>{t.date} · {t.description}</span></label>)}<Pagination page={page} total={preview.total} size={100} loading={busy} onChange={p=>loadPreview(preview.rule_id,p)}/><Button disabled={!Object.keys(selection).length} onClick={()=>setBulk(true)}>Preview selected changes</Button></Modal>}
  {bulk&&preview&&<BulkEditor {...props} rows={Object.values(selection)} ruleId={preview.rule_id} onClose={()=>setBulk(false)} onDone={()=>{setBulk(false);setPreview(null);setSelection({});refresh()}}/>}

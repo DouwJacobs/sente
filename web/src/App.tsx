@@ -279,7 +279,9 @@ export default function App() {
         setTheme={setTheme}
         more={more}
         setMore={setMore}
-        go={go}
+        go={(page) => page === "Transactions" ? openTransactions("all") : go(page)}
+        onReview={() => openTransactions("review")}
+        reviewActive={current === "Transactions" && transactionTab === "review"}
         signingOut={signingOut}
         onAbout={() => {
           setSettingsSection("about");
