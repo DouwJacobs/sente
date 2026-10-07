@@ -6,13 +6,13 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
+
+	"finance-tracker/internal/classification"
+	"finance-tracker/internal/statements"
 )
 
-func fingerprint(row SourceRow) string {
-	return hash(row.Date + "|" + strconv.FormatInt(row.Amount, 10) + "|" + normalize(row.Description))
-}
-func normalize(s string) string { return strings.ToLower(strings.Join(strings.Fields(s), " ")) }
+func fingerprint(row SourceRow) string { return statements.Fingerprint(row) }
+func normalize(s string) string        { return classification.Normalize(s) }
 func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 	if err := q.QueryRow("SELECT name FROM accounts WHERE id=?", account).Scan(&p.AccountName); err != nil {
 		return err
@@ -149,7 +149,7 @@ func (a *App) previewImport(w http.ResponseWriter, r *http.Request) error {
 		if total > 25<<20 {
 			return fail(400, "Upload exceeds 25 MiB")
 		}
-		incoming = append(incoming, inputFile{header.Filename, b})
+		incoming = append(incoming, inputFile{Name: header.Filename, Content: b})
 	}
 	files, err := expand(incoming)
 	if err != nil {

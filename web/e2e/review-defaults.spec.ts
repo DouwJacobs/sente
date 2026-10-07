@@ -18,7 +18,9 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`review f
  const controls=await Promise.all(['Filter by category','Filter by spending group'].map(label=>filters.getByLabel(label,{exact:true}).boundingBox()))
  for(const control of controls){expect(control).not.toBeNull();expect(Math.abs(control!.width-controls[0]!.width)).toBeLessThanOrEqual(1)}
  await filters.getByLabel('Budget period',{exact:true}).selectOption('unassigned')
- await expect(rows).toHaveCount(0)
+ // Other import workflows may add legitimate unassigned entries to the shared fixture.
+ await expect(rows.filter({hasText:'Market groceries'})).toHaveCount(0)
+ for(const row of await rows.all())await expect(row).toContainText('Needs a period')
  await filters.getByLabel('Budget period',{exact:true}).selectOption('1')
  await expect(rows.filter({hasText:'Market groceries'})).toHaveCount(1)
  await filters.getByLabel('Budget period',{exact:true}).selectOption('')

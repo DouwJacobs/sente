@@ -1,7 +1,7 @@
 import {useEffect,useState,useRef} from 'react'
 import {api} from './api'
 import {Field,Button,Loading,Pagination} from './ui'
-import {type Row} from './App'
+import {type Row} from './shared/types'
 export function usePagedList(url:string,revision=0,size=20){
  const stamp=useRef({version:'',revision,url,query:''})
  const[page,setPage]=useState(0),[query,setQuery]=useState(''),[items,setItems]=useState<Row[]>([]),[total,setTotal]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState(''),[retry,setRetry]=useState(0)

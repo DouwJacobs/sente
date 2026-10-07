@@ -18,7 +18,7 @@ for(const mobile of [false,true]){
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
   await login(page);await navigate(page,'Review',mobile)
   await page.getByRole('button').filter({hasText:'Synthetic long description'}).click()
-  const transaction=page.getByRole('dialog').filter({hasText:'Category amounts'})
+  const transaction=page.getByRole('dialog',{name:/^Transaction #[0-9]+$/})
   await transaction.getByLabel('Category',{exact:true}).click()
   const picker=page.getByRole('dialog',{name:'Select category',exact:true})
   const before=await page.evaluate(async()=> (await fetch('/api/categories').then(r=>r.json())).length)
@@ -34,6 +34,7 @@ for(const mobile of [false,true]){
   expect(after).toBe(before+1)
   await transaction.getByLabel('Spending group',{exact:true}).click()
   await page.getByRole('dialog',{name:'Select spending group',exact:true}).getByRole('button',{name:/^Recurring(?: Selected)?$/}).click()
+  await transaction.locator('summary').filter({hasText:'Automatically categorize similar transactions'}).click()
   await transaction.getByLabel('Use this category and spending group for similar transactions in this account',{exact:true}).check()
   await transaction.getByLabel('Description contains',{exact:true}).fill('Synthetic long description')
   await transaction.getByRole('button',{name:'Save changes',exact:true}).click()
@@ -55,7 +56,7 @@ for(const mobile of [false,true]){
  })
 }
 test('fresh installation ships editable defaults',async({page})=>{
- await page.goto('http://127.0.0.1:18082/')
+ await page.goto('http://127.0.0.1:'+String(Number(process.env.E2E_TEST_PORT||18080)+2)+'/')
  await page.getByLabel('Username',{exact:true}).fill('starter-owner')
  await page.getByLabel('Password',{exact:true}).fill('synthetic-starter-password')
  await page.getByLabel('Confirm password',{exact:true}).fill('synthetic-starter-password')

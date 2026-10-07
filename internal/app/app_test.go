@@ -124,29 +124,16 @@ func (e *testEnv) stage(t *testing.T, name, content string) ParsedFile {
 func (e *testEnv) commit(t *testing.T, id int64, decisions map[string]string, confirm bool) *httptest.ResponseRecorder {
 	return e.req(t, 1, fmt.Sprintf("/api/imports/%d/commit", id), "POST", map[string]any{"decisions": decisions, "confirm_valid_rows": confirm})
 }
-func TestMoney(t *testing.T) {
-	for s, want := range map[string]int64{"0.29": 29, "-123.45": -12345, "1.2": 120, "+1": 100} {
-		got, err := Cents(s)
-		if err != nil || got != want {
-			t.Fatalf("%s: %d %v", s, got, err)
-		}
-	}
-	for _, s := range []string{"1e2", "1.001", "NaN", "1x", "9223372036854775807", ""} {
-		if _, err := Cents(s); err == nil {
-			t.Fatalf("accepted %s", s)
-		}
-	}
-}
 func TestFNBAdapters(t *testing.T) {
-	p := parseFile(inputFile{"test.csv", []byte(csvFile("2026/10/21,-100.00,900.00,Market"))})
+	p := parseFile(inputFile{Name: "test.csv", Content: []byte(csvFile("2026/10/21,-100.00,900.00,Market"))})
 	if p.Error != "" || p.AccountID != "12345678901" || len(p.Rows) != 1 || p.Rows[0].Amount != -10000 || p.BalanceDate != "2026-10-21" {
 		t.Fatalf("%+v", p)
 	}
-	o := parseFile(inputFile{"test.ofx", []byte(ofx(ofxRow("id1", "20261021", "-100.00", "Market")))})
+	o := parseFile(inputFile{Name: "test.ofx", Content: []byte(ofx(ofxRow("id1", "20261021", "-100.00", "Market")))})
 	if o.Error != "" || o.Currency != "ZAR" || o.AccountType != "CHECKING" || o.Rows[0].FITID != "id1" || o.Balance == nil {
 		t.Fatalf("%+v", o)
 	}
-	invalid := parseFile(inputFile{"bad.csv", []byte(csvFile("2026/10/21,invalid,900.00,Market", "bad,-1.00,899.00,Shop"))})
+	invalid := parseFile(inputFile{Name: "bad.csv", Content: []byte(csvFile("2026/10/21,invalid,900.00,Market", "bad,-1.00,899.00,Shop"))})
 	if invalid.Rows[0].Error == "" || invalid.Rows[1].Error == "" {
 		t.Fatal("invalid rows were accepted")
 	}
@@ -158,7 +145,7 @@ func TestZipSafety(t *testing.T) {
 		f, _ := z.Create(name)
 		f.Write([]byte("bad"))
 		z.Close()
-		if _, err := expand([]inputFile{{"files.zip", b.Bytes()}}); err == nil {
+		if _, err := expand([]inputFile{{Name: "files.zip", Content: b.Bytes()}}); err == nil {
 			t.Fatal("accepted unsafe ZIP")
 		}
 	}
@@ -167,7 +154,7 @@ func TestZipSafety(t *testing.T) {
 	f, _ := z.Create("safe/test.ofx")
 	f.Write([]byte(ofx(ofxRow("id1", "20261021", "-100.00", "Market"))))
 	z.Close()
-	files, err := expand([]inputFile{{"files.zip", b.Bytes()}})
+	files, err := expand([]inputFile{{Name: "files.zip", Content: b.Bytes()}})
 	if err != nil || len(files) != 1 {
 		t.Fatal(err)
 	}
@@ -279,11 +266,11 @@ func TestReviewSplitsAndOptimisticEdits(t *testing.T) {
 	path := fmt.Sprintf("/api/transactions/%d", id)
 	status(t, e.req(t, 1, "/api/review", "POST", map[string]any{"items": []map[string]int64{{"id": id, "version": 1}}}), 400)
 	cat := int64(1)
-	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{&cat, -6000, ""}, {&cat, -3000, ""}})), 400)
-	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{&cat, -6000, "Food"}, {&cat, -4000, "Other"}})), 200)
+	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{CategoryID: &cat, Amount: -6000, Note: ""}, {CategoryID: &cat, Amount: -3000, Note: ""}})), 400)
+	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{CategoryID: &cat, Amount: -6000, Note: "Food"}, {CategoryID: &cat, Amount: -4000, Note: "Other"}})), 200)
 	// Filling all split categories accepts automatically.
-	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{&cat, -10000, ""}})), 409)
-	status(t, e.req(t, 1, path, "PUT", editBody(2, -10000, []Allocation{{&cat, -10000, ""}})), 200)
+	status(t, e.req(t, 1, path, "PUT", editBody(1, -10000, []Allocation{{CategoryID: &cat, Amount: -10000, Note: ""}})), 409)
+	status(t, e.req(t, 1, path, "PUT", editBody(2, -10000, []Allocation{{CategoryID: &cat, Amount: -10000, Note: ""}})), 200)
 	var state string
 	e.a.DB.QueryRow("SELECT review_state FROM transactions WHERE id=?", id).Scan(&state)
 	if state != "approved" {
@@ -307,7 +294,7 @@ func TestPermissionBoundaries(t *testing.T) {
 	if strings.Contains(w.Body.String(), "77777") || strings.Contains(w.Body.String(), "Private") {
 		t.Fatal("private transaction leaked")
 	}
-	status(t, e.req(t, 3, fmt.Sprintf("/api/transactions/%d", shared), "PUT", editBody(1, -10000, []Allocation{{&cat, -10000, ""}})), 403)
+	status(t, e.req(t, 3, fmt.Sprintf("/api/transactions/%d", shared), "PUT", editBody(1, -10000, []Allocation{{CategoryID: &cat, Amount: -10000, Note: ""}})), 403)
 	status(t, e.req(t, 2, fmt.Sprintf("/api/audit/%d", private), "GET", nil), 403)
 	status(t, e.req(t, 2, "/api/dashboard", "GET", nil), 403)
 	status(t, e.req(t, 2, "/api/periods", "GET", nil), 403)
@@ -385,7 +372,7 @@ func TestBudgetGapsOverlapsAndManualAssignments(t *testing.T) {
 	}
 	// Explicit manual membership is preserved even outside the period's date range.
 	version := queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", gap)
-	b := editBody(version, -200, []Allocation{{&cat, -200, ""}})
+	b := editBody(version, -200, []Allocation{{CategoryID: &cat, Amount: -200, Note: ""}})
 	b["date"] = "2026-11-20"
 	b["assignment"] = "manual"
 	b["period_id"] = 1
@@ -532,7 +519,7 @@ func TestNonmemberCannotRewriteBudgetAssignment(t *testing.T) {
 	if strings.Contains(w.Body.String(), "\"period_name\":\"October\"") {
 		t.Fatal("budget period metadata leaked")
 	}
-	b := editBody(1, -100, []Allocation{{&cat, -100, ""}})
+	b := editBody(1, -100, []Allocation{{CategoryID: &cat, Amount: -100, Note: ""}})
 	b["assignment"] = "outside"
 	status(t, e.req(t, 2, fmt.Sprintf("/api/transactions/%d", id), "PUT", b), 200)
 	var assignment string

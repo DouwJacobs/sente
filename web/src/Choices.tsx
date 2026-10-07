@@ -3,7 +3,7 @@ import {useId,useState,useEffect,useRef,type ReactNode} from 'react'
 import {Check,ChevronRight,Plus} from 'lucide-react'
 import {Button,Empty,Field,Form,Modal,Loading,Spinner} from './ui'
 import {api} from './api'
-import {type PageProps} from './App'
+import {type PageProps} from './shared/types'
 
 export type Choice={id:number;name:string;detail?:string;color?:string;usage?:number;category_id?:number|null;spending_group_id?:number|null}
 export function GroupDot({color}: {color?:string}){return <span aria-hidden="true" className={'group-dot '+(color||'slate')}/>}

@@ -1,7 +1,8 @@
 import {useEffect,useState} from 'react'
 import {api} from './api'
 import {Button,Field,Form,Badge,Loading} from './ui'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 export function FNBConnection({data,revision,refresh,notify,onAccounts,onTransactions}:PageProps&{onAccounts:()=>void;onTransactions:()=>void}){
  const[status,setStatus]=useState<Row|null>(null),[username,setUsername]=useState(''),[password,setPassword]=useState(''),[hours,setHours]=useState('0'),[debug,setDebug]=useState(false),[editing,setEditing]=useState(false)
  const[loading,setLoading]=useState(true),[loadError,setLoadError]=useState(''),[retry,setRetry]=useState(0)

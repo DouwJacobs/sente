@@ -8,7 +8,7 @@ import (
 
 func pendingRuleBody(version int64, group int64) map[string]any {
 	category := int64(1)
-	body := editBody(version, -100, []Allocation{{&category, -100, "source note"}})
+	body := editBody(version, -100, []Allocation{{CategoryID: &category, Amount: -100, Note: "source note"}})
 	body["description"] = "Synthetic merchant reference 1234"
 	body["spending_group_id"] = group
 	body["rule"] = map[string]any{"pattern": "Synthetic merchant"}
@@ -124,11 +124,11 @@ func TestPendingRuleConflictsAndAtomicRollback(t *testing.T) {
 		t.Fatal(err)
 	}
 	body["version"] = 2
-	body["allocations"] = []Allocation{{nil, -100, ""}}
+	body["allocations"] = []Allocation{{CategoryID: nil, Amount: -100, Note: ""}}
 	status(t, e.req(t, 1, fmt.Sprintf("/api/transactions/%d", source), "PUT", body), 400)
 	// Use a valid category with an altered pattern so the failing save tests every write.
 	cat := int64(1)
-	body["allocations"] = []Allocation{{&cat, -100, ""}}
+	body["allocations"] = []Allocation{{CategoryID: &cat, Amount: -100, Note: ""}}
 	body["description"] = "Synthetic merchant edited reference"
 	status(t, e.req(t, 1, fmt.Sprintf("/api/transactions/%d", source), "PUT", body), 500)
 	if queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", source) != 2 || queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", target) != 1 || queryInt(e.a.DB, "SELECT version FROM rules WHERE pattern='Synthetic merchant'") != 1 {

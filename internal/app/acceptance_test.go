@@ -56,7 +56,7 @@ func TestAutomaticAcceptanceAndPersonalSeen(t *testing.T) {
 		t.Fatal("unauthorized seen allowed")
 	}
 	cat := int64(1)
-	body := editBody(1, -1234, []Allocation{{&cat, -1234, "updated"}})
+	body := editBody(1, -1234, []Allocation{{CategoryID: &cat, Amount: -1234, Note: "updated"}})
 	status(t, e.req(t, 1, fmt.Sprintf("/api/transactions/%d", id), "PUT", body), 200)
 	if transactionFor(t, e, 1, id)["seen"] != float64(1) || transactionFor(t, e, 3, id)["seen"] != float64(0) {
 		t.Fatal("edit did not reset other users' seen versions")
@@ -66,20 +66,20 @@ func TestAutomaticAcceptanceAndPersonalSeen(t *testing.T) {
 	}
 	// Missing split categories remain pending; filling the last split accepts it.
 	body["version"] = 2
-	body["allocations"] = []Allocation{{&cat, -1000, ""}, {nil, -234, ""}}
+	body["allocations"] = []Allocation{{CategoryID: &cat, Amount: -1000, Note: ""}, {CategoryID: nil, Amount: -234, Note: ""}}
 	status(t, e.req(t, 1, fmt.Sprintf("/api/transactions/%d", id), "PUT", body), 200)
 	if transactionFor(t, e, 1, id)["review_state"] != "pending_review" {
 		t.Fatal("partial split accepted")
 	}
 	body["version"] = 3
-	body["allocations"] = []Allocation{{&cat, -1000, ""}, {&cat, -234, ""}}
+	body["allocations"] = []Allocation{{CategoryID: &cat, Amount: -1000, Note: ""}, {CategoryID: &cat, Amount: -234, Note: ""}}
 	status(t, e.req(t, 1, fmt.Sprintf("/api/transactions/%d", id), "PUT", body), 200)
 	if transactionFor(t, e, 1, id)["review_state"] != "approved" {
 		t.Fatal("complete split not accepted")
 	}
 	body["version"] = 4
 	body["is_transfer"] = true
-	body["allocations"] = []Allocation{{nil, -1234, ""}}
+	body["allocations"] = []Allocation{{CategoryID: nil, Amount: -1234, Note: ""}}
 	status(t, e.req(t, 1, fmt.Sprintf("/api/transactions/%d", id), "PUT", body), 200)
 	if transactionFor(t, e, 1, id)["review_state"] != "approved" {
 		t.Fatal("explicit transfer not accepted")

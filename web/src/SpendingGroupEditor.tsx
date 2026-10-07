@@ -1,6 +1,7 @@
 import {useState} from 'react'
 import {api} from './api'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 import {Button,Field,Form,Modal} from './ui'
 
 export function SpendingGroupEditor({group,notify,onClose,onDone}:{group:Row;notify:PageProps['notify'];onClose:()=>void;onDone:()=>void}){

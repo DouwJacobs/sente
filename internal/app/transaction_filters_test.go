@@ -89,7 +89,7 @@ func TestImportClassificationFiltersUseCurrentRulesAndLedger(t *testing.T) {
 	stamp := filterResult(t, e, 1, "/api/imports?page=0&category=uncategorized")
 	id := queryInt(e.a.DB, "SELECT id FROM transactions WHERE import_id=?", p.ID)
 	cat := int64(1)
-	body := editBody(1, -200, []Allocation{{&cat, -200, ""}})
+	body := editBody(1, -200, []Allocation{{CategoryID: &cat, Amount: -200, Note: ""}})
 	body["date"] = "2026-10-21"
 	status(t, e.req(t, 1, fmt.Sprintf("/api/transactions/%d", id), "PUT", body), 200)
 	if filterResult(t, e, 1, "/api/imports?page=0&category=uncategorized")["total"] != float64(0) {

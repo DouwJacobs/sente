@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 	"strings"
+
+	"finance-tracker/internal/classification"
 )
 
 type ruleInput struct {
@@ -246,17 +248,7 @@ func (a *App) deleteRule(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-type classificationRule struct {
-	Builtin           bool   `json:"builtin"`
-	ID                int64  `json:"id"`
-	Pattern           string `json:"pattern"`
-	CategoryID        int64  `json:"category_id"`
-	CategoryName      string `json:"category_name"`
-	SpendingGroupID   *int64 `json:"spending_group_id,omitempty"`
-	SpendingGroupName string `json:"spending_group_name"`
-	Direction         string `json:"direction,omitempty"`
-	Priority          int    `json:"priority,omitempty"`
-}
+type classificationRule = classification.Rule
 
 func loadRules(q queryer, account int64) ([]classificationRule, error) {
 	rows, err := q.Query("SELECT r.id,r.pattern,r.category_id,c.name,r.spending_group_id,COALESCE(s.name,''),r.direction,r.priority,0 builtin FROM rules r JOIN categories c ON c.id=r.category_id LEFT JOIN spending_groups s ON s.id=r.spending_group_id WHERE r.account_id=? AND r.enabled=1 UNION ALL SELECT -r.id,r.pattern,r.category_id,c.name,r.spending_group_id,COALESCE(s.name,''),r.direction,r.priority,1 builtin FROM builtin_rules r JOIN categories c ON c.id=r.category_id LEFT JOIN spending_groups s ON s.id=r.spending_group_id WHERE r.enabled=1 ORDER BY 8 DESC,1", account)
@@ -274,60 +266,10 @@ func loadRules(q queryer, account int64) ([]classificationRule, error) {
 	}
 	return result, rows.Err()
 }
-func matchingRules(rules []classificationRule, description string, amount int64) []classificationRule {
-	result := []classificationRule{}
-	for _, rule := range rules {
-		if rule.Direction == "debit" && amount >= 0 || rule.Direction == "credit" && amount <= 0 {
-			continue
-		}
-		if strings.Contains(normalize(description), normalize(rule.Pattern)) {
-			result = append(result, rule)
-		}
-	}
-	custom := []classificationRule{}
-	for _, rule := range result {
-		if !rule.Builtin {
-			custom = append(custom, rule)
-		}
-	}
-	if len(custom) > 0 {
-		return custom
-	}
-	return result
-}
-func differentOutputs(left, right classificationRule) bool {
-	if left.CategoryID != right.CategoryID {
-		return true
-	}
-	if left.SpendingGroupID == nil || right.SpendingGroupID == nil {
-		return left.SpendingGroupID != right.SpendingGroupID
-	}
-	return *left.SpendingGroupID != *right.SpendingGroupID
-}
 func classify(row *SourceRow, rules []classificationRule) {
-	row.CategoryID = nil
-	row.SpendingGroupID = nil
-	row.Suggestion = ""
-	row.RuleMatches = nil
-	row.RuleConflict = false
-	matches := matchingRules(rules, row.Description, row.Amount)
-	if len(matches) == 0 {
-		return
-	}
-	row.RuleMatches = matches
-	for _, m := range matches[1:] {
-		if differentOutputs(matches[0], m) {
-			row.RuleConflict = true
-		}
-	}
-	if row.RuleConflict {
-		row.Suggestion = "Conflicting rule suggestions; choose classification during review"
-		return
-	}
-	id := matches[0].CategoryID
-	row.CategoryID = &id
-	row.SpendingGroupID = matches[0].SpendingGroupID
-	row.Suggestion = "Description contains: " + matches[0].Pattern
+	result := classification.Classify(row.Description, row.Amount, rules)
+	row.CategoryID, row.SpendingGroupID = result.CategoryID, result.SpendingGroupID
+	row.Suggestion, row.RuleMatches, row.RuleConflict = result.Suggestion, result.RuleMatches, result.RuleConflict
 }
 
 type rulePreviewInput struct {

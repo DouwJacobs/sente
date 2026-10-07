@@ -1,8 +1,8 @@
 import {createContext,useContext,useEffect,useRef,useState,type ReactNode} from 'react'
 import {api} from './api'
 import {Modal,Loading} from './ui'
-import {TransactionEditor} from './Transactions'
-import type {PageProps,Row} from './App'
+import {TransactionEditor} from './features/transactions/TransactionEditor'
+import type {PageProps,Row} from './shared/types'
 
 export type TransactionScope={income?:boolean;account?:string;period?:string;category?:string;group?:string;dateFrom?:string;dateTo?:string;excluded?:boolean}
 type Access={openTransaction:(id:number,onSaved?:()=>void,query?:string)=>void;viewTransactions:(scope:TransactionScope)=>void}

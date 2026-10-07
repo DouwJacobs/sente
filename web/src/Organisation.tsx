@@ -5,7 +5,8 @@ import {Button,Field,Form,Modal,Badge,Loading,Pagination,ActionMenu} from './ui'
 import {ChoiceField,CategoryChoice,GroupDot} from './Choices'
 import {PagedSelect,usePagedList,ListStatus,ListNavigation} from './PagedList'
 import {BulkEditor} from './CoreWorkflows'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 export function CategoryEditor({category,notify,onClose,onDone}:{category:Row;notify:PageProps['notify'];onClose:()=>void;onDone:()=>void}){
  const[name,setName]=useState(category.name),[archived,setArchived]=useState(!!category.archived),[deps,setDeps]=useState<Row|null>(null),[error,setError]=useState('')
  const{busy,run}=useTask(notify)
