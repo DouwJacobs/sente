@@ -14,6 +14,14 @@ Issues #4 and #5 are paired on `codex/copy-docs-cleanup`: product/helper copy us
 
 MCP impact: browser wording and documentation only. Tools, input/output fields, permissions, exact proposal effects/audits, consent and shared finance services are unchanged. Existing technical MCP contracts remain in [MCP.md](MCP.md). No migration or financial behavior change.
 
+## Version and support batch — issues #20–#23
+
+Prepared on `codex/version-about-support` in the shared WSL checkout: Git/build-derived backend version metadata, a sidebar version button, Settings → About for every signed-in user, and safe GitHub issue-report prefills. Release builds and Docker workflow arguments share `internal/buildinfo`; MCP initialization now uses its version too. Configuration import/export workflows are outside this batch. Release/image publishing remains covered by the repository workflow; no production application deployment was performed.
+
+Verification: 10 frontend unit tests, production build, 8 focused synthetic browser workflows at 1440px/360px in light/dark, focused backend endpoint authorization/privacy and MCP initialization race tests, Go vet, synthetic tagged/untagged/modified Git metadata checks and executable linker-metadata probe passed. Domain race suites passed; broad app/MCP runs were interrupted and are not full-suite passes (see VERIFICATION). Temporary test harnesses were removed. Docker/production publishing and manual visual inspection remain unverified.
+
+MCP impact: initialization version now shares the application version; tools, schemas, financial output allowlists, permissions, consent, proposal previews/audits and write services are unchanged. About and detailed build/report links remain browser-only support workflows. No schema migration or financial behavior change. The repository currently declares no licence, which About states explicitly.
+
 ## Remaining operational checks
 
 - Live FNB compatibility and MFA/layout failures require owner-run checks. Preserve capped-history/overlap limits and never inspect credentials, bank sessions or real reports. See [FNB runtime](FNB-RUNTIME.md).
@@ -39,3 +47,9 @@ User security UI follow-up: shared Field adds password eye controls across all b
 Password/menu verification: final frontend build, 8 unit tests and 9 synthetic desktop/mobile password/menu/security/onboarding workflows passed. Eye hover is transparent/borderless; keyboard focus remains visible. See VERIFICATION.md for exact coverage and corrected test selectors.
 
 Integration before merge (2026-10-07): incorporated main’s PR #43 documentation/copy cleanup, retained its active/archive organization and this branch’s security notes, and repeated the final production frontend build, 8 unit tests and six desktop/mobile password/menu/security browser workflows successfully. Backend implementation is unchanged by that integration. Temporary integration server/config removed; dev on port 5175 remains available.
+
+## About presentation follow-up
+
+Owner-requested refinement: sidebar version is a single quiet label; About now uses Sente branding, grouped project links, a prominent report action and inset build details. Production frontend build and 8 focused synthetic desktop/mobile/light/dark workflows passed; no manual visual sign-off. The existing dev server at 5173 hot-reloads these changes. MCP/build/report data contracts are unchanged.
+
+The sidebar version now uses plain footer text styling with zero spacing and no hover surface, at the owner's request. Focus remains visible. Final frontend build and light/dark synthetic structural checks passed; no MCP changes.

@@ -208,3 +208,7 @@ No existing connection gains a new write capability or automatic-approval type. 
 
 ### Account security lifecycle (2026-10-07)
 User deletion and administrator password reset are browser administration workflows; MCP has no user/password tools or new grants. Self-service password change retains its initiating browser session and revokes every other session and MCP connection. Administrator reset revokes all target sessions/connections, preserving disabled status. User deletion retires the historical identity, removes grants/sessions/personal seen state/FNB credentials, and retains financial history and audit attribution. Every path removes user-bound pending OAuth consent as well as connections; existing cascades remove proposals, codes and access/refresh credentials. A client must reconnect with fresh browser consent after a password change/reset. Offline password recovery uses the same revocation service. No password material enters proposals, audit details or response allowlists.
+
+## Application version metadata
+
+MCP initialization advertises the same application version as the backend/browser through `internal/buildinfo`, replacing the independent hardcoded server version. Server identity and protocol negotiation are unchanged. No tools, input schemas, financial output allowlists, permissions, consent, proposals or audits change. The detailed build endpoint and About/report links are browser-only support features; they do not need a new agent capability.

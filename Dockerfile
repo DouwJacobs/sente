@@ -11,7 +11,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /finance ./cmd/finance
+ARG SENTE_VERSION=dev
+ARG SENTE_COMMIT=""
+ARG SENTE_BUILD_TIME=""
+COPY scripts/build-metadata.sh ./scripts/build-metadata.sh
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(sh scripts/build-metadata.sh)" -o /finance ./cmd/finance
 
 FROM alpine:3.23
 LABEL org.opencontainers.image.title="Sente" \

@@ -281,6 +281,10 @@ export default function App() {
         setMore={setMore}
         go={go}
         signingOut={signingOut}
+        onAbout={() => {
+          setSettingsSection("about");
+          go("Settings");
+        }}
         onSearch={() => setSearchOpen(true)}
         onSignOut={() =>
           signOut(async () => {

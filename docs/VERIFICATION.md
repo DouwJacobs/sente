@@ -17,6 +17,24 @@ The full backend and historical browser suites were not rerun for text/docs-only
 
 MCP impact: connection/privacy/approval copy is clearer, but tools, schemas, output fields, grants, proposal evidence/audits, consent and shared write services remain unchanged. No new MCP capability or browser financial operation is introduced.
 
+## Issues #20–#23 — version and support batch, 7 October 2026
+
+Implemented the shared application version source, sidebar version link, About tab and Report an issue link. Build responses are authenticated/non-cached and contain only version, revision/date and modified state. Issue reports whitelist these fields, excluding arbitrary extra user/account/financial fields. No configuration import/export workflow, database migration or financial behavior changed.
+
+Passed:
+
+- 10 frontend unit tests and the TypeScript/Vite production build.
+- 8 focused synthetic Chromium workflows: About/report links at 1440px/360px in light/dark; metadata failure/retry; desktop/mobile Settings drafts and keyboard navigation; ordinary-user management-request isolation and About visibility. No external report was submitted. No computer-use/manual visual inspection was performed.
+- Browser endpoint authorization for anonymous/admin/ordinary/viewer users, exact public output fields, `no-store` and unsupported-method handling.
+- Go vet, temporary Git fixtures for untagged/exact-tag/dirty-tag metadata and malformed linker-input rejection. A temporary executable probe verified injected version, full revision and revision date through `buildinfo.Current()`. Go production compilation with the metadata flags succeeded; Docker packaging is unavailable.
+- Whitespace checks and cleanup of temporary browser configs, synthetic service/database and linker probe.
+
+Backend race verification: domain suites (`classification`, `ledger`, `money`, `statements`) passed in the broad run. The full app suite was deliberately interrupted after about 14.5 minutes, and the broad MCP-prefixed run after about 6.8 minutes; neither is a passing full-suite result. The final race run of `TestBuildInfoAuthorizationAndSafeOutput` and `TestMCPPrivacyAndTransport` passed (20.7 seconds), followed by a passing `go vet ./...`.
+
+The initial standard Playwright harness stalled while probing unbound WSL loopback ports; only our runs were interrupted. A temporary harness prestarted its isolated synthetic service before Playwright, then removed its configuration. The first focused run passed 7 tests and found an ambiguous recovery-test selector matching both the inline status and shared error toast. Scoping that selector to About fixed the test; all 8 passed on the next run.
+
+MCP initialization now advertises the shared application version rather than an independent hardcoded version. No tools/input schemas, financial output fields, grants/consent, exact proposals/audits or shared writes changed. Detailed build/About/report links remain browser-only support features. Docker image build/publishing, live banking and manual visual sign-off are outside this verification.
+
 ## Previous evidence
 
 The [archived verification record](archive/2026-10-07/VERIFICATION.md) retains the detailed audit/refactor/demo results, including intermediate failures and reruns. The refactor covered 168 distinct backend tests with race detection across two runs and 55 distinct synthetic browser workflows across main/focused runs. The combined branding/demo branch passed 8 frontend tests, a production build, demo invariants, 3 focused MCP/OAuth tests, Go vet and 2 handover workflows. These are previous results, not a full-suite rerun for this change.
@@ -44,3 +62,15 @@ The initial migration fixture incorrectly removed its schema marker and was corr
 Password visibility/user-menu follow-up (2026-10-07): final frontend build and 8 unit tests passed. Nine synthetic browser workflows passed across the main/follow-up runs: password toggles and menu editing at 1440/360px, four existing security workflows, and three onboarding/budget workflows. Coverage checks all ten password inputs across setup, sign-in, self-service, add/reset users and FNB credentials; value preservation, re-masking on clear, keyboard toggling, labelled input linkage, 44px targets, transparent hover background/border, validation and menu focus restoration. Initial onboarding failures came from a partial selector matching the new eye button; exact field selectors and keyboard expectations were corrected, and all three onboarding workflows then passed on a fresh disposable server. Temporary runner configs/test servers were removed/stopped; the worktree dev server on 5175 remains running. No manual visual inspection, banking interaction or backend/MCP contract changes.
 
 Integration before merge (2026-10-07): incorporated main’s PR #43 documentation/copy cleanup, retained its active/archive organization and this branch’s security notes, and repeated the final production frontend build, 8 unit tests and six desktop/mobile password/menu/security browser workflows successfully. Backend implementation is unchanged by that integration. Temporary integration server/config removed; dev on port 5175 remains available.
+
+## About presentation refinement — 7 October 2026
+
+At the owner's request, the sidebar now shows only a compact version label (Development for `dev`) rather than the full commit/modified string. About adds the existing Sente mark, grouped icon/text resource links, a primary Report an issue link and an inset installation-information surface. Technical details remain available in About and the sidebar tooltip. No build data or issue-report fields changed.
+
+The production TypeScript/Vite build and all 8 focused synthetic About/Settings Chromium workflows passed. Checks cover 1440px/360px, light/dark, compact sidebar height, aligned desktop columns and stacked mobile sections, no page overflow, keyboard tabs, ordinary-user access, draft preservation, metadata retry and safe report URLs. Whitespace checks passed. The temporary harness and synthetic service were cleaned up. No computer-use/manual visual inspection was performed; the owner's existing development server was retained and Vite hot-reloaded these changes.
+
+MCP impact: browser presentation only; initialization metadata, tool schemas/outputs, consent, permissions, proposals/audits and shared services are unchanged.
+
+Sidebar spacing follow-up: removed shared button styling, margin/padding and inherited control minimum height from the version text. It retains semantic activation and visible keyboard focus, with no hover surface. The initial synthetic DOM check detected the inherited minimum height; after explicitly resetting it, light/dark computed-spacing, compact-height, hover and keyboard-focus checks passed. The final production frontend build passed. This is browser presentation only; MCP and build contracts are unchanged.
+
+PR integration check: rebased the version/About batch onto main containing PR #44 user security. Resolved append-only documentation/style conflicts by retaining both features, including each CSS block's closing braces. Integrated code passed 10 frontend unit tests, production frontend build, focused build-endpoint/MCP initialization race tests and Go vet, plus 10 synthetic About/Settings/password-menu workflows at desktop/mobile sizes with About light/dark coverage. No configuration import/export implementation is included.
