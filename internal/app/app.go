@@ -22,6 +22,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	problemerror "finance-tracker/internal/problem"
+
 	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
 )
@@ -75,13 +77,9 @@ type ctxKey int
 
 const authKey ctxKey = 0
 
-type problem struct {
-	Code    int
-	Message string
-}
+type problem = problemerror.Error
 
-func (p problem) Error() string     { return p.Message }
-func fail(code int, s string) error { return problem{code, s} }
+func fail(code int, s string) error { return problemerror.New(code, s) }
 
 type queryer interface {
 	Query(string, ...any) (*sql.Rows, error)
