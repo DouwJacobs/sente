@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/DouwJacobs/sente-config/main/schema.json",
+  "title": "Sente portable configuration version 2",
+  "description": "Up to 10,000 combined entries and 32 MiB; runtime also validates references, permissions, duplicates and dependencies.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version"
+  ],
+  "properties": {
+    "version": {
+      "const": 2
+    },
+    "exported_at": {
+      "type": "string"
+    },
+    "spending_groups": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/spending_group"
+      }
+    },
+    "categories": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/category"
+      }
+    },
+    "merchants": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/merchant"
+      }
+    },
+    "merchant_rules": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/merchant_rule"
+      }
+    },
+    "rules": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "maxItems": 10000,
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "$defs": {
+    "spending_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "color": {
+          "enum": [
+            "blue",
+            "amber",
+            "purple",
+            "orange",
+            "teal",
+            "slate",
+            "rose"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "color"
+      ]
+    },
+    "category": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "kind": {
+          "enum": [
+            "expense",
+            "income"
+          ]
+        },
+        "group_name": {
+          "type": "string"
+        },
+        "spending_group": {
+          "type": "string"
+        },
+        "archived": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ]
+    },
+    "merchant": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "logo_data": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "category_group_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "spending_group": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "merchant_rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "merchant": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "merchant_account_name": {
+          "type": "string"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "direction": {
+          "enum": [
+            "any",
+            "debit",
+            "credit",
+            ""
+          ]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "merchant",
+        "pattern",
+        "enabled"
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "category_group_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "spending_group": {
+          "type": "string"
+        },
+        "account_name": {
+          "type": "string"
+        },
+        "builtin": {
+          "type": "boolean"
+        },
+        "direction": {
+          "enum": [
+            "any",
+            "debit",
+            "credit",
+            ""
+          ]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "pattern",
+        "category",
+        "enabled"
+      ]
+    }
+  }
+}

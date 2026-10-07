@@ -44,6 +44,7 @@ func TestBrandingMigrationAndRestart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	groups := queryInt(a.DB, "SELECT COUNT(*) FROM spending_groups")
 	// Simulate the previous schema: real tables survive the upgrade.
 	a.DB.Exec("DROP TABLE workspace_branding; DELETE FROM migrations WHERE version=4; INSERT OR IGNORE INTO migrations VALUES(3)")
 	a.Close()
@@ -56,7 +57,7 @@ func TestBrandingMigrationAndRestart(t *testing.T) {
 	if name != "Household" {
 		t.Fatal(name)
 	}
-	if queryInt(a.DB, "SELECT COUNT(*) FROM spending_groups") != 11 {
+	if queryInt(a.DB, "SELECT COUNT(*) FROM spending_groups") != groups {
 		t.Fatal("groups changed")
 	}
 	a.DB.Exec("UPDATE workspace_branding SET display_name='Family',version=2")

@@ -155,7 +155,7 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
     flatItems.push({
       id: `rule-${r.id}`, section: 'Rules',
       label: `"${r.pattern}"`,
-      detail: [r.category_name || 'Unassigned', r.account_name || 'All accounts', r.builtin ? 'Built-in' : ''].filter(Boolean).join(' · '),
+      detail: [r.category_name || 'Unassigned', r.account_name || 'All accounts', r.builtin ? 'Global fallback' : ''].filter(Boolean).join(' · '),
       onSelect: () => { onClose(); setEditingRule(r) },
     })
   }

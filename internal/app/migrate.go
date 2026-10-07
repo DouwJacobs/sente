@@ -7,9 +7,10 @@ import (
 	"strings"
 )
 
-const schemaVersion = 20
+const schemaVersion = 21
 
 func migrate(db *sql.DB) error {
+	fresh := queryInt(db, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='migrations'") == 0
 	if _, err := db.Exec("PRAGMA foreign_keys=ON;PRAGMA journal_mode=WAL;PRAGMA busy_timeout=5000"); err != nil {
 		return err
 	}
@@ -89,14 +90,14 @@ func migrate(db *sql.DB) error {
 			return err
 		}
 	}
-	if queryInt(tx, "SELECT MAX(version) FROM migrations") < 3 {
+	if !fresh && queryInt(tx, "SELECT MAX(version) FROM migrations") < 3 {
 		for _, group := range [][2]string{{"Day-to-day", "blue"}, {"Recurring", "amber"}, {"Invest-save-repay", "purple"}, {"Exceptions", "orange"}, {"Income", "teal"}, {"Transfer", "slate"}, {"Bank Fees", "orange"}, {"Communications", "purple"}, {"Debt", "rose"}, {"Utilities", "blue"}, {"Insurance", "teal"}} {
 			if _, err := tx.Exec("INSERT INTO spending_groups(name,color) VALUES(?,?)", group[0], group[1]); err != nil {
 				return err
 			}
 		}
 	}
-	if queryInt(tx, "SELECT MAX(version) FROM migrations") < 9 {
+	if !fresh && queryInt(tx, "SELECT MAX(version) FROM migrations") < 9 {
 		if err := seedClassification(tx); err != nil {
 			return err
 		}

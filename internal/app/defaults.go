@@ -2,7 +2,8 @@ package app
 
 import "database/sql"
 
-// General starter labels and descriptions, never personal financial fixtures.
+// Frozen pre-v20 migration catalogue. Fresh installations never seed these entries;
+// optional starter configuration is maintained separately in sente-config.
 var defaultCategories = []struct{ Name, Kind string }{
 	{"Groceries", "expense"}, {"Eating out", "expense"}, {"Transport & fuel", "expense"},
 	{"Bank charges", "expense"}, {"Interest paid", "expense"}, {"Housing", "expense"},

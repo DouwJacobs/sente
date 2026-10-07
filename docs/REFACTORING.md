@@ -20,6 +20,7 @@ Persistence remains intentionally in app: moving a method to a separate package 
 - `users.go` owns user administration; `user_security.go` owns browser security mutations and shared atomic password/agent/session revocation used by offline recovery.
 - `periods.go`, `budget_targets.go`, `budget_target_queries.go`, `budget_settings.go`, `dashboard.go` separate period lifecycle, atomic targets, target reads, preferences and aggregates.
 - `transaction_queries.go`, `transactions.go`, `transaction_review.go`, `transfers.go`, `transaction_audit.go`, `transaction_metadata.go` separate authorized ledger queries, atomic editing, review, linked transfers, audit and metadata.
+- `configuration.go`, `configuration_state.go`, `configuration_preview.go`, `configuration_apply.go`, `configuration_repository.go` separate source contracts, configuration snapshots/diffs, validation previews, atomic application and public Git fetching. `ruleset.go` owns the shared portable import/export writers.
 - `labels.go`, `categories.go`, `merchant_rules.go`, `merchant_matching.go` separate catalogue workflows and merchant matching/persistence.
 - `fnb_credentials.go`, `fnb_connection.go`, `fnb_runner.go`, `fnb_snapshots.go`, `fnb_provider.go`, `fnb_scheduler.go`, `fnb_diagnostics.go` separate encrypted storage, settings endpoints, serialized jobs, snapshot application, bounded subprocess IO, scheduling and allowlisted diagnostics.
 
@@ -35,7 +36,7 @@ Authorization, versions, source identities, exact proposal effects and audit rem
 | `features/accounts` | Account screen using shared account management. |
 | `features/categories` | Category/group/rule screen. |
 | `features/budgets` | Budget-period screen and existing builder/report integration. |
-| `features/settings` | Settings orchestration, general/security forms, access list/dialogs and persistent access drafts. |
+| `features/settings` | Settings orchestration, general/security forms, portable configuration source forms/preview/history, access list/dialogs and persistent drafts. |
 | `features/imports` | Import orchestration, activity expansion, exception previews, retained source rows and rule suggestions. |
 | `features/transactions` | Ledger selection/paging, editor orchestration, split controls, transfer/provenance extras and audit history. |
 | `shared/types.ts` | Row, workspace data and page contracts. |

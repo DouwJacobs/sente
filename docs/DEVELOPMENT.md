@@ -4,6 +4,8 @@ Read [AGENTS.md](../AGENTS.md), [accepted plan](PLAN.md) and [architecture](ARCH
 
 Install Go 1.27.1, Linux Node 22.21+ and Python 3. `make build` produces `bin/finance` and the frontend. `make dev` runs Vite hot reload and a watched Go backend at http://127.0.0.1:5173 using `data/dev/finance.sqlite` and `backups/dev`. A fresh dev database uses browser onboarding. Never copy production data to it.
 
+Repository pulls need Git on the Sente host; the Docker runtime includes it. Worktrees may reuse a local `web/node_modules` symlink, which is ignored like ordinary installed dependencies.
+
 The runner discovers Linux nvm installations and the optional `work/toolchain/go/bin/go`. You can set `GO` to an installed executable. In the owner's WSL checkout, that toolchain is `/home/douw/finance-tracker/work/toolchain/go/bin/go`. After dependency changes run `npm ci` in `web` and restart. `DEV_PORT`, `DEV_API_PORT` and `DEV_PUBLIC_URL` select exact ports/origin; occupied ports fail rather than switching.
 
 For reproducible demo data and screenshots use [DEMO.md](DEMO.md). Demo ports 5174/8082 are separate from routine development 5173/8081 and Docker 8080.

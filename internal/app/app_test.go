@@ -34,6 +34,12 @@ func setup(t *testing.T) *testEnv {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { a.Close() })
+	// Synthetic groups are explicit fixtures; fresh installations contain no classification.
+	for _, group := range [][2]string{{"Day-to-day", "blue"}, {"Recurring", "amber"}, {"Invest-save-repay", "purple"}, {"Exceptions", "orange"}, {"Income", "teal"}, {"Transfer", "slate"}, {"Bank Fees", "orange"}, {"Communications", "purple"}, {"Debt", "rose"}, {"Utilities", "blue"}, {"Insurance", "teal"}} {
+		if _, err := a.DB.Exec("INSERT INTO spending_groups(name,color) VALUES(?,?)", group[0], group[1]); err != nil {
+			t.Fatal(err)
+		}
+	}
 	// These legacy fixtures deliberately omit starter classification.
 	if _, err := a.DB.Exec("DELETE FROM builtin_rules; DELETE FROM categories"); err != nil {
 		t.Fatal(err)

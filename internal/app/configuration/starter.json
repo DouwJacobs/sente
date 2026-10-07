@@ -1,0 +1,176 @@
+{
+  "version": 2,
+  "spending_groups": [
+    {
+      "name": "Day-to-day",
+      "color": "blue"
+    },
+    {
+      "name": "Recurring",
+      "color": "amber"
+    },
+    {
+      "name": "Income",
+      "color": "teal"
+    },
+    {
+      "name": "Transfer",
+      "color": "slate"
+    },
+    {
+      "name": "Bank Fees",
+      "color": "orange"
+    }
+  ],
+  "categories": [
+    {
+      "name": "Groceries",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Eating out",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Transport & fuel",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Bank charges",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Interest paid",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Housing",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Utilities",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Insurance",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Phone & internet",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Medical",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Personal care",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Pets",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Clothing",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Entertainment",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Subscriptions",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Home & garden",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Gifts & donations",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Education",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Travel",
+      "group_name": "",
+      "kind": "expense"
+    },
+    {
+      "name": "Salary",
+      "group_name": "",
+      "kind": "income"
+    },
+    {
+      "name": "Interest earned",
+      "group_name": "",
+      "kind": "income"
+    }
+  ],
+  "merchants": [],
+  "merchant_rules": [],
+  "rules": [
+    {
+      "pattern": "Monthly Account Fee",
+      "category": "Bank charges",
+      "spending_group": "Bank Fees",
+      "builtin": true,
+      "direction": "debit",
+      "priority": -1000,
+      "enabled": true,
+      "category_group_name": ""
+    },
+    {
+      "pattern": "Monthly Service Fee",
+      "category": "Bank charges",
+      "spending_group": "Bank Fees",
+      "builtin": true,
+      "direction": "debit",
+      "priority": -1000,
+      "enabled": true,
+      "category_group_name": ""
+    },
+    {
+      "pattern": "Service Fees",
+      "category": "Bank charges",
+      "spending_group": "Bank Fees",
+      "builtin": true,
+      "direction": "debit",
+      "priority": -1000,
+      "enabled": true,
+      "category_group_name": ""
+    },
+    {
+      "pattern": "Salary",
+      "category": "Salary",
+      "spending_group": "Income",
+      "builtin": true,
+      "direction": "credit",
+      "priority": -1000,
+      "enabled": true,
+      "category_group_name": ""
+    }
+  ]
+}

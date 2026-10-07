@@ -64,3 +64,13 @@ CREATE INDEX IF NOT EXISTS tag_transaction ON transaction_tags(tag_id,transactio
 CREATE TABLE IF NOT EXISTS account_import_checks(account_id INTEGER PRIMARY KEY REFERENCES accounts(id),last_checked TEXT NOT NULL,import_id INTEGER REFERENCES imports(id));
 
 CREATE UNIQUE INDEX IF NOT EXISTS global_merchant_name ON merchants(name COLLATE NOCASE) WHERE account_id IS NULL;
+
+CREATE TABLE IF NOT EXISTS configuration_sources (
+ id INTEGER PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN ('repository','file','starter')),
+ repository_url TEXT NOT NULL DEFAULT '', ref TEXT NOT NULL DEFAULT '', path TEXT NOT NULL DEFAULT '',
+ last_revision TEXT NOT NULL DEFAULT '', last_sync TEXT NOT NULL DEFAULT '', version INTEGER NOT NULL DEFAULT 1
+);
+CREATE TABLE IF NOT EXISTS configuration_previews (
+ id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ fingerprint TEXT NOT NULL, payload TEXT NOT NULL, source TEXT NOT NULL, expires_at INTEGER NOT NULL
+);

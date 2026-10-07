@@ -8,6 +8,9 @@ services:
     environment:
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      SENTE_DEFAULT_CONFIG_REPOSITORY: ${SENTE_DEFAULT_CONFIG_REPOSITORY:-https://github.com/DouwJacobs/sente-config.git}
+      SENTE_DEFAULT_CONFIG_REF: ${SENTE_DEFAULT_CONFIG_REF:-}
+      SENTE_DEFAULT_CONFIG_PATH: ${SENTE_DEFAULT_CONFIG_PATH:-sente.json}
       LISTEN_ADDRESS: 0.0.0.0
       DATABASE_PATH: /app/data/finance.sqlite
       BACKUP_DIR: /app/backups

@@ -18,6 +18,10 @@ if os.environ.get("E2E_EMPTY") != "1":
     db.executescript("""
     DELETE FROM builtin_rules;
     DELETE FROM categories;
+    INSERT INTO spending_groups(name,color) VALUES
+    ('Day-to-day','blue'),('Recurring','amber'),('Invest-save-repay','purple'),('Exceptions','orange'),
+    ('Income','teal'),('Transfer','slate'),('Bank Fees','orange'),('Communications','purple'),
+    ('Debt','rose'),('Utilities','blue'),('Insurance','teal');
     INSERT INTO users(id,username,password,admin,budget_member) VALUES(2,'partner','unused',0,1),(3,'restricted','unused',0,0);
     INSERT INTO accounts(id,name,bank_id,household,balance_cents,balance_date) VALUES
     (1,'Everyday account','12345678901',1,1452500,'2026-10-26'),
