@@ -24,3 +24,11 @@ The Docker image workflow publishes `douwjacobs/sente:latest` from pushes to `ma
 The regression check `GO=/path/to/go python3 scripts/test_demo.py` validates exclusive creation, exact allocation totals, transfer balance, budget aggregates and absence of bank/MCP connections.
 
 The binary (`finance`), Go module (`finance-tracker`), environment variables, database names, key directory and existing Compose service/volumes retain their compatibility identifiers. Product-facing names use Sente.
+
+## Application version
+
+The backend's authenticated `GET /api/build` endpoint is the source used by the sidebar and Settings → About. It returns only version, commit, revision date and modified state, with `Cache-Control: no-store`. It does not expose Go build settings, host paths, environment, users or financial data. About is available to every signed-in user; its Report an issue link prefills only these public build fields and opens GitHub for the user to review and submit.
+
+Release versions come from Git tags matching `v[0-9]*`. `make build` embeds `git describe`, full commit and commit date through `scripts/build-metadata.sh`; untagged repositories use `dev`. Ordinary Go builds, including `make dev`, use `dev` plus embedded Go VCS revision/date/modified metadata. The frontend package version is package metadata and is not the displayed application version.
+
+Docker builds exclude `.git`, so pass `SENTE_VERSION`, `SENTE_COMMIT` and `SENTE_BUILD_TIME` as build arguments when building a known release. Without arguments the image reports `dev` and unavailable commit/date. The image workflow fetches tags and resolves these arguments from its checked-out revision. Build revision date is the commit date, not a claim about wall-clock compilation time. All linker metadata is restricted to safe single-token characters. Repository metadata currently declares no licence; About says so rather than assigning one.

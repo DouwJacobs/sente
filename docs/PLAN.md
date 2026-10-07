@@ -63,3 +63,7 @@ One Go service serves React and SQLite. Docker deployment uses an HTTPS proxy fo
 Verification uses synthetic fixtures for financial invariants, authorization, import idempotency, stale writes, rollback and browser workflows. Live FNB reliability, OFX ID stability across downloads and external MCP clients require separate checks. See [VERIFICATION.md](VERIFICATION.md).
 
 Other banks, custom mappings, external AI classification, FX conversion, investments, offline synchronization and forecasting remain outside current scope.
+
+## Application information
+
+The sidebar and Settings → About show the backend's application build version and available revision details. Every signed-in user can access About, repository/documentation/issue links and a Report an issue link. Report prefills contain only public application build metadata, with user review and submission on GitHub. No financial, account or personal details are prefilled.

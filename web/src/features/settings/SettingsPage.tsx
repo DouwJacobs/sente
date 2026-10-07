@@ -1,3 +1,4 @@
+import { AboutSettings } from "./AboutSettings";
 import { GeneralSettings } from "./GeneralSettings";
 import { SecuritySettings } from "./SecuritySettings";
 import { UserAccessSettings } from "./UserAccessSettings";
@@ -80,6 +81,7 @@ export function SettingsPage({
       : []),
     { id: "mcp", label: "MCP" },
     { id: "security", label: "Security" },
+    { id: "about", label: "About" },
   ];
   const active = tabs.some((tab) => tab.id === section) ? section : "general";
   const panel = (id: string) => ({
@@ -116,6 +118,9 @@ export function SettingsPage({
       </div>
       <div {...panel("security")}>
         <SecuritySettings busy={busy} run={run} />
+      </div>
+      <div {...panel("about")}>
+        {active === "about" && <AboutSettings notify={notify} />}
       </div>
       {data.user.admin && (
         <>

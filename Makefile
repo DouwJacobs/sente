@@ -3,7 +3,7 @@ GO ?= go
 build:
 	cd web && npm ci && npm run build
 	mkdir -p bin
-	$(GO) build -trimpath -o bin/finance ./cmd/finance
+	$(GO) build -trimpath -ldflags="$$(sh scripts/build-metadata.sh)" -o bin/finance ./cmd/finance
 test:
 	$(GO) test -race ./...
 	cd web && npm test && npm run build

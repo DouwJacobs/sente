@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"finance-tracker/internal/buildinfo"
 )
 
 func mcpToken(t *testing.T, e *testEnv, user int, write bool) string {
@@ -81,6 +83,9 @@ func TestMCPPrivacyAndTransport(t *testing.T) {
 	seedMCPTransactions(t, e)
 	token := mcpToken(t, e, 3, false)
 	initialized := mcpRPC(t, e, token, "initialize", map[string]any{"protocolVersion": "2025-11-25", "capabilities": map[string]any{}, "clientInfo": map[string]any{"name": "test", "version": "1"}})
+	if initialized["serverInfo"].(map[string]any)["version"] != buildinfo.Current().Version {
+		t.Fatal("MCP must advertise the application build version")
+	}
 	if initialized["serverInfo"].(map[string]any)["name"] != "finance-tracker" {
 		t.Fatal(initialized)
 	}

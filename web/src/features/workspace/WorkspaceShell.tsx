@@ -1,3 +1,4 @@
+import { buildLabel, useBuildInfo } from "../../shared/buildInfo";
 import type { ReactNode } from "react";
 import {
   LayoutDashboard,
@@ -46,6 +47,7 @@ export function WorkspaceShell({
   signingOut,
   onSignOut,
   onSearch,
+  onAbout,
   children,
 }: {
   user: Row;
@@ -60,8 +62,10 @@ export function WorkspaceShell({
   signingOut: boolean;
   onSignOut: () => void;
   onSearch: () => void;
+  onAbout: () => void;
   children: ReactNode;
 }) {
+  const { info } = useBuildInfo();
   const visibleNav = nav.filter(
     (n) => user.budget_member || !["Dashboard", "Budgets"].includes(n.name),
   );
@@ -98,6 +102,15 @@ export function WorkspaceShell({
         <div className="sidebar-foot">
           <span className="dot" />
           ZAR · South Africa<small>Self-hosted. Your data stays here.</small>
+          <button
+            type="button"
+            className="sidebar-version"
+            onClick={onAbout}
+            aria-label="About Sente"
+            title={info ? buildLabel(info) : "About Sente"}
+          >
+            {info ? (info.version === "dev" ? "Development" : info.version) : "About"}
+          </button>
         </div>
       </aside>
       <div className="workspace">
