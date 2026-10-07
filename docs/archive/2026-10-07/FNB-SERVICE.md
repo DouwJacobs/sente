@@ -1,6 +1,8 @@
-# Separate connector experiment
+> Historical record, archived 7 October 2026. This describes earlier development and includes superseded decisions. Use the [current documentation](../../README.md) for new work.
 
-This disconnected mock experiment predates the accepted same-host worker. Sente currently uses `owner/refresh.mjs`; this service is not a deployment requirement and has no tracker client. See the [current connector guide](../README.md) and [archived proposal](../../../docs/archive/2026-10-07/FNB-SERVICE.md). A future strict host-isolation requirement would need an independently operated service.
+# Separate connector service: mock-only scaffold
+
+The owner has accepted deployment as a separate isolated service. This source is prepared here for review and synthetic testing. It must ultimately run on an independently operated host outside Codex/agent permissions; launching a container on this workstation does not meet that requirement.
 
 No live provider or credential-input endpoint exists. The server rejects all mutations, including credential submission. It does not call upstream, persist reports or secrets, run a scheduler or expose credentials. Live mode is rejected. The tracker has no client for this server yet.
 
@@ -10,7 +12,7 @@ Authenticated GET routes: `/v1/status`, `/v1/accounts`, `/v1/report`. Each retur
 
 `vault.mjs` contains internal encryption primitives, disconnected from HTTP and storage. AES-256-GCM uses a fresh 12-byte nonce, 16-byte tag, and associated data containing purpose, user, connection and key version. Both username and password are encrypted. Missing keys, wrong identity and tampered records return a generic owner-action failure. Rotation decrypts with the old key and reseals with a new nonce/version, retaining owner/connection identity. No decrypt/read route may be added. Byte buffers are wiped where practical; JavaScript strings and process memory still contain plaintext briefly, which is why host isolation is required.
 
-If this experiment is developed for a separate-host deployment:
+Owner provisioning/recovery requirements before production:
 
 - Provision encryption keys in the isolated service's runtime secret manager; never use a default key or store keys alongside ciphertext, source or ordinary database snapshots. Separate transport and encryption keys.
 - Back up key versions through an independently protected owner-controlled channel, separate from encrypted-data backups. Keep old keys until every associated record is successfully rotated and rollback snapshots have expired.

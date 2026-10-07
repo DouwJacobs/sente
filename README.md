@@ -77,6 +77,8 @@ Demo data lives in `data/demo/finance.sqlite`, with backups in `backups/demo`. C
 
 ## Documentation
 
+The [documentation index](docs/README.md) separates current guides from [development history](docs/archive/README.md).
+
 - [MCP setup and permissions](docs/MCP.md)
 - [Offline rulesets](docs/RULESETS.md)
 - [Architecture](docs/ARCHITECTURE.md), [accepted behavior](docs/PLAN.md), and [UI guide](docs/UI.md)

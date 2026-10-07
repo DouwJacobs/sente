@@ -51,7 +51,7 @@ for(const width of [1440,360])test(`FNB connection controls preserve secrecy and
  await panel.locator('summary').filter({hasText:'Troubleshooting'}).focus()
  await page.keyboard.press('Enter')
  await expect(panel.getByText('Layout diagnostics (counts only)',{exact:true})).toBeVisible()
- const debug=panel.getByRole('checkbox',{name:'Show Chrome while updating accounts'})
+ const debug=panel.getByRole('checkbox',{name:'Show Chrome during bank updates'})
  await expect(debug).not.toBeChecked()
  await debug.check();await panel.getByRole('button',{name:'Save browser mode',exact:true}).click()
  await expect(debug).toBeChecked()
