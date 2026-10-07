@@ -12,19 +12,19 @@ import (
 )
 
 type mcpCapabilities struct {
-	ManageMerchants      bool `json:"manage_merchants"`
-	ManageMerchantRules  bool `json:"manage_merchant_rules"`
-	DeleteMerchantRule   bool `json:"delete_merchant_rule"`
-	AssignMerchants      bool `json:"assign_merchants"`
-	AssignMissing        bool `json:"assign_missing"`
-	Recategorize         bool `json:"recategorize"`
-	FinancialEdit        bool `json:"financial_edit"`
-	CreateCategory       bool `json:"create_category"`
-	CreateRule           bool `json:"create_rule"`
-	UpdateRule           bool `json:"update_rule"`
-	DeleteRule           bool `json:"delete_rule"`
-	UpdateBudget         bool `json:"update_budget"`
-	ChangeSeen           bool `json:"change_seen"`
+	ManageMerchants     bool `json:"manage_merchants"`
+	ManageMerchantRules bool `json:"manage_merchant_rules"`
+	DeleteMerchantRule  bool `json:"delete_merchant_rule"`
+	AssignMerchants     bool `json:"assign_merchants"`
+	AssignMissing       bool `json:"assign_missing"`
+	Recategorize        bool `json:"recategorize"`
+	FinancialEdit       bool `json:"financial_edit"`
+	CreateCategory      bool `json:"create_category"`
+	CreateRule          bool `json:"create_rule"`
+	UpdateRule          bool `json:"update_rule"`
+	DeleteRule          bool `json:"delete_rule"`
+	UpdateBudget        bool `json:"update_budget"`
+	ChangeSeen          bool `json:"change_seen"`
 }
 type mcpConstraints struct {
 	SelectedAccounts bool    `json:"selected_accounts"`
@@ -33,6 +33,7 @@ type mcpConstraints struct {
 	ConstrainedRules bool    `json:"constrained_rules"`
 }
 type mcpPermissions struct {
+	ReadContext   bool            `json:"read_context"`
 	ReadMerchants bool            `json:"read_merchants"`
 	SchemaVersion int             `json:"schema_version"`
 	Preset        string          `json:"preset"`

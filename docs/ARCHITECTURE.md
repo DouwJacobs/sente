@@ -14,7 +14,7 @@ Frontend workflows live in `web/src/features/<feature>`. App composes session, n
 
 ## Persistence and authorization
 
-Embedded `internal/app/schema.sql` and ordered migrations initialize SQLite. The current schema is 21. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
+Embedded `internal/app/schema.sql` and ordered migrations initialize SQLite. The current schema is 22. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
 
 Budget membership grants editor access to household accounts. Private accounts require explicit grants, including for administrators, and do not participate in shared budgets. Administrative account-management metadata excludes financial records. Hidden accounts are excluded before ordinary reads/aggregates and connector work. Access checks precede search, count, paging, history and aggregates.
 
@@ -88,3 +88,10 @@ MCP impact: account administration/passwords remain browser-only (offline recove
 ## Build metadata
 
 `internal/buildinfo` owns public version/revision metadata, using release linker values with Go VCS fallback. `internal/app/build_info.go` exposes it through the authenticated, non-cached browser API. `scripts/build-metadata.sh` and Docker workflow arguments derive release information from Git. `web/src/shared/buildInfo.ts` owns the typed browser contract and safe issue-report URL; Settings owns the About view. This metadata does not read the database or alter MCP consent.
+
+
+## MCP summaries and personal context
+
+`mcp_aggregates.go` owns bounded SQL summaries and period comparisons over the shared authorized ledger scope, with allocation-based income/spending and separate parent cashflow. Merchant dimensions retain explicit consent. `mcp_transactions.go` hydrates queue allocations in one page query inside the existing snapshot.
+
+`mcp_context.go` owns private context storage, versioned browser writes and consent-gated MCP reads/initialization. Schema 22 adds `mcp_user_context`; existing connections retain sharing off. Middleware copies each request's initialization result rather than modifying shared instructions. Audit records contain only version/length. `features/mcp/SavedMCPContext.tsx` owns the draft; Settings keeps MCP mounted after first visit to preserve drafts across tabs.

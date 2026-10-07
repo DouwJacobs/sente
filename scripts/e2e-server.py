@@ -5,9 +5,14 @@ root = Path(__file__).resolve().parents[1]
 go = os.environ.get("GO", str(root / "work/toolchain/go/bin/go"))
 if not Path(go).exists():
     go = "go"
-work = Path(tempfile.mkdtemp(prefix="finance-e2e-"))
-binary = work / "finance"
-subprocess.run([go, "build", "-o", str(binary), "./cmd/finance"], cwd=root, check=True)
+work = Path(os.environ["E2E_WORK"]) if os.environ.get("E2E_WORK") else Path(tempfile.mkdtemp(prefix="finance-e2e-"))
+if os.environ.get("E2E_WORK"):
+    work.mkdir()
+binary = Path(os.environ.get("E2E_BINARY", str(work / "finance")))
+if not os.environ.get("E2E_BINARY"):
+    subprocess.run([go, "build", "-o", str(binary), "./cmd/finance"], cwd=root, check=True)
+elif not binary.is_file():
+    raise RuntimeError("The prebuilt synthetic test binary is unavailable")
 port = os.environ.get("E2E_PORT", "18080")
 env = {**os.environ, "DATABASE_PATH": str(work/"finance.sqlite"), "BACKUP_DIR": str(work/"backups"),
        "PUBLIC_URL": os.environ.get("E2E_PUBLIC_URL", f"http://127.0.0.1:{port}"), "PORT": port, "LISTEN_ADDRESS": "127.0.0.1", "STATIC_DIR": str(root/"web/dist"),

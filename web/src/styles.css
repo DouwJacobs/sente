@@ -2885,3 +2885,24 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
   .about-mark { width:44px; height:44px; }
   .about-installation { padding:20px; }
 }
+
+/* MCP uses shared surfaces and spacing for connection, context and consent. */
+.mcp-connect-steps { padding-left:24px; margin:16px 0; }
+.mcp-connect-steps li { margin:8px 0; }
+.mcp-privacy { margin:16px 0; }
+.mcp-privacy summary { cursor:pointer; }
+.mcp-context-panel textarea { resize:vertical; min-height:140px; }
+.mcp-context-status { margin:0 0 12px; }
+.mcp-access-row { padding:16px; border:0; border-radius:12px; background:var(--surface-soft); }
+.permission-scope > .check { align-items:flex-start; min-height:44px; gap:10px; padding:8px 0; }
+.permission-scope > .check input { flex-shrink:0; margin-top:3px; }
+.permission-summary p { overflow-wrap:anywhere; }
+
+.mcp-permission-summary ul { padding-left:22px; margin:10px 0 16px; }
+.mcp-permission-summary li { margin:6px 0; overflow-wrap:anywhere; }
+.permission-summary > summary { cursor:pointer; font-weight:600; }
+
+.mcp-connection-panel .editor-actions,
+.mcp-context-panel .editor-actions,
+.mcp-permission-form > .editor-actions { border-top:0; padding-top:0; margin-top:16px; }
+.permission-scope .mcp-context-sharing-hint { margin:0 0 12px; padding-left:32px; }

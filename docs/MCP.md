@@ -4,7 +4,7 @@ Settings → MCP shows the public endpoint (`PUBLIC_URL/api/mcp`), connected age
 
 1. Share the MCP endpoint from Settings → MCP with your agent. Ordinary link reads return public text containing setup instructions, the same endpoint and OAuth discovery URLs. The agent can configure its supported remote MCP/OAuth integration without a separately copied prompt; clients that cannot add connections from chat still need their connection settings.
 2. The client discovers OAuth metadata and registers its callback. It opens your browser to Sente sign-in and connection approval. Check the signed-in username, supplied agent name and callback origin; client names are not verified identities.
-3. Choose Review only (default), Categorisation proposals, Finance editing proposals, or custom permissions within the client’s requested scope. Denying creates no connection. No token needs to be copied or pasted. Server instructions arrive through MCP initialization after authentication.
+3. Choose Read-only (default), Categorisation proposals, Finance editing proposals, or custom permissions within the client’s requested scope. Denying creates no connection. No token needs to be copied or pasted. Server instructions arrive through MCP initialization after authentication.
 4. Settings → MCP lists your own connected agents, capability and account-scope summaries, last use and expiry. Edit permissions requires explicit browser confirmation; a read-only connection must reconnect to obtain proposal scope. Revoke ends all credentials for that connection and removes its proposals. Separate users and separate approvals have independent connections; current tracker permissions determine accessible data.
 5. For proposed changes, refresh proposals, inspect exact before/after values, then approve or reject. Approval itself does not change financial data. The agent applies the approved proposal once. Explicitly enabled automatic approval can approve matching change types; all other proposals need your review.
 
@@ -33,6 +33,9 @@ MCP excludes account numbers/bank IDs, usernames, bank login credentials, transa
 
 | Tool | Purpose |
 | --- | --- |
+| `get_session_context` | Current personal context, with this connection's explicit sharing permission |
+| `get_financial_summary` | Filtered spending/income/cashflow totals and paged category/merchant/account/month groups |
+| `compare_financial_periods` | Totals for 2–12 saved periods in requested order |
 | `list_accounts` | Authorized internal account IDs and generic labels/access |
 | `list_transactions` | Filtered, paged ledger with allocations, versions, acceptance and personal seen state |
 | `get_transaction_review_queue` | Typed compact needs-category queue, optionally limited to unseen entries, with opaque cursor paging |
@@ -50,7 +53,7 @@ MCP excludes account numbers/bank IDs, usernames, bank login credentials, transa
 | `get_change_status` | Read proposal status, without its private payload |
 | `apply_change` | Apply the same user's/connection's approved proposal atomically |
 
-Read tools take an optional `filters` map of string values. Metadata uses `page` (zero-based), `page_size` (1–100), `q`, `id`, `list_version`. Transactions use `offset` (100 per page), `id`, `account`, `period`, `pending=1`, `category=uncategorized` or ID, `spending_group=unassigned` or ID, `direction=in/out`, `q`, `seen=0/1`, `unassigned=1` and `list_version`. Summary supports `period`, `account`, `category_page`, `balance_page`. Reset paging when a list-version conflict occurs. Budget limits use `period_id` outside filters.
+Legacy read tools take an optional `filters` map of string values. Metadata uses `page` (zero-based), `page_size` (1–100), `q`, `id`, `list_version`. Transactions use `offset` (100 per page), `id`, `account`, `period`, `pending=1`, `category=uncategorized` or ID, `spending_group=unassigned` or ID, `direction=in/out`, `q`, `seen=0/1`, `unassigned=1` and `list_version`. Summary supports `period`, `account`, `category_page`, `balance_page`. Reset paging when a list-version conflict occurs. Budget limits use `period_id` outside filters.
 
 `prepare_change` supports these operations:
 
@@ -135,7 +138,7 @@ Prepare, obtain approval for the exact proposal, then apply its proposal_id. Exi
 
 `mcp_tokens.permissions` stores versioned JSON (`schema_version=1`); `permission_version` guards browser changes with optimistic versions. Migration maps legacy read-only/proposal-enabled connections to exactly their existing capabilities. Legacy finance grants and the Finance preset exclude independent seen changes and merchant capabilities; only custom consent can enable them. No usage quotas were added by owner decision. Existing expiry, rate limits, registration/connection caps and 20-active-proposal cap remain safeguards, not daily usage quotas.
 
-- **Review only:** authorized reads; no change proposals.
+- **Read-only:** authorized reads; no change proposals.
 - **Categorisation proposals:** reads, missing-category assignments and constrained contains-rule creation. Requires explicit selected accounts; cannot recategorize or edit finances, existing rules or shared budgets.
 - **Finance editing proposals:** existing assignment/recategorization, financial edits, category creation, rule create/edit/delete and budget-limit proposals, within current user permissions. Seen changes remain custom.
 - **Custom:** independently select `assign_missing`, `recategorize`, `financial_edit`, `create_category`, `create_rule`, `update_rule`, `delete_rule`, `update_budget`, `change_seen`. Only supported category creation is exposed; category administration/deletion is absent.
@@ -144,7 +147,7 @@ Constraints are explicit `account_ids` (1–100 distinct currently accessible ID
 
 Every entry point rechecks grants/capabilities, including legacy `prepare_change` generic edits, exact browser approval, apply and stored-result replay. Generic no-op edits require financial-edit permission, preventing a category-only grant from being used solely to mark seen while preserving existing finance-edit behavior. Removed categorized allocations require recategorization permission. Automatic seen marking following a legitimate financial/category edit retains normal edit semantics; the custom capability governs independent manual seen actions.
 
-OAuth consent defaults to Review only and never silently grants proposal scope. Existing write-scoped connections can narrow or expand individual capabilities through signed-in, CSRF-protected browser consent in Settings; the original OAuth coarse scope remains the maximum ceiling. A read-scoped connection cannot upgrade there: start fresh authorization from the agent. Refresh cannot expand scope. Browser permission changes require exact displayed confirmation and optimistic permission_version; failures preserve the draft. Writes always use approved proposals; automatic approval requires separate explicit grants.
+OAuth consent defaults to Read-only and never silently grants proposal scope. Existing write-scoped connections can narrow or expand individual capabilities through signed-in, CSRF-protected browser consent in Settings; the original OAuth coarse scope remains the maximum ceiling. A read-scoped connection cannot upgrade there: start fresh authorization from the agent. Refresh cannot expand scope. Browser permission changes require exact displayed confirmation and optimistic permission_version; failures preserve the draft. Writes always use approved proposals; automatic approval requires separate explicit grants.
 
 All read tool annotations are read-only and closed-world. Preparation is a write to proposal storage, non-destructive and not idempotent; application is potentially destructive and idempotent through stored replay. Annotations never authorize changes. Atomic `mcp.applied` audit records user, connection, proposal, time and durable before/actual-after evidence for every affected transaction, category, rule (including deletion), budget or personal seen marker. Audits remain inside browser/storage boundaries and are not agent read results or logs. Legacy deleted-rule replay resolves its original account from retained deletion audit when older snapshots omit it; current access still applies.
 
@@ -215,3 +218,26 @@ User deletion and administrator password reset are browser administration workfl
 ## Application version metadata
 
 MCP initialization advertises the same application version as the backend/browser through `internal/buildinfo`, replacing the independent hardcoded server version. Server identity and protocol negotiation are unchanged. No tools, input schemas, financial output allowlists, permissions, consent, proposals or audits change. The detailed build endpoint and About/report links are browser-only support features; they do not need a new agent capability.
+
+
+## Personal context
+
+Settings → MCP has one personal context field per user, up to 6,000 Unicode characters. Browser GET/PUT `/api/mcp/context` uses the current signed-in user, CSRF, optimistic versions and a serialized audited write; no arbitrary user ID is accepted. Schema 22 adds `mcp_user_context`. Database backup/restore retains context; user deletion removes it. Configuration exports exclude it. Audits contain only action, version and character count, never the prose.
+
+Each connection needs explicit `read_context` consent in OAuth or Settings. This independent read flag defaults false for existing connections and new presets; changing proposal presets retains explicitly chosen read permissions. It grants no changes or automatic approval. Disabling sharing takes effect on subsequent reads/initializations.
+
+Authenticated initialization includes current shared context in a per-request copy of server instructions. Shared server options and public setup text never contain context. `get_session_context` returns `{shared, context, version}`; sharing off returns false, empty text and version 0 without reading the stored prose. Instructions ask clients to refresh context at the start of every new conversation, including reused connections. Sente delivers it on initialization; client obedience/use cannot be enforced.
+
+Context is deliberately shared as written, unlike redacted financial descriptions. It is user-provided guidance and cannot override account access, financial invariants or proposal approval. Include preferences and useful background rather than credentials.
+
+## Financial aggregates
+
+`get_financial_summary` uses typed `account_id`, `period_id`, inclusive `date_from`/`date_to`, `category_id`, `merchant_id`, normalized description search `q`, `group_by` (none/category/merchant/account/month), and zero-based `page`/`page_size` (1–100, default 50). Invalid IDs/dates/groupings reject. Merchant grouping/filtering needs `read_merchants`. Current grants, connection account scope and hidden-account exclusion precede all queries in one SQLite snapshot.
+
+Results expose only currency, typed overall totals, bounded group items and paging metadata. Totals cover the complete matched scope regardless of paging. Allocation category kinds determine income/spending; transfers contribute neither, and expense refunds reduce spending. Category filters sum only matching allocations. Cash in/out/net count each matching parent once, including transfers; category filtering selects matching parents but retains their whole cash movement. Distinct-parent group counts must not be summed across categories when a split spans groups. Month IDs/labels stay exact, account labels are generic, and category/merchant names are redacted. No raw transactions, notes, logos, banking identity or source data are returned. Sum/net overflow rejects rather than rounding.
+
+A saved period without an account uses household assigned-period scope, excluding private accounts. An explicit private account uses period dates; date filters can narrow either scope. With no period, all authorized enabled accounts or the selected account use the supplied calendar dates.
+
+`compare_financial_periods` accepts 2–12 distinct positive `period_ids` and optional account/category/merchant/query filters, preserves requested order and uses the same arithmetic in one snapshot. Unknown periods or access errors reject the whole result. Existing `get_budget_summary`, `get_budget_limits` and `get_budget_trends` remain authoritative for budget status and limits. New aggregate reads add no write permissions or automatic approval types.
+
+Review queue allocation hydration uses one query for the already authorized returned page, none for an empty page. Allocation-ID order, cursor/version, privacy and output fields remain unchanged; lookahead and unrelated entries are not hydrated.

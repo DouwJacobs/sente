@@ -34,3 +34,11 @@ The backend's authenticated `GET /api/build` endpoint is the source used by the 
 Release versions come from Git tags matching `v[0-9]*`. `make build` embeds `git describe`, full commit and commit date through `scripts/build-metadata.sh`; untagged repositories use `dev`. Ordinary Go builds, including `make dev`, use `dev` plus embedded Go VCS revision/date/modified metadata. The frontend package version is package metadata and is not the displayed application version.
 
 Docker builds exclude `.git`, so pass `SENTE_VERSION`, `SENTE_COMMIT` and `SENTE_BUILD_TIME` as build arguments when building a known release. Without arguments the image reports `dev` and unavailable commit/date. The image workflow fetches tags and resolves these arguments from its checked-out revision. Build revision date is the commit date, not a claim about wall-clock compilation time. All linker metadata is restricted to safe single-token characters. Repository metadata currently declares no licence; About says so rather than assigning one.
+
+
+## Continuous integration
+
+`.github/workflows/ci.yml` verifies pull requests and pushes to main with Go race tests/vet, lockfile-based frontend installation, Vitest, production build and synthetic Chromium workflows. Dependencies are cached by Go modules/npm lockfile; failed browser traces are retained for seven days. The verification job has read-only repository access and never publishes images or uses production data.
+
+
+The browser runner builds the backend once, then starts three fresh disposable synthetic databases for each spec file, including dedicated empty-installation services. It reserves local ports, waits for health with proxy bypass and tears down every fixture. Files cannot inherit transactions, credentials, rules or settings changed by earlier specs. Pass filenames/options through `npm run test:e2e -- mcp.spec.ts`. The ordinary Playwright configuration remains available for direct single-session runs.

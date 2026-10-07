@@ -1,0 +1,51 @@
+name: Verify Sente
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GO: go
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.21.1
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Backend tests and race detection
+        run: go test -race ./...
+      - name: Go vet
+        run: go vet ./...
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+      - name: Frontend tests and production build
+        run: npm test && npm run build
+        working-directory: web
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Synthetic browser workflows
+        run: npm run test:e2e
+        working-directory: web
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: web/test-results/
+          retention-days: 7

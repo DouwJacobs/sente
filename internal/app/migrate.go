@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const schemaVersion = 21
+const schemaVersion = 22
 
 func migrate(db *sql.DB) error {
 	fresh := queryInt(db, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='migrations'") == 0

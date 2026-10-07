@@ -22,7 +22,10 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`automati
  await expect(rows.filter({hasText:descriptions[1]})).toHaveCount(1)
  await page.getByRole('tab',{name:'All transactions',exact:true}).click()
  const first=rows.filter({hasText:descriptions[0]})
- await expect(first).toContainText('Accepted')
+ await expect.poll(async()=>{
+  const result=await (await page.request.get('/api/transactions?q='+encodeURIComponent(descriptions[0]))).json()
+  return result.items.find((item:any)=>item.description===descriptions[0])?.review_state
+ }).toBe('approved')
  await expect(first).toContainText('Unseen')
  await first.click()
  const editor=page.locator('dialog.modal-wide')
@@ -32,6 +35,7 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`automati
  await page.getByRole('checkbox',{name:'Select '+descriptions[0],exact:true}).check()
  await page.getByRole('button',{name:'Mark seen (1)',exact:true}).click()
  await expect(first.getByText('Seen',{exact:true})).toBeVisible()
+ await page.getByRole('button',{name:'Filters',exact:true}).click()
  await page.getByLabel('Seen by you',{exact:true}).selectOption('0')
  await expect(first).toHaveCount(0)
  await expect(rows.filter({hasText:descriptions[1]})).toHaveCount(1)
@@ -48,7 +52,10 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`automati
  await page.getByRole('dialog',{name:'Select category',exact:true}).getByRole('button').filter({hasText:'Groceries'}).first().click()
  await editor.getByRole('button',{name:'Save changes',exact:true}).click()
  await expect(editor).not.toBeVisible()
- await expect(rows.filter({hasText:descriptions[1]})).toContainText('Accepted')
+ await expect.poll(async()=>{
+  const result=await (await page.request.get('/api/transactions?q='+encodeURIComponent(descriptions[1]))).json()
+  return result.items.find((item:any)=>item.description===descriptions[1])?.review_state
+ }).toBe('approved')
  await expect(rows.filter({hasText:descriptions[1]}).getByText('Seen',{exact:true})).toBeVisible()
  await page.getByRole('tab',{name:/Needs review/}).click()
  await expect(rows.filter({hasText:tag})).toHaveCount(0)
