@@ -40,6 +40,8 @@ Use an HTTPS reverse proxy for remote access. [Reverse proxy setup](docs/REVERSE
 
 The Compose service uses a non-root user, a read-only root filesystem and persistent `finance_data` / `finance_backups` volumes. Keep those volume names when upgrading an existing installation. `docker compose down -v` deletes them.
 
+Fresh installations start without categories or rules. In Settings → Configuration, import the optional [Sente starter](https://github.com/DouwJacobs/sente-config), add public Git sources or upload JSON files. Several sources can coexist; updates are manual and replacements require a preview and confirmation. Export your categories, spending groups, merchants and rules to a portable JSON file. See [portable configuration](docs/RULESETS.md) for the format and account mapping.
+
 ## Import and review
 
 Add an account, then upload statements in Transactions → Import activity. Choose the matching account before upload. Exact duplicates are skipped; possible duplicates, invalid rows and conflicting bank IDs need attention. Original upload bytes are discarded after staging.

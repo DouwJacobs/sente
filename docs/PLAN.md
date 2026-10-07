@@ -30,6 +30,8 @@ Complete categorized allocations accept transactions automatically on import, ed
 
 Seen/unseen is personal and tied to the transaction version. Imports and rule-applied targets begin unseen. Saving marks the edited version seen for that user; later financial changes invalidate prior markers. Opening a dialog alone does not mark seen. Authorized 1–100 selection actions change personal seen state independently of acceptance and reporting.
 
+Fresh installations contain no categories, spending groups, merchants or rules. Settings → Configuration supports optional starter configuration, multiple public HTTPS Git repositories and JSON files, explicit manual pulls, validated previews and snapshot export. Imports merge in explicitly confirmed application order, retain omitted entries and require confirmation for replacements. Existing installations retain their configuration. See [RULESETS.md](RULESETS.md).
+
 Description rules choose categories and optional groups. Custom rules take precedence over built-ins; conflicting outputs withhold classification. Direction, priority, enabled state and account scope are explicit. New all-current rules apply only to current enabled editable accounts; future accounts do not silently join. Grouped edits/pause/delete are all-or-nothing and version-checked.
 
 The transaction editor can explicitly save an account/direction rule for a single-category, non-transfer, nonzero transaction. In the same write it categorizes eligible existing unsplit uncategorized matches in that account, fills only missing groups and preserves existing categories/splits/transfers. Conflicts remain uncategorized. Standalone rule management applies to future imports, without retrospective application. Rules are never silently learned.

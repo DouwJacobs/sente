@@ -1,3 +1,4 @@
+import { ConfigurationSettings } from "./ConfigurationSettings";
 import { AboutSettings } from "./AboutSettings";
 import { GeneralSettings } from "./GeneralSettings";
 import { SecuritySettings } from "./SecuritySettings";
@@ -72,6 +73,9 @@ export function SettingsPage({
     { id: "general", label: "General" },
     ...(data.user.admin
       ? [
+          ...(data.user.budget_member
+            ? [{ id: "configuration", label: "Configuration" }]
+            : []),
           { id: "banking", label: "Banking" },
           { id: "accounts", label: "Accounts" },
           { id: "access", label: "Users & access" },
@@ -124,6 +128,11 @@ export function SettingsPage({
       </div>
       {data.user.admin && (
         <>
+          {data.user.budget_member && (
+            <div {...panel("configuration")}>
+              <ConfigurationSettings notify={notify} refresh={refresh} />
+            </div>
+          )}
           <div {...panel("banking")}>
             {active === "banking" && (
               <FNBConnection

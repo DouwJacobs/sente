@@ -10,9 +10,13 @@ Edit `/home/douw/finance-tracker` directly in Ubuntu WSL; the Windows Finance Tr
 
 ## Current work
 
-Issues #4 and #5 are paired on `codex/copy-docs-cleanup`: product/helper copy uses plain terms, and active documentation now describes current behavior without dated implementation logs. Original core guides, test history and connector notes are preserved in `docs/archive/2026-10-07`. Keep new decisions in their owning guide; keep this file short. The frontend build, 8 unit tests, 16 focused synthetic browser workflows, local links and archive-preservation checks passed; see VERIFICATION for intermediate test repairs and coverage limits.
+Portable configuration implements issues #10–#14 and #28 on `codex/portable-configuration`, in `/home/douw/finance-tracker-portable`. The main checkout is untouched. Fresh installations contain no classification configuration; upgrades preserve existing records. Settings → Configuration supports several public HTTPS repositories and JSON files, manual pulls, validated one-use previews, explicit replacement confirmation, source history and JSON export. Imports affect future transactions only. [RULESETS.md](RULESETS.md) documents format version 2, source precedence, account identity mapping and limits.
 
-MCP impact: browser wording and documentation only. Tools, input/output fields, permissions, exact proposal effects/audits, consent and shared finance services are unchanged. Existing technical MCP contracts remain in [MCP.md](MCP.md). No migration or financial behavior change.
+The official generic source is [DouwJacobs/sente-config](https://github.com/DouwJacobs/sente-config), release `v1.0.0`. It contains 21 categories, five spending groups and four fallback rules, with no personal EFT patterns. Starter pulls use the public repository; an explicit bundled offline snapshot is also available. Git is added to the runtime image. Private repository credentials are not used; upload a private configuration file instead.
+
+Schema 21 adds source history and expiring configuration previews. Browser, offline and MCP catalogue/rule operations share the authorized writers. Bulk configuration remains browser/host only: no MCP tool, output field, consent or automatic-approval capability is added. Configuration forms and preview presentation have dedicated frontend modules; SQL snapshots, preview, apply and repository fetching have separate backend modules.
+
+Full backend race tests, Go vet, 8 frontend unit tests, the production build, synthetic demo invariants and public/pinned starter pull/import/repeat-pull checks passed. All 15 targeted browser workflows passed across desktop/mobile, including light/dark rule application. Details are recorded in [VERIFICATION.md](VERIFICATION.md). No production deployment, real financial data or live banking inspection is part of this work.
 
 ## Version and support batch — issues #20–#23
 
@@ -53,3 +57,7 @@ Integration before merge (2026-10-07): incorporated main’s PR #43 documentatio
 Owner-requested refinement: sidebar version is a single quiet label; About now uses Sente branding, grouped project links, a prominent report action and inset build details. Production frontend build and 8 focused synthetic desktop/mobile/light/dark workflows passed; no manual visual sign-off. The existing dev server at 5173 hot-reloads these changes. MCP/build/report data contracts are unchanged.
 
 The sidebar version now uses plain footer text styling with zero spacing and no hover surface, at the owner's request. Focus remains visible. Final frontend build and light/dark synthetic structural checks passed; no MCP changes.
+
+## Portable configuration final integration
+
+Ready for main after owner acceptance: card spacing matches the active theme on desktop/mobile, current account-security/About features are preserved, and portable configuration uses schema 21. Full backend race tests, Go vet, 10 frontend unit tests, production build, live public starter pull and all 10 focused integrated browser workflows passed; see VERIFICATION.md. The development server at 127.0.0.1:5173 is running from the portable worktree. The config repository's main branch has the expanded starter and three optional packs; Gifts received and personal transaction rules are excluded from public packs. The bundled offline snapshot remains the original release snapshot. MCP contracts and consent are unchanged.

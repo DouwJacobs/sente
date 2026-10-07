@@ -14,7 +14,7 @@ Frontend workflows live in `web/src/features/<feature>`. App composes session, n
 
 ## Persistence and authorization
 
-Embedded `internal/app/schema.sql` and ordered migrations initialize SQLite. The current schema is 19. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
+Embedded `internal/app/schema.sql` and ordered migrations initialize SQLite. The current schema is 21. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
 
 Budget membership grants editor access to household accounts. Private accounts require explicit grants, including for administrators, and do not participate in shared budgets. Administrative account-management metadata excludes financial records. Hidden accounts are excluded before ordinary reads/aggregates and connector work. Access checks precede search, count, paging, history and aggregates.
 
@@ -66,7 +66,7 @@ The official Go MCP SDK provides stateless Streamable HTTP at `/api/mcp`. Ordina
 
 Connection permission JSON and account constraints are checked at prepare, approval, apply and replay. Explicit output fields exclude private notes/source identity; merchant reads require consent. Exact one-hour proposals capture before/after financial state and versions. Grouped budget proposals resolve stable IDs and retain membership, target, inclusion and recurrence evidence. Application commits financial effects, result and audit together for idempotent replay. Automatic approval requires every effect's explicit grant and is rechecked before apply; it cannot approve older pending proposals retroactively. See [MCP.md](MCP.md) for the full tool, schema, permission and redaction contract.
 
-Offline ruleset version 2 uses snapshot export and atomic authorized import with explicit operator/database/account mapping. CLI and Python wrappers share existing services; they add no MCP/HTTP endpoint. See [RULESETS.md](RULESETS.md).
+Portable configuration version 2 uses consistent snapshot export and one atomic authorized import service shared by browser previews/application and offline CLI/Python wrappers. Schema 21 adds source history and expiring user-bound configuration previews. Preview simulation rolls back SQL savepoint changes; apply rechecks configuration/access fingerprints and explicit replacement consent. Public HTTPS Git sources use isolated, bounded manual fetches and record the applied commit. No background sync or MCP capability is added. Fresh installations skip historical classification seeds; existing records and upgrade migrations remain. See [RULESETS.md](RULESETS.md).
 
 ## Recovery and network lifecycle
 

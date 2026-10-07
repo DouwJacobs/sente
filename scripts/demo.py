@@ -28,6 +28,7 @@ def seed():
                    "BACKUP_DIR": str(ROOT / "backups/demo"),
                    "PUBLIC_URL": "http://127.0.0.1:5174", "FINANCE_PASSWORD": PASSWORD}
             subprocess.run([str(binary), "create-admin", "demo"], env=env, check=True)
+            subprocess.run([str(binary), "import-ruleset", str(ROOT / "internal/app/configuration/starter.json")], env={**env, "FINANCE_RULESET_USER":"demo"}, check=True)
         with sqlite3.connect(TARGET) as db:
             db.execute("PRAGMA foreign_keys=ON")
             db.executescript((ROOT / "fixtures/demo/household.sql").read_text())

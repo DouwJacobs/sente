@@ -1,5 +1,22 @@
 # Verification
 
+## Portable configuration — 7 October 2026
+
+Scope: issues #10–#14 and #28, expanded to multiple repository/file sources, optional default configuration, manual pulls and browser export. Schema 21 adds source tracking and expiring configuration previews. Existing financial records/configuration remain; fresh databases contain no classification catalogue. The generic `sente-config` repository and release `v1.0.0` were created with public non-personal fixtures.
+
+Completed with isolated synthetic data:
+
+- Full `go test -race ./... -timeout=10m` passed, using `TMPDIR=/dev/shm GOTMPDIR=/dev/shm` for synthetic temporary files. Go vet passed. Domain money, ledger, classification and statement checks remain included.
+- Race-enabled configuration/ruleset regression tests also passed on ordinary temporary storage. Tests cover preview rollback/audits, current admin/member/account authorization, stale configuration/access evidence, expiry/replay, explicit replacement consent, repeat-import version stability, source coexistence, retention on Forget source, invalid references/unknown fields, normalized duplicates, bounded repository output and public-host validation.
+- All 8 frontend unit tests and the production TypeScript/Vite build passed. The synthetic demo explicitly imports the optional starter and preserves its financial/budget/privacy invariants.
+- Live public repository fetching and complete synthetic import passed from `DouwJacobs/sente-config`. A second smoke test pinned `v1.0.0`, exercised browser preview/application and a manual repeat pull, and confirmed no changes on an unchanged revision.
+- Eight targeted Playwright workflows passed for file import/replacement/export/source retention, Settings drafts/navigation/ordinary-user visibility, transaction-created rules and an empty installation's optional starter import, at 1440px and 360px. The final run passed all 15 workflows, adding rule management and pending-rule application with 1440px/360px and light/dark coverage. The earlier broader run passed 11 but stopped four pending-rule workflows on stale helper text/closed disclosures; their selectors were corrected to the current UI before the successful final rerun.
+- Whitespace checks passed, and all 79 local links across the active guides, root README and configuration snapshot docs resolve.
+
+Intermediate checks: one full backend run found the branding test's obsolete assumption that a fresh database seeds 11 groups, then timed out during slow WSL disk syncs after 15 minutes. The assertion now checks preservation of the actual original group count. A subsequent run was stopped when inspection showed Go 1.27's `testing.TempDir` uses `GOTMPDIR`, overriding the initial `TMPDIR` choice; pointing both variables at memory-backed storage allowed the full race suite to pass in about 50 seconds. Application SQLite settings were never relaxed. An initial starter test exposed ambiguous historical Salary category names; explicit empty historical identity keys were added to starter rule references. Starter smoke tests then passed. Cached formatter discovery was used after an offline npm formatter invocation found no matching tarball; no dependency was installed.
+
+MCP impact: shared authorized entity services are reused; browser/host bulk source operations add no MCP tools, input schemas, output allowlists, consent or automatic approval grants. Docker runtime packaging adds Git but the image was not built because Docker is unavailable. Public-repository smoke tests do not validate private Git authentication, which is deliberately unsupported by browser pulls. No manual visual sign-off, live banking inspection or production deployment was performed.
+
 ## Issues #4 and #5 — 7 October 2026
 
 Scope: plain product copy and current documentation. UI edits change text only; no financial behavior, runtime configuration, schema, API fields or permission logic changed. Core guides and FNB notes now separate current contracts from archived development history.
@@ -74,3 +91,11 @@ MCP impact: browser presentation only; initialization metadata, tool schemas/out
 Sidebar spacing follow-up: removed shared button styling, margin/padding and inherited control minimum height from the version text. It retains semantic activation and visible keyboard focus, with no hover surface. The initial synthetic DOM check detected the inherited minimum height; after explicitly resetting it, light/dark computed-spacing, compact-height, hover and keyboard-focus checks passed. The final production frontend build passed. This is browser presentation only; MCP and build contracts are unchanged.
 
 PR integration check: rebased the version/About batch onto main containing PR #44 user security. Resolved append-only documentation/style conflicts by retaining both features, including each CSS block's closing braces. Integrated code passed 10 frontend unit tests, production frontend build, focused build-endpoint/MCP initialization race tests and Go vet, plus 10 synthetic About/Settings/password-menu workflows at desktop/mobile sizes with About light/dark coverage. No configuration import/export implementation is included.
+
+## Portable configuration integration — 7 October 2026
+
+Integrated current main's account-security and About changes. Portable configuration uses schema 21, following account security's schema 20; additive migration fixtures cover upgrade preservation. Configuration forms now have equal gaps above/below their row: 24px desktop and the active theme's 20px mobile.
+
+Final checks passed: full backend race suite (app 70 seconds), Go vet, 10 frontend unit tests, production build, live expanded public starter pull/import/repeat-pull, and all 10 desktop/mobile Configuration, Settings and About browser workflows. The first browser run passed nine and detected a four-pixel mobile spacing mismatch; correcting it produced the final ten passes. Unbound WSL port probes delayed the standard harness; prestarted isolated synthetic services allowed the final run in 10 seconds. Temporary harness and synthetic services were removed. No manual visual inspection or production deployment was performed.
+
+The maintained configuration repository now offers the expanded 26-category starter and optional South African, detailed-category and local-merchant packs, without Gifts received or personal transfer rules. Its main branch is current; the bundled offline application snapshot and v1.0.0 config tag remain deliberate older snapshots. Repository reads/imports remain manual, and MCP tools/consent/output contracts are unchanged.

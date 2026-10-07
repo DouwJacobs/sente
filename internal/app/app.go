@@ -427,6 +427,7 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) error {
 func (a *App) routes() http.Handler {
 	m := http.NewServeMux()
 	a.workflowRoutes(m)
+	a.configurationRoutes(m)
 	m.HandleFunc("GET /api/build", wrap(a.buildInfo))
 	m.HandleFunc("GET /api/mcp/settings", wrap(a.mcpSettings))
 	m.HandleFunc("GET /api/mcp/authorization/{id}", wrap(a.mcpAuthorization))
