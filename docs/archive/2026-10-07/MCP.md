@@ -1,3 +1,5 @@
+> Historical record, archived 7 October 2026. Use the [current MCP guide](../../MCP.md) for new work.
+
 # Agent access
 
 Settings → MCP shows the public endpoint (`PUBLIC_URL/api/mcp`), connected agents and change proposals. The server runs inside the existing Go service; no second application or model API key is needed.
@@ -6,7 +8,7 @@ Settings → MCP shows the public endpoint (`PUBLIC_URL/api/mcp`), connected age
 2. The client discovers OAuth metadata and registers its callback. It opens your browser to Sente sign-in and connection approval. Check the signed-in username, supplied agent name and callback origin; client names are not verified identities.
 3. Choose Review only (default), Categorisation proposals, Finance editing proposals, or custom permissions within the client’s requested scope. Denying creates no connection. No token needs to be copied or pasted. Server instructions arrive through MCP initialization after authentication.
 4. Settings → MCP lists your own connected agents, capability and account-scope summaries, last use and expiry. Edit permissions requires explicit browser confirmation; a read-only connection must reconnect to obtain proposal scope. Revoke ends all credentials for that connection and removes its proposals. Separate users and separate approvals have independent connections; current tracker permissions determine accessible data.
-5. For proposed changes, refresh proposals, inspect exact before/after values, then approve or reject. Approval itself does not change financial data. The agent applies the approved proposal once. Explicitly enabled automatic approval can approve matching change types; all other proposals need your review.
+5. For proposed changes, refresh proposals, inspect exact before/after values, then approve or reject. Approval itself does not change financial data. The agent applies the approved proposal once.
 
 A remote agent needs a reachable HTTPS `PUBLIC_URL`. HTTP is allowed only on localhost/loopback for local development. Proxy `/api`, `/oauth` and `/.well-known` to the application, with `/mcp/authorize` served by the frontend. Vite proxies all three API paths in development. Browser consent uses the existing sign-in session and CSRF protection; the agent uses opaque bearer credentials managed by its OAuth client.
 
@@ -45,10 +47,9 @@ MCP excludes account numbers/bank IDs, usernames, bank login credentials, transa
 | `get_budget_summary` | Household or explicitly authorized account spending/limits summary, including group/category comparisons |
 | `get_budget_trends` | Read saved-period/year comparisons using the shared authorized report service |
 | `get_account_import_health` | Paged import/check freshness and schedule state; generic account labels; does not refresh banking |
-| `list_merchants`, `list_merchant_rules`, `preview_merchant_rule` | Consent-gated merchant reads and rule previews; see Merchant capabilities |
 | `prepare_change` | Validate and store an exact proposal without changing finances |
 | `get_change_status` | Read proposal status, without its private payload |
-| `apply_change` | Apply the same user's/connection's approved proposal atomically |
+| `apply_change` | Apply the same user's/connection's browser-approved proposal atomically |
 
 Read tools take an optional `filters` map of string values. Metadata uses `page` (zero-based), `page_size` (1–100), `q`, `id`, `list_version`. Transactions use `offset` (100 per page), `id`, `account`, `period`, `pending=1`, `category=uncategorized` or ID, `spending_group=unassigned` or ID, `direction=in/out`, `q`, `seen=0/1`, `unassigned=1` and `list_version`. Summary supports `period`, `account`, `category_page`, `balance_page`. Reset paging when a list-version conflict occurs. Budget limits use `period_id` outside filters.
 
@@ -60,7 +61,7 @@ Read tools take an optional `filters` map of string values. Metadata uses `page`
 - `create_category`: `category` with name and kind (`expense`/`income`). Membership and duplicate-name checks apply.
 - `save_rule`: `id=0` creates; existing IDs require the rule's current version. `rule` uses account_id, pattern, category_id, optional direction/priority/spending_group_id/enabled/version. Pausing uses enabled=false. Negative built-in IDs follow membership/version checks. Rules classify future imports; this operation does not sweep existing entries. Use explicit bulk transaction edits for existing matches.
 - `delete_rule`: id and version.
-- `update_budget`: `id` is the period ID; `budget` includes its current version and targets (category_id, nonnegative amount_cents). Group scopes and merge/replacement behavior follow the exact budget contract below. Period creation/date changes and default start-day edits are not exposed.
+- `update_budget`: `id` is the period ID; `budget` includes its current version and targets (category_id, nonnegative amount_cents). Use merge=true to retain other limits; merge=false replaces them. Period creation/date changes and default start-day edits are not in this initial surface.
 
 All money is integer ZAR cents. Split sums and signs must match the parent exactly. Source fields remain immutable. Transfer links retain existing constraints. Classification completeness determines Accepted; missing categories remain Needs review, and an agent cannot override this rule. Saving marks the editing user's new version seen; other users' old seen versions become stale.
 
@@ -79,7 +80,7 @@ MCP GETs request SSE and retain authentication; all POSTs, protocol-marked GETs,
 2026-10-05 OAuth client compatibility: an external client repeated the same resource parameter in its authorization URL. Authorization and URL-encoded token/revoke parsing now normalize repeated identical resource values, following RFC 8707's resource parameter exception. The MCP audience still must exactly match the configured endpoint. Different/empty resource values and all repeated client_id, redirect_uri, state, PKCE, scope, code and grant parameters reject before processing. Code, refresh, user/session and financial permission boundaries are unchanged. Regression fixtures are synthetic; no real client IDs, states or PKCE values are saved in source/docs.
 
 
-## Typed transaction reads and review queue
+## Typed transaction reads and review queue (2026-10-05)
 
 `list_transactions` keeps the existing `filters`, `offset` (100 per page), and `list_version` contract. These additional fields can be supplied as typed top-level arguments or inside the legacy string map:
 
@@ -107,7 +108,8 @@ Queue entries contain internal transaction/allocation/category IDs, version, dat
 
 Cursors are encrypted and authenticated with an ephemeral process key and bind to the user, connection, filters, limit and list snapshot. Authorization is checked again on every page. Financial-version, queue membership or personal-seen changes produce a stale-list error; altered/cross-user/cross-connection cursors reject. Restart paging without a cursor after these errors or a server restart. Cursors grant no access themselves. Counts, snapshots, page rows and allocations share one SQLite read transaction; predicates apply before counts and paging.
 
-Indexes `transaction_account_date_id` and `allocation_category_transaction` support account/date/ID ordering and category filtering. Normalized substring searches and full-list snapshots can still scan; these indexes do not make all searches constant-time.
+Two additive startup indexes support account/date/ID ordering and allocation category filtering: `transaction_account_date_id`, `allocation_category_transaction`. These indexes were introduced at schema 12 without a financial data migration. Granular permission metadata subsequently advances the schema to 13; see below. Synthetic plans were examined before and after. Normalized substring searches and full-list snapshot calculations can still scan; these indexes do not make all searches constant-time.
+
 
 ## Category context and rule impact
 
@@ -129,11 +131,11 @@ Narrow assignment example:
 {"operation":"assign_categories","categorizations":[{"id":42,"version":3,"category_id":2,"allocation_id":87}]}
 ```
 
-Prepare, obtain approval for the exact proposal, then apply its proposal_id. Existing categorized allocations and transfers cannot be overwritten using this operation. Generic financial edits remain available only with the corresponding capabilities.
+Prepare, approve the exact browser proposal, then apply its proposal_id. Existing categorized allocations and transfers cannot be overwritten using this operation. Generic financial edits remain available only with the corresponding capabilities.
 
 ## Versioned connection permissions
 
-`mcp_tokens.permissions` stores versioned JSON (`schema_version=1`); `permission_version` guards browser changes with optimistic versions. Migration maps legacy read-only/proposal-enabled connections to exactly their existing capabilities. Legacy finance grants and the Finance preset exclude independent seen changes and merchant capabilities; only custom consent can enable them. No usage quotas were added by owner decision. Existing expiry, rate limits, registration/connection caps and 20-active-proposal cap remain safeguards, not daily usage quotas.
+Schema 13 adds `mcp_tokens.permissions` (versioned JSON, schema_version=1) and `permission_version` (optimistic browser edit version). Startup maps legacy read-only/proposal-enabled connections to exactly their existing capabilities. Legacy finance grants and the Finance preset exclude the new manual seen capability; only custom consent can enable it. No usage quotas were added by owner decision. Existing expiry, rate limits, registration/connection caps and 20-active-proposal cap remain safeguards, not daily usage quotas.
 
 - **Review only:** authorized reads; no change proposals.
 - **Categorisation proposals:** reads, missing-category assignments and constrained contains-rule creation. Requires explicit selected accounts; cannot recategorize or edit finances, existing rules or shared budgets.
@@ -144,27 +146,25 @@ Constraints are explicit `account_ids` (1–100 distinct currently accessible ID
 
 Every entry point rechecks grants/capabilities, including legacy `prepare_change` generic edits, exact browser approval, apply and stored-result replay. Generic no-op edits require financial-edit permission, preventing a category-only grant from being used solely to mark seen while preserving existing finance-edit behavior. Removed categorized allocations require recategorization permission. Automatic seen marking following a legitimate financial/category edit retains normal edit semantics; the custom capability governs independent manual seen actions.
 
-OAuth consent defaults to Review only and never silently grants proposal scope. Existing write-scoped connections can narrow or expand individual capabilities through signed-in, CSRF-protected browser consent in Settings; the original OAuth coarse scope remains the maximum ceiling. A read-scoped connection cannot upgrade there: start fresh authorization from the agent. Refresh cannot expand scope. Browser permission changes require exact displayed confirmation and optimistic permission_version; failures preserve the draft. Writes always use approved proposals; automatic approval requires separate explicit grants.
+OAuth consent defaults to Review only and never silently grants proposal scope. Existing write-scoped connections can narrow or expand individual capabilities through signed-in, CSRF-protected browser consent in Settings; the original OAuth coarse scope remains the maximum ceiling. A read-scoped connection cannot upgrade there: start fresh authorization from the agent. Refresh cannot expand scope. Browser permission changes require exact displayed confirmation and optimistic permission_version; failures preserve the draft. No autonomous financial writes are supported.
 
 All read tool annotations are read-only and closed-world. Preparation is a write to proposal storage, non-destructive and not idempotent; application is potentially destructive and idempotent through stored replay. Annotations never authorize changes. Atomic `mcp.applied` audit records user, connection, proposal, time and durable before/actual-after evidence for every affected transaction, category, rule (including deletion), budget or personal seen marker. Audits remain inside browser/storage boundaries and are not agent read results or logs. Legacy deleted-rule replay resolves its original account from retained deletion audit when older snapshots omit it; current access still applies.
 
-## Proposal recovery
+## Release and recovery
 
-Existing proposals retain their connection identity, approval, version and expiry checks. Use the original connection and an approved, unexpired, current proposal; otherwise prepare a fresh proposal. [VERIFICATION.md](VERIFICATION.md) records source checks and external limits, without claiming a production deployment or recovery of real proposals.
+The development watcher runs the current source with a separate development database. The owner requested production deployment after synthetic verification. See VERIFICATION.md for the exact deployed image and health/schema checks; these do not establish external-client compatibility or recover the reported 13 proposals. No real financial proposals were retried. Existing proposals retain identity/approval/version/expiry boundaries; use the original connection and only a still-approved, unexpired, current proposal, otherwise prepare a fresh proposal for browser approval.
 
-## Selected and automatic approval
+## Selected and automatic approval (2026-10-05 follow-up)
 
-Settings → MCP supports proposal checkboxes, Select all pending, Approve selected and Approve all shown. These actions submit explicit displayed proposal IDs, never proposals arriving later. Server batches allow 1–500 distinct own IDs and approve atomically: an expired, changed, revoked or unauthorized item rolls back every approval and audit. Approval itself applies no financial effects. The displayed list is bounded at 500 with deterministic ordering; bulk-all explicitly means shown pending proposals.
+Owner requested less repetitive approval and selected automatic approval through existing proposals, individually for all existing capabilities. Settings → MCP now supports proposal checkboxes, Select all pending, Approve selected and Approve all shown. These actions submit explicit displayed proposal IDs, never proposals arriving later. Server batches allow 1–500 distinct own IDs and approve atomically: an expired, changed, revoked or unauthorized item rolls back every approval and audit. Approval itself applies no financial effects. The displayed list is bounded at 500 with deterministic ordering; bulk-all explicitly means shown pending proposals.
 
 Under each agent’s Edit permissions (and browser connection consent), Automatic proposal approval offers only its granted change types. All existing connections and presets default to no automatic approval. The new optional automatic_approval capability map remains in schema-version-1 permission JSON, so no database version change is needed. It cannot exceed the corresponding grants, OAuth scope or account/operation constraints. Switching presets clears automatic choices; disabling a capability clears its automatic choice. Settings confirmation is reset after a draft change.
 
 prepare_change returns approved for a new proposal only when **every** capability required by its exact effects is enabled for automatic approval. Generic edits cannot disguise financial/notes/group/period/transfer/split changes or recategorization as a category-only operation; mixed changes otherwise remain pending. New and edited rules are separate types. No direct-write tool or automatic application was introduced: the agent still calls apply_change. Existing pending proposals are not retroactively approved when automatic approval is enabled. Exact payload retains its automatic-approval basis, and approval attribution is audited atomically; application retains complete entity before/after evidence and once-only replay.
 
-Removing an automatic type blocks any still-unapplied proposal relying on it; the agent prepares a fresh proposal for manual approval. Current grant/account/version/expiry checks still run. Already-applied replays return their original result after ordinary current-capability checks, without repeating effects. MCP initialization/tool/public setup instructions explain pending versus approved, so agents need not ask for manual approval again when the proposal is already automatically approved. Manual approval remains required for types without automatic approval.
+Removing an automatic type blocks any still-unapplied proposal relying on it; the agent prepares a fresh proposal for manual approval. Current grant/account/version/expiry checks still run. Already-applied replays return their original result after ordinary current-capability checks, without repeating effects. MCP initialization/tool/public setup instructions explain pending versus approved, so agents need not ask for manual approval again when the proposal is already automatically approved. Previously documented mandatory per-proposal browser approval is superseded only for explicitly enabled types.
 
-## Budget contract
-
-Categories are flat and do not own spending groups. Transactions and categorization/merchant rules retain independent category and spending-group fields. Aggregate category-budget reads sum independent period/group/category limits.
+Budget contract (2026-10-07, supersedes the earlier browser-only grouped-write restriction): categories are flat and do not own spending groups. Transactions and categorization/merchant rules retain independent category and spending-group fields. Aggregate category-budget reads sum independent period/group/category limits.
 
 `update_budget` proposals accept an explicit root `group_id`/`spending_group_id`, per-target group IDs or `spending_group_name`, or `groups` with explicit group scopes and child targets. Group 0 explicitly means No spending group; omitted scope is only a compatibility path for legacy ungrouped limits. Names resolve to stable IDs during preparation; conflicting IDs/names and unknown names reject. An omitted target group rejects when that category already has a named-group budget. An omitted-scope whole-period replacement rejects once named groups exist. No category metadata, rule defaults or Day-to-day inference chooses a budget's group.
 
@@ -173,9 +173,9 @@ Categories are flat and do not own spending groups. Transactions and categorizat
 Preparation stores canonical IDs plus exact before/after group membership, group versions, category IDs/names, cents, inclusion and carry-forward. Undistributed legacy aggregate limits without canonical children appear as legacy_targets in the before-state and are preserved under No spending group before synchronization. Named/inactive canonical entries are never replaced by that compatibility path; partial writes retain unloaded limits. Settings → MCP displays both states before approval. Apply checks the current before state and actual after effects atomically, alongside current period version, consent, account constraints and automatic-approval rules. A stale context rejects without financial effects. Old unapplied budget proposals lacking exact grouped effects must be prepared again; already-applied results retain guarded once-only replay. This repair does not expand existing connection grants or automatic-approval types.
 
 
-## Feature coverage
+## Core feature coverage review (2026-10-05)
 
-The following read fields and workflows are supported. New browser fields never enter MCP responses automatically; write capabilities remain separately consented.
+Reviewed after the five core phases and the owner's UI cleanup request. MCP was **not** automatically updated by schema 16. This follow-up adds compatible read coverage, without expanding write grants or exposing private metadata.
 
 - `list_categories` now retains `archived` and `version`; `filters.active=1` returns assignable categories. The shared writer rejects new assignments to archived categories.
 - `get_budget_limits` accepts `filters.group` (0 = No spending group) and `filters.budget_only=1`, returns `carry_forward`, and retains exact group/category amounts. The default aggregate read remains compatible.
@@ -190,15 +190,18 @@ The following read fields and workflows are supported. New browser fields never 
 | Merchants / merchant naming rules / logos | Implemented through opt-in merchant reads and separate proposal capabilities; see Merchant capabilities below. Existing grants are preserved. |
 | Tags | Gap: no tag read/proposal tools or MCP tag filter. Ordinary financial edits preserve tags. |
 | Transaction notes | Intentionally excluded by the accepted privacy boundary; ordinary edits preserve them. |
-| Import health | Read tool; banking/import execution remains owner/browser-only. |
-| Group/category budgets | Explicit grouped limit proposals and exact effect previews supported; see the budget contract above. Selective one-time/upcoming builder and rebalancing remain browser workflows. |
-| Period/year reports | Read tool. Browser CSV/ZIP downloads remain browser workflows; MCP can return the authorized report data. |
+| Import health | New read tool; banking/import execution remains owner/browser-only. |
+| Group/category budgets | Explicit grouped limit proposals and exact effect previews supported; see the 2026-10-07 contract above. Selective one-time/upcoming builder and rebalancing remain browser workflows. |
+| Period/year reports | New read tool. Browser CSV/ZIP downloads remain browser workflows; MCP can return the authorized report data. |
 | Category rename/archive/restore | Archived state visible. **Write gap:** existing create_category consent does not authorize category administration; requires a distinct opt-in capability before adding writes. |
 | UI layout/theme changes | No additional MCP operation needed; finance services and permissions are unchanged. |
 
 No existing connection gains a new write capability or automatic-approval type. Synthetic tests cover selected-account/hidden-account boundaries, generic labels, archived/group budget reads and preservation/privacy of schema-16 transaction metadata. No external-client or production release verification is implied.
 
-## Merchant capabilities
+### Global merchants and logos (schema 17)
+Global merchant rules are evaluated by the shared naming service across accounts, while previews and explicit browser bulk applications enforce account edit permission. Merchant names/IDs, logo data, tags and notes remain excluded from MCP responses. Catalogue/rule/logo mutations remain browser-only; adding MCP access requires dedicated tools, consent scopes and proposal handling rather than exposing browser endpoints. No MCP grant expansion is introduced by global merchant support.
+
+### Merchant capabilities — 2026-10-06 (supersedes browser-only merchant gap)
 - Read tools: `list_merchants`, `list_merchant_rules`, `preview_merchant_rule`. Merchant reads require explicit `read_merchants` consent; logos are omitted unless `include_logo=true`. Items include associated `category_id`, `category_name`, `spending_group_id`, `spending_group_name`, and `spending_group_color` when set. Ledger reads include merchant ID/redacted name and logo presence, with a consent-gated `merchant` filter. Notes/tags/source data remain excluded.
 - Proposal operations: `save_merchant` (create/rename/versioned logo update/removal, category/spending group assignment), `save_merchant_rule` (create/edit/pause/global or account scope, regex/alternation patterns), `delete_merchant_rule` (permanently delete by id/version), `assign_merchants` (1–100 versioned transaction assignments/clear). Use existing prepare/approve/apply workflow; reads never write. Saved-rule previews leave named entries untouched; assignments are explicit and preserve money/categories/splits.
 - Separate change capabilities: `manage_merchants`, `manage_merchant_rules`, `delete_merchant_rule`, `assign_merchants`; automatic approval is opt-in per type. Combined rule/logo changes require both grants. No new grants are added to legacy or finance presets. Current connection consent, account grants, versions and automatic approval are rechecked at apply and replay. Global merchant/catalogue writes require unrestricted connection account scope and budget membership; restricted connections can propose permitted account-level changes only.

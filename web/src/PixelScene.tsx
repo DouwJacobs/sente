@@ -1,7 +1,6 @@
 import {useEffect,useRef} from 'react'
 
-// An original decorative savings landscape. It contains no financial data.
-// Render at a deliberately low resolution, then scale with nearest-neighbour pixels.
+// Render at low resolution and scale without smoothing.
 export function PixelScene(){
  const ref=useRef<HTMLCanvasElement>(null)
  useEffect(()=>{
@@ -16,7 +15,7 @@ export function PixelScene(){
    const dark=css.getPropertyValue('--pixel-dark').trim(),mid=css.getPropertyValue('--pixel-mid').trim(),light=css.getPropertyValue('--pixel-light').trim()
    context.clearRect(0,0,128,64);context.imageSmoothingEnabled=false
    const block=(x:number,y:number,w:number,h:number,color:string)=>{context.fillStyle=color;context.fillRect(Math.round(x),Math.round(y),w,h)}
-   // Stepped island and three deliberately illustrative coin stacks.
+   // Island and coin stacks.
    block(14,51,100,2,mid);block(22,45,84,6,light);block(30,39,68,6,light)
    for(let i=0;i<7;i++)block(34+i*8,48,4,2,mid)
    const stack=(x:number,y:number,count:number)=>{
@@ -25,12 +24,12 @@ export function PixelScene(){
     }
    }
    stack(34,38,3);stack(56,38,5);stack(78,38,7)
-   // A pixel sprout leans gently toward the cursor.
+   // Sprouts follow the cursor.
    const sway=Math.round(position*2)
    block(21,27,2,18,dark);block(16+sway,24,7,4,mid);block(23+sway,20,7,4,mid);block(19+sway,28,4,3,light)
    block(103-sway,17,2,18,dark);block(98-sway,15,7,4,mid);block(105-sway,11,7,4,mid)
    block(97,33,14,4,mid);block(99,37,10,5,dark)
-   // One nostalgic device: occasional square stars, no blinking or marquee.
+   // Static stars.
    block(16,10,2,6,mid);block(14,12,6,2,mid);block(89,5,2,2,light)
    block(48,10,2,2,mid);block(112,27,2,2,light)
    if(!motion.matches&&Math.abs(target-position)>.01)frame=requestAnimationFrame(paint)

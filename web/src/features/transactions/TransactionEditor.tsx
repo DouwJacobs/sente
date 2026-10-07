@@ -465,7 +465,7 @@ export function TransactionEditor({
                   </label>
                   <Field
                     label="Description contains"
-                    hint="Use the shop or provider name, without the changing reference number."
+                    hint="Use the shop or service name, leaving out reference numbers."
                     validate={(value) =>
                       !saveRule
                         ? ""

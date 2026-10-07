@@ -1,6 +1,6 @@
 # Module ownership
 
-Issues #1 and #2 establish these boundaries without changing deployment, routes, database schema or financial behavior. The application remains one Go service with a React/Vite frontend.
+Use these boundaries when extending the application. The application remains one Go service with a React/Vite frontend.
 
 ## Backend
 
