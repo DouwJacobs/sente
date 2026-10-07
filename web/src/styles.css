@@ -2795,3 +2795,29 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
     display: none;
   }
 }
+
+
+.password-control {
+  position:relative;
+  min-width:0;
+}
+.password-control input {
+  width:100%;
+  padding-right:52px;
+}
+.password-control > .button {
+  position:absolute;
+  top:50%;
+  right:2px;
+  transform:translateY(-50%);
+  width:44px;
+  min-height:44px;
+  padding:10px;
+}
+
+.password-control > .button.quiet,
+.password-control > .button.quiet:hover:not(:disabled) {
+  background:transparent;
+  border-color:transparent;
+  box-shadow:none;
+}

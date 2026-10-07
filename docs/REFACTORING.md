@@ -17,6 +17,7 @@ Dependencies point from app into domain packages. Statements uses money/classifi
 
 Persistence remains intentionally in app: moving a method to a separate package solely to reduce file size would force a large exported database/authorization interface and risk fragmented transactions. Focused workflow files make the existing shared services navigable:
 
+- `users.go` owns user administration; `user_security.go` owns browser security mutations and shared atomic password/agent/session revocation used by offline recovery.
 - `periods.go`, `budget_targets.go`, `budget_target_queries.go`, `budget_settings.go`, `dashboard.go` separate period lifecycle, atomic targets, target reads, preferences and aggregates.
 - `transaction_queries.go`, `transactions.go`, `transaction_review.go`, `transfers.go`, `transaction_audit.go`, `transaction_metadata.go` separate authorized ledger queries, atomic editing, review, linked transfers, audit and metadata.
 - `labels.go`, `categories.go`, `merchant_rules.go`, `merchant_matching.go` separate catalogue workflows and merchant matching/persistence.

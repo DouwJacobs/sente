@@ -170,17 +170,13 @@ func (a *App) ResetPassword(username, password string) error {
 	}
 	return a.write(func(tx *sql.Tx) error {
 		var id int64
-		if err := tx.QueryRow("SELECT id FROM users WHERE username=?", username).Scan(&id); err != nil {
+		if err := tx.QueryRow("SELECT id FROM users WHERE username=? AND deleted_at IS NULL", username).Scan(&id); err != nil {
 			return errors.New("User not found")
 		}
-		if _, err := tx.Exec("UPDATE users SET password=? WHERE id=?", string(digest), id); err != nil {
+		if err := setUserPasswordTx(tx, id, string(digest), ""); err != nil {
 			return err
 		}
-		if _, err := tx.Exec("DELETE FROM mcp_tokens WHERE user_id=?", id); err != nil {
-			return err
-		}
-		_, err := tx.Exec("DELETE FROM sessions WHERE user_id=?", id)
-		return err
+		return audit(tx, User{ID: id, Username: username}, nil, "user", id, "password_recovered", map[string]any{"method": "offline", "all_sessions_revoked": true})
 	})
 }
 func (a *App) write(fn func(*sql.Tx) error) error {
@@ -414,7 +410,14 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) error {
 	token := randomToken()
 	csrf := randomToken()
 	expires := time.Now().Add(7 * 24 * time.Hour)
-	if _, err := a.DB.Exec("INSERT INTO sessions VALUES(?,?,?,?)", hash(token), u.ID, csrf, expires.Unix()); err != nil {
+	if err := a.write(func(tx *sql.Tx) error {
+		// A reset/deletion that raced bcrypt verification must win over this login.
+		if err := tx.QueryRow("SELECT username,admin,budget_member FROM users WHERE id=? AND password=? AND disabled=0 AND deleted_at IS NULL", u.ID, password).Scan(&u.Username, &u.Admin, &u.Member); err != nil {
+			return fail(401, "Username or password is incorrect")
+		}
+		_, err := tx.Exec("INSERT INTO sessions VALUES(?,?,?,?)", hash(token), u.ID, csrf, expires.Unix())
+		return err
+	}); err != nil {
 		return err
 	}
 	http.SetCookie(w, &http.Cookie{Name: "finance_session", Value: token, Path: "/", HttpOnly: true, Secure: a.Secure, SameSite: http.SameSiteStrictMode, Expires: expires})
@@ -464,6 +467,8 @@ func (a *App) routes() http.Handler {
 	m.HandleFunc("GET /api/users", wrap(a.users))
 	m.HandleFunc("POST /api/users", wrap(a.createUser))
 	m.HandleFunc("PUT /api/users/{id}", wrap(a.updateUser))
+	m.HandleFunc("POST /api/users/{id}/password", wrap(a.adminPassword))
+	m.HandleFunc("DELETE /api/users/{id}", wrap(a.deleteUser))
 	m.HandleFunc("PUT /api/grants", wrap(a.grant))
 	m.HandleFunc("GET /api/grants", wrap(a.grants))
 	m.HandleFunc("GET /api/spending-groups", wrap(a.spendingGroups))

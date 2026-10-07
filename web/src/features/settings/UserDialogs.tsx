@@ -1,3 +1,4 @@
+import { UserSecurityDialog } from "./UserSecurityDialog";
 import { api } from "../../api";
 import { Button, Field, Form, Modal } from "../../ui";
 import { passwordError, usernameError } from "../../validation";
@@ -40,6 +41,12 @@ export function UserDialogs({
   } = access;
   return (
     <>
+      {access.securityUser && <UserSecurityDialog
+        key={access.securityUser.user.id + access.securityUser.action}
+        user={access.securityUser.user} action={access.securityUser.action}
+        busy={busy} run={run} refresh={refresh}
+        onClose={() => access.setSecurityUser(null)}
+      />}
       {editUser && (
         <Modal title="Edit user" onClose={() => setEditUser(null)}>
           <Form
