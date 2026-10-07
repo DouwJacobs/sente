@@ -1,5 +1,5 @@
 import {Field} from './ui'
-import type {Row} from './App'
+import type {Row} from './shared/types'
 export const capabilityLabels:Record<string,string>={manage_merchants:'Create/edit merchants and logos',manage_merchant_rules:'Create/edit merchant naming rules',delete_merchant_rule:'Delete merchant naming rules',assign_merchants:'Assign or clear transaction merchants',assign_missing:'Fill missing categories',recategorize:'Change assigned categories',financial_edit:'Edit amounts, dates, descriptions, notes, splits, groups and periods',create_category:'Create categories',create_rule:'Create rules',update_rule:'Edit rules',delete_rule:'Delete rules',update_budget:'Edit shared budget limits',change_seen:'Mark your transactions seen or unseen'}
 export const reviewPermissions=()=>({schema_version:1,preset:'review',automatic_approval:{},capabilities:Object.fromEntries(Object.keys(capabilityLabels).map(k=>[k,false])),constraints:{account_ids:[] as number[],selected_accounts:false,missing_categories_only:false,constrained_rules:false}})
 export function selectPreset(p:Row,preset:string):Row{

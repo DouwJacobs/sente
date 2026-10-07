@@ -1,6 +1,6 @@
 # Sente handover
 
-Current source handover, updated 7 October 2026. Work directly in Ubuntu WSL at /home/douw/finance-tracker; the Windows project links to that source. Preserve existing uncommitted work. No production deployment was performed during the latest audit repair.
+Current source handover, updated 7 October 2026. Work directly in Ubuntu WSL at /home/douw/finance-tracker; the Windows project links to that source. Preserve existing uncommitted work. No production deployment was performed during the latest audit repair or module refactor.
 
 ## Working instructions
 
@@ -56,8 +56,20 @@ Category administration, selective budget recurrence and rebalance remain browse
 
 All nine 7 October repository/UI findings are resolved in source. The final build, 8 frontend unit tests, 25 synthetic browser workflows, four strict ruleset tests, CLI wrappers, vet and whitespace checks passed.
 
-The full backend run had 164 passes, one expected external-sample skip and one legacy-limit preservation failure. That failure was repaired; all seven affected regressions then passed. The entire backend suite was not repeated after that final correction. [VERIFICATION.md](VERIFICATION.md) preserves exact coverage and limitations. There was no production deployment, commit, live banking test or manual visual sign-off.
+The full backend run had 164 passes, one expected external-sample skip and one legacy-limit preservation failure. That failure was repaired; all seven affected regressions then passed. At the end of that audit, the entire backend suite had not been repeated after its final correction; the module refactor below subsequently covered the complete backend test list across race-enabled runs. [VERIFICATION.md](VERIFICATION.md) preserves exact coverage and limitations. There was no production deployment, commit, live banking test or manual visual sign-off.
+
+
+## Issues #1 and #2 module refactor — 7 October 2026
+
+Work is on `codex/domain-feature-refactor`. Backend domain packages now own money, classification, statement adapters and allocation invariants; focused app files keep authorization and atomic SQL services shared by HTTP, MCP and offline commands. Frontend screens/import previews/transaction components live under `web/src/features`, with contracts/request tasks under `web/src/shared`. App no longer exports shared contracts or hooks. [REFACTORING.md](REFACTORING.md) maps ownership; AGENTS.md requires future changes to follow these boundaries and preserve behavior, draft ownership and shared UI controls.
+
+MCP impact: the existing shared services reach the extracted domain logic; routes, input schemas, JSON output allowlists, grants, proposal previews/evidence and consent are unchanged. No migration, live banking, production-data inspection or deployment. Current validation results are recorded in VERIFICATION.md.
+
+
+Refactor verification: 168 distinct backend tests passed with race detection across the main run and its one remaining-test follow-up; the external FNB sample test skipped as expected. All final packages compiled and vet passed. Frontend build and 8 unit tests passed; 55 distinct synthetic browser workflows passed across main/focused runs, including settings draft retention, session feedback and nested editing. Historical browser expectations were repaired without changing the application UI. The main backend run hit its 30-minute process limit, and the complete 140-test historical browser suite was not rerun; VERIFICATION.md records exact coverage. No production deployment or live banking check.
 
 ## Sente README and demo branch — 2026-10-07
 
-Issues #3 and #18 are paired on `codex/sente-readme-demo` in `/home/douw/sente-readme-demo`, based on main. Concurrent uncommitted refactoring remains in `/home/douw/finance-tracker` on `codex/domain-feature-refactor`. README is user-focused; runtime/development notes are in dedicated docs. Product names use Sente; existing binary, key path, module and volume identifiers remain compatible. Docker destination is douwjacobs/sente with latest/development tags. Synthetic SQL and exclusive new-database tooling support shared local demo data. MCP impact: public product/resource names change only; offline demo tooling introduces no MCP endpoint, financial schema/allowlist, capability or consent change. Screenshots and live FNB compatibility are not claimed.
+Issues #3 and #18 are paired on `codex/sente-readme-demo` in `/home/douw/sente-readme-demo`, based on main. The issues #1/#2 refactor was merged into main as PR #42 before this branch was integrated; branding now follows the extracted auth/workspace components. README is user-focused; runtime/development notes are in dedicated docs. Product names use Sente; existing binary, key path, module and volume identifiers remain compatible. Docker destination is douwjacobs/sente with latest/development tags. Synthetic SQL and exclusive new-database tooling support shared local demo data. MCP impact: public product/resource names change only; offline demo tooling introduces no MCP endpoint, financial schema/allowlist, capability or consent change. Screenshots and live FNB compatibility are not claimed.
+
+Integrated with main after PR #42; current production build, unit/demo/MCP/OAuth checks, vet and both synthetic handover browser workflows passed. See VERIFICATION.md for the unavailable Docker repeat check and publishing credential requirement.

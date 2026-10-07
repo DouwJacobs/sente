@@ -7,7 +7,7 @@ import {GroupDot} from './Choices'
 import {MerchantAvatar} from './MerchantAvatar'
 import {CategoryEditor,MerchantRuleEditor} from './Organisation'
 import {RuleEditor} from './Rules'
-import type {Row,PageProps} from './App'
+import type {Row,PageProps} from './shared/types'
 import type {TransactionScope} from './TransactionAccess'
 
 export interface SearchResults {

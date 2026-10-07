@@ -1,7 +1,8 @@
 import {useEffect,useState} from 'react'
 import {api} from './api'
 import {Button,Form,Loading,Empty} from './ui'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 import {MCPPermissionFields,reviewPermissions} from './MCPPermissions'
 
 export function OAuthConsent({notify,onSignOut}:Pick<PageProps,'notify'>&{onSignOut:()=>Promise<void>}){

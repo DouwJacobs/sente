@@ -10,13 +10,13 @@ func TestSaveAndApproveAtomic(t *testing.T) {
 	id := seedTransaction(t, e, 1, -10000, "2026-10-21", nil)
 	path := fmt.Sprintf("/api/transactions/%d", id)
 	cat := int64(1)
-	body := editBody(1, -10000, []Allocation{{nil, -10000, ""}})
+	body := editBody(1, -10000, []Allocation{{CategoryID: nil, Amount: -10000, Note: ""}})
 	body["approve"] = true
 	status(t, e.req(t, 1, path, "PUT", body), 400)
 	if queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", id) != 1 {
 		t.Fatal("uncategorized approval saved edits")
 	}
-	body["allocations"] = []Allocation{{&cat, -10000, ""}}
+	body["allocations"] = []Allocation{{CategoryID: &cat, Amount: -10000, Note: ""}}
 	body["rule"] = map[string]any{"pattern": " "}
 	status(t, e.req(t, 1, path, "PUT", body), 400)
 	if queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", id) != 1 || queryInt(e.a.DB, "SELECT COUNT(*) FROM audit WHERE entity='transaction' AND entity_id=?", id) != 0 {
@@ -62,16 +62,16 @@ func TestSaveAndApproveSplitsAndTransfers(t *testing.T) {
 	cat := int64(1)
 	id := seedTransaction(t, e, 1, -10000, "2026-10-21", nil)
 	path := fmt.Sprintf("/api/transactions/%d", id)
-	body := editBody(1, -10000, []Allocation{{&cat, -6000, ""}, {nil, -4000, ""}})
+	body := editBody(1, -10000, []Allocation{{CategoryID: &cat, Amount: -6000, Note: ""}, {CategoryID: nil, Amount: -4000, Note: ""}})
 	body["approve"] = true
 	status(t, e.req(t, 1, path, "PUT", body), 400)
-	body["allocations"] = []Allocation{{&cat, -6000, ""}, {&cat, -3999, ""}}
+	body["allocations"] = []Allocation{{CategoryID: &cat, Amount: -6000, Note: ""}, {CategoryID: &cat, Amount: -3999, Note: ""}}
 	status(t, e.req(t, 1, path, "PUT", body), 400)
-	body["allocations"] = []Allocation{{&cat, -6000, ""}, {&cat, -4000, ""}}
+	body["allocations"] = []Allocation{{CategoryID: &cat, Amount: -6000, Note: ""}, {CategoryID: &cat, Amount: -4000, Note: ""}}
 	status(t, e.req(t, 1, path, "PUT", body), 200)
 	body["version"] = 2
 	body["is_transfer"] = true
-	body["allocations"] = []Allocation{{nil, -10000, ""}}
+	body["allocations"] = []Allocation{{CategoryID: nil, Amount: -10000, Note: ""}}
 	status(t, e.req(t, 1, path, "PUT", body), 200)
 	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions WHERE id=? AND is_transfer=1 AND review_state='approved'", id) != 1 {
 		t.Fatal("explicit transfer approval failed")

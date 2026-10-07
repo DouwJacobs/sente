@@ -5,7 +5,8 @@ import {Field,Form,Button,Empty,Modal,Badge,validateFields} from './ui'
 import {moneyError} from './validation'
 import {CreateCategory,GroupDot} from './Choices'
 import {usePagedList,ListStatus,ListNavigation,PagedSelect} from './PagedList'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 
 type CategoryDraft={id:number;name:string;amount:string;carry:boolean;upcoming:boolean;baseAmount:number;remove?:boolean}
 type GroupDraft={id:number;name:string;color?:string;target_cents?:number;added?:boolean;remove?:boolean;targets:Record<number,CategoryDraft>}

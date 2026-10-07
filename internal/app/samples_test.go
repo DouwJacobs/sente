@@ -18,7 +18,7 @@ func TestSuppliedFNBPair(t *testing.T) {
 		if err != nil {
 			t.Fatal("supplied archive is unavailable")
 		}
-		expanded, err := expand([]inputFile{{name, b}})
+		expanded, err := expand([]inputFile{{Name: name, Content: b}})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -27,7 +27,7 @@ for(const width of [1440,360])test(`shared editor from categories accounts perio
  const card=page.locator('section.panel').filter({has:page.getByRole('heading',{name:/October 2026/})})
  await card.getByRole('button',{name:'October 2026',exact:true}).click();await expect(page.getByLabel('Budget period',{exact:true})).toHaveValue('1');await expect(page.getByLabel('Accounts',{exact:true})).toHaveValue('')
  await page.locator('.transaction-detail').filter({hasText:'Market groceries'}).click();await expect(editor).toBeVisible();await page.keyboard.press('Escape')
- await nav(page,'Budgets',width);await card.getByRole('button',{name:'Edit dates',exact:true}).click()
+ await nav(page,'Budgets',width);await card.getByLabel('Actions for October 2026',{exact:true}).click();await card.getByRole('button',{name:'Edit dates',exact:true}).click()
  const periodEditor=page.getByRole('dialog',{name:'Edit budget period',exact:true})
  await periodEditor.getByLabel('Start date').fill('2026-10-22');await periodEditor.getByRole('button',{name:'Preview affected transactions',exact:true}).click()
  await periodEditor.getByText('View affected transactions',{exact:true}).click();await periodEditor.locator('.transaction-link').filter({hasText:'#2 ·'}).click()

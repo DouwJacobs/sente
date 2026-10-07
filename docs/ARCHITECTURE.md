@@ -8,17 +8,9 @@ Production consists of one non-root Go service in a read-only Docker container. 
 
 ## Backend boundaries
 
-- app.go: connection/migration initialization, authentication/session middleware, JSON errors, origin/CSRF checks and routes.
-- setup.go: same-origin first-run status and token-protected, transactional administrator/session bootstrap; closes permanently when an administrator exists.
-- accounts.go: users, account management/grants, categories, description rules, password changes. Category popularity counts distinct transactions from authorized accounts only.
-- spending_groups.go: authenticated group listing and household-member creation/editing, optimistic versions and audit history.
-- parser.go: exact cents conversion, safe in-memory ZIP expansion, FNB CSV/OFX adapters.
-- imports.go: persistent staging, duplicate annotation, commit, provenance and history.
-- transactions.go: authorized listing/editing, allocations, approval, assignments, transfer links and audit access.
-- budgets.go: periods/preview tokens, targets/settings, dashboard aggregation.
-- backup.go: exclusive process lock, snapshots, retention, scheduler and offline restore.
+See [REFACTORING.md](REFACTORING.md) for the maintained module map and dependency direction. `internal/app` remains the composition and authorized transactional-service layer used by browser, MCP and offline commands. Reusable rules live in `internal/money`, `internal/classification`, `internal/statements` and `internal/ledger`; safe response errors live in `internal/problem`. These domain packages never import app or HTTP/MCP transport.
 
-Adapters produce ParsedFile and SourceRow values, independently of review and ledger persistence. No source CSV/OFX files are tracked.
+Statement adapters own `ParsedFile`/`SourceRow` and independent CSV/OFX/live normalization. App retains thin facade aliases and existing shared staging/commit services. Source files and financial data are never tracked. Budget, transaction, catalogue and FNB persistence workflows use focused files listed in the module map; their serialized permission/version/audit transactions remain intact.
 
 ## Persistence and correctness
 
@@ -31,6 +23,8 @@ Transaction source_date/source_amount/source_description, FITID, import linkage,
 Budget totals use allocations, cash movement uses parent transactions, and transfer principal is excluded. Dashboard default scope is household only. Explicit account selection uses account-specific reporting and removes shared limit comparison; private accounts use the selected period as a date filter.
 
 ## Frontend
+
+Route screens and workflow components live in `web/src/features/<feature>`. App owns session/workspace orchestration; `web/src/shared/types.ts` and `shared/useTask.ts` own reusable contracts and request-task state. Feature modules do not import App. See [REFACTORING.md](REFACTORING.md) for ownership and extension guidance.
 
 Shared structural rules live in web/src/styles.css and active visual tokens in web/src/finance-theme.css; shared button/field/form/badge/modal primitives live in web/src/ui.tsx. API calls centralize CSRF, same-origin credentials, session expiry, and JSON errors. Shared Field/Form validation uses first blur to reveal inline accessible errors, then updates while editing; dependent validators re-run with related values, and submission blocks invalid requests and focuses the first invalid field. Local storage contains theme preference only.
 
@@ -249,7 +243,7 @@ Committed import-detail reads attach transaction_id by immutable saved provenanc
 
 Additive fields: categories archived/version, transactions note/merchant_id, imports committed_at; account-scoped merchants/tags/merchant_rules, transaction_tags and account_import_checks. Existing allocations, parent money, source provenance and budget history are preserved. Historical import timestamps fall back to their saved creation time; new commits record the actual commit time. Connector checks record successful staged fetches independently, and committed checks (including reused zero-new snapshots) advance successful freshness. No refresh-on-read.
 
-workflows.go implements current authorized ledger navigation, signed user-bound 15-minute previews, atomic 1–100 bulk edits and snapshot ZIP export. Previews sign semantic edits and transaction versions; apply recomputes under serialized write and rechecks access. Newly created account label IDs are provisional during rollback-only preview, resolved by name on apply. Bulk audit records complete before/after input, including notes and labels. organisation.go validates account ownership and label bounds, category version/archive dependencies and independent merchant rule matching. New metadata is excluded by the existing MCP whitelist; optional input fields preserve metadata when omitted.
+workflows.go implements current authorized ledger navigation, signed user-bound 15-minute previews, atomic 1–100 bulk edits and snapshot ZIP export. Previews sign semantic edits and transaction versions; apply recomputes under serialized write and rechecks access. Newly created account label IDs are provisional during rollback-only preview, resolved by name on apply. Bulk audit records complete before/after input, including notes and labels. transaction_metadata.go, labels.go, categories.go and merchant_matching.go validate account ownership and label bounds, category version/archive dependencies and independent merchant rule matching. New metadata is excluded by the existing MCP whitelist; optional input fields preserve metadata when omitted.
 
 reporting.go uses read snapshots and allocation-based expense/refund totals with shared authorization, private-account date scope and household assigned-period scope. Budget years select whole saved periods by start date. Excluded records link through the authorized ledger scope. Rebalance previews sign the period version and both current limits/spending; apply rejects changed spending or limits, updates only the two current entries, rebuilds legacy aggregate targets and audits. CSV text is spreadsheet-formula escaped; cents columns stay numeric.
 

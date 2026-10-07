@@ -6,7 +6,7 @@ import {api,money,decimal,cents} from './api'
 import {moneyError} from './validation'
 import {GroupDot} from './Choices'
 import {Pagination,Modal,Button,Field,Form} from './ui'
-import type {Row,PageProps} from './App'
+import type {Row,PageProps} from './shared/types'
 
 export function SpendingBucket({group,period,account,groupPage,hasTargets,notify,revision,sort,periodName,canEditBudget,refresh}:{periodName?:string;sort?:string;group:Row;period:string;account:string;groupPage:number;hasTargets:boolean;notify:PageProps['notify'];revision:number;canEditBudget?:boolean;refresh?:()=>void}){
  const[page,setPage]=useState(0),[categories,setCategories]=useState<Row[]>(group.categories),[loading,setLoading]=useState(false)

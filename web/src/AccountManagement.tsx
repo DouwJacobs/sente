@@ -3,7 +3,8 @@ import {Menu,Pencil,RefreshCw,Eye,EyeOff} from 'lucide-react'
 import {usePagedList,ListStatus,ListNavigation} from './PagedList'
 import {api} from './api'
 import {Button,Field,Form,Modal,Loading} from './ui'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 
 export function useAccountManagement({data,revision,refresh,notify}:PageProps){
  const shown=usePagedList(data.user.admin?'/accounts/manage?hidden=0':'',revision),hidden=usePagedList(data.user.admin?'/accounts/manage?hidden=1':'',revision)

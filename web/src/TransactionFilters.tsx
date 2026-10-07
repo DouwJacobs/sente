@@ -3,7 +3,7 @@ import {useState} from 'react'
 import {cents} from './api'
 import {moneyError} from './validation'
 import {PagedSelect} from './PagedList'
-import {type PageProps} from './App'
+import {type PageProps} from './shared/types'
 export type TransactionFilterValues={category:string;group:string;direction:string;query:string;seen?:string;acceptance?:string;date_from?:string;date_to?:string;minimum?:string;maximum?:string;merchant?:string;tag?:string;excluded?:string}
 export const emptyTransactionFilters:TransactionFilterValues={category:'',group:'',direction:'',query:'',seen:'',acceptance:''}
 export function transactionFilterQuery(filters:TransactionFilterValues,account=''){

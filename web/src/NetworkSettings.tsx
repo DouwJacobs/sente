@@ -1,7 +1,8 @@
 import {useEffect,useState} from 'react'
 import {api} from './api'
 import {Badge,Button,Field,Form,Loading} from './ui'
-import {useTask,type PageProps,type Row} from './App'
+import {useTask} from './shared/useTask'
+import {type PageProps,type Row} from './shared/types'
 export function publicURLError(value:string){
  try{const u=new URL(value.trim());if(!['http:','https:'].includes(u.protocol)||!u.hostname||u.username||u.password||u.pathname!=='/'||u.search||u.hash||value.includes('?')||value.includes('#')||value.length>2048)throw Error();return ''}catch{return 'Enter a full http:// or https:// address without a folder path, login details, or URL parameters.'}
 }
