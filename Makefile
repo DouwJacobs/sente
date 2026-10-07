@@ -11,3 +11,9 @@ dev:
 	GO="$(GO)" python3 scripts/dev.py
 clean:
 	rm -rf bin web/dist
+
+.PHONY: demo dev-demo
+demo:
+	GO="$(GO)" python3 scripts/demo.py
+dev-demo:
+	GO="$(GO)" python3 scripts/demo.py --serve

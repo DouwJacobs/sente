@@ -12,7 +12,7 @@ export function OAuthConsent({notify,onSignOut}:Pick<PageProps,'notify'>&{onSign
  const decide=(allow:boolean)=>run(async()=>{const result=await api('/mcp/authorization/'+encodeURIComponent(id),'POST',{allow,permissions:allow?permissions:undefined});window.location.assign(result.redirect)})
  return <main className="login"><section className="login-panel"><h1>Approve agent connection</h1>
  {error?<Empty title="Connection unavailable">{error}</Empty>:!state?<Loading>Loading connection request</Loading>:<>
- <p><strong>{state.client_name}</strong> wants to connect to Finance Tracker.</p><p className="muted">Signed in as <strong>{state.username}</strong>. The agent name is supplied by its client. Check that you started this connection.</p>
+ <p><strong>{state.client_name}</strong> wants to connect to Sente.</p><p className="muted">Signed in as <strong>{state.username}</strong>. The agent name is supplied by its client. Check that you started this connection.</p>
  <p className="footnote">Approval returns to {state.redirect_origin}. This request expires at {new Date(state.expires_at*1000).toLocaleTimeString('en-ZA')}.</p>
  <Form onSubmit={()=>decide(true)}><p>The agent can read the transactions and accounts you can access, plus your permitted categories, rules and budget. Bank identifiers, credentials, notes and import source details are excluded. Personal text in merchant descriptions may remain.</p>
  <MCPPermissionFields value={permissions} onChange={setPermissions} accounts={state.accounts} canPropose={state.can_propose}/>

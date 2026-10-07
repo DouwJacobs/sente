@@ -79,7 +79,7 @@ func normalizeOAuthParameters(values url.Values) bool {
 }
 func (a *App) oauthRoutes(mux *http.ServeMux) {
 	metadata := func(w http.ResponseWriter, r *http.Request) {
-		send(w, map[string]any{"resource": a.mcpResource(), "authorization_servers": []string{a.PublicURL}, "scopes_supported": []string{mcpReadScope, mcpWriteScope}, "bearer_methods_supported": []string{"header"}, "resource_name": "Finance Tracker"})
+		send(w, map[string]any{"resource": a.mcpResource(), "authorization_servers": []string{a.PublicURL}, "scopes_supported": []string{mcpReadScope, mcpWriteScope}, "bearer_methods_supported": []string{"header"}, "resource_name": "Sente"})
 	}
 	mux.HandleFunc("GET /.well-known/oauth-protected-resource/api/mcp", metadata)
 	mux.HandleFunc("GET /.well-known/oauth-protected-resource", metadata)

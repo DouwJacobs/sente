@@ -14,6 +14,9 @@ COPY internal/ ./internal/
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /finance ./cmd/finance
 
 FROM alpine:3.23
+LABEL org.opencontainers.image.title="Sente" \
+      org.opencontainers.image.description="Self-hosted household finance and budgeting" \
+      org.opencontainers.image.source="https://github.com/DouwJacobs/sente"
 RUN apk add --no-cache ca-certificates tzdata && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app
 WORKDIR /app
 COPY --from=backend /finance /usr/local/bin/finance

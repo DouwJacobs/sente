@@ -96,7 +96,7 @@ export default function App(){
   }).catch(e=>alive&&notify(e.message,true)).finally(()=>alive&&setRefreshingData(false));return()=>{alive=false}
  },[user,revision])
  useEffect(()=>{if(!user||consent)return;let alive=true;Promise.all([api('/transactions?pending=1'),api('/imports?page=0')]).then(([t,i])=>{if(alive)setWorkCounts({review:t.total,imports:i.pending_total||0})}).catch(()=>{});return()=>{alive=false}},[user,revision])
- useEffect(()=>{document.title=user&&data?data.branding.display_name+' · Finance tracker':'Finance tracker'},[user,data?.branding.display_name])
+ useEffect(()=>{document.title=user&&data?data.branding.display_name+' · Sente':'Sente'},[user,data?.branding.display_name])
  if(!ready)return <div className="initial"><Loading>Loading your workspace</Loading></div>
  if(startupError)return <main className="login"><div className="login-panel"><h1>Unable to load your workspace</h1><p role="alert" className="error-text">{startupError}</p><Button onClick={()=>setStartupRetry(v=>v+1)}>Retry</Button></div></main>
  if(setup)return <Setup onComplete={u=>{setSetup(null);setUser(u);setNotice(null)}} onClosed={()=>{setSetup(null);setCSRF('');setNotice({id:++noticeSequence.current,message:'Setup is already complete. Sign in with your administrator account.',error:false})}}/>
@@ -118,7 +118,7 @@ export default function App(){
  return <TransactionAccess {...props} viewTransactions={viewTransactions}>
   <GlobalSearchWrapper open={searchOpen} onClose={()=>setSearchOpen(false)} onNavigate={navigateFromSearch} notify={notify} refresh={refresh} data={data} revision={revision}/>
   <div className="shell"><a className="skip-link" href="#main-content">Skip to content</a>
-  <aside className="sidebar"><div className="brand"><span className="brand-mark"><PixelMark/></span><div className="brand-text"><span title={data.branding.display_name}>{data.branding.display_name}</span><small>Finance tracker</small></div></div>
+  <aside className="sidebar"><div className="brand"><span className="brand-mark"><PixelMark/></span><div className="brand-text"><span title={data.branding.display_name}>{data.branding.display_name}</span><small>Sente</small></div></div>
    <nav aria-label="Main navigation">{visibleNav.map(n=><button key={n.name} className={current===n.name?'nav-item active':'nav-item'} aria-current={current===n.name?'page':undefined} onClick={()=>go(n.name)}><n.icon size={19}/>{n.name}</button>)}</nav>
    <div className="sidebar-foot"><span className="dot"/>ZAR · South Africa<small>Self-hosted. Your data stays here.</small></div>
   </aside>
@@ -151,7 +151,7 @@ export default function App(){
 function Setup({onComplete,onClosed}:{onComplete:(user:Row)=>void;onClosed:()=>void}){
  const[usernameServerError,setUsernameServerError]=useState('')
  const[username,setUsername]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('')
- return <main className="login"><div className="login-brand"><span className="brand-mark"><PixelMark/></span>Finance tracker</div><div className="login-panel"><h1>Create admin account</h1><p className="muted">Set up your finance tracker.</p><Form onSubmit={async e=>{
+ return <main className="login"><div className="login-brand"><span className="brand-mark"><PixelMark/></span>Sente</div><div className="login-panel"><h1>Create admin account</h1><p className="muted">Set up Sente for your household.</p><Form onSubmit={async e=>{
   e.preventDefault();setError('')
   setBusy(true)
   try{const v=await api('/setup','POST',{username,password});setCSRF(v.csrf);onComplete(v.user)}
@@ -161,7 +161,7 @@ function Setup({onComplete,onClosed}:{onComplete:(user:Row)=>void;onClosed:()=>v
 }
 function Login({onLogin,onAttempt,onError}:{onLogin:(user:Row)=>void;onAttempt:()=>void;onError:(message:string)=>void}){
  const[username,setUsername]=useState(''),[password,setPassword]=useState(''),[busy,setBusy]=useState(false),pending=useRef(false)
- return <main className="login"><div className="login-brand"><span className="brand-mark"><PixelMark/></span>Finance tracker</div><div className="login-panel"><h1>Welcome back</h1><p className="muted">Sign in to your finance tracker.</p><Form onSubmit={async e=>{e.preventDefault();if(pending.current)return;pending.current=true;setBusy(true);onAttempt();try{const v=await api('/login','POST',{username,password});setCSRF(v.csrf);onLogin(v.user)}catch(e){onError((e as Error).message)}finally{pending.current=false;setBusy(false)}}}><Field label="Username"><input autoComplete="username" required value={username} onChange={e=>setUsername(e.target.value)}/></Field><Field label="Password"><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></Field><Button variant="primary" loading={busy} disabled={busy} type="submit">{busy?'Signing in':'Sign in'}</Button></Form></div></main>
+ return <main className="login"><div className="login-brand"><span className="brand-mark"><PixelMark/></span>Sente</div><div className="login-panel"><h1>Welcome back</h1><p className="muted">Sign in to Sente.</p><Form onSubmit={async e=>{e.preventDefault();if(pending.current)return;pending.current=true;setBusy(true);onAttempt();try{const v=await api('/login','POST',{username,password});setCSRF(v.csrf);onLogin(v.user)}catch(e){onError((e as Error).message)}finally{pending.current=false;setBusy(false)}}}><Field label="Username"><input autoComplete="username" required value={username} onChange={e=>setUsername(e.target.value)}/></Field><Field label="Password"><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></Field><Button variant="primary" loading={busy} disabled={busy} type="submit">{busy?'Signing in':'Sign in'}</Button></Form></div></main>
 }
 function Dashboard({data,period,account,revision,notify,onReview,onUnassigned,onImport,stagedCount,onAccounts,refresh}:PageProps&{period:string;account:string;onReview:()=>void;onUnassigned:()=>void;onImport:()=>void;stagedCount:number;onAccounts:()=>void}){
  const {viewTransactions}=useTransactionAccess()

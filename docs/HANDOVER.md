@@ -1,4 +1,4 @@
-# Finance tracker handover
+# Sente handover
 
 Current source handover, updated 7 October 2026. Work directly in Ubuntu WSL at /home/douw/finance-tracker; the Windows project links to that source. Preserve existing uncommitted work. No production deployment was performed during the latest audit repair.
 
@@ -57,3 +57,7 @@ Category administration, selective budget recurrence and rebalance remain browse
 All nine 7 October repository/UI findings are resolved in source. The final build, 8 frontend unit tests, 25 synthetic browser workflows, four strict ruleset tests, CLI wrappers, vet and whitespace checks passed.
 
 The full backend run had 164 passes, one expected external-sample skip and one legacy-limit preservation failure. That failure was repaired; all seven affected regressions then passed. The entire backend suite was not repeated after that final correction. [VERIFICATION.md](VERIFICATION.md) preserves exact coverage and limitations. There was no production deployment, commit, live banking test or manual visual sign-off.
+
+## Sente README and demo branch — 2026-10-07
+
+Issues #3 and #18 are paired on `codex/sente-readme-demo` in `/home/douw/sente-readme-demo`, based on main. Concurrent uncommitted refactoring remains in `/home/douw/finance-tracker` on `codex/domain-feature-refactor`. README is user-focused; runtime/development notes are in dedicated docs. Product names use Sente; existing binary, key path, module and volume identifiers remain compatible. Docker destination is douwjacobs/sente with latest/development tags. Synthetic SQL and exclusive new-database tooling support shared local demo data. MCP impact: public product/resource names change only; offline demo tooling introduces no MCP endpoint, financial schema/allowlist, capability or consent change. Screenshots and live FNB compatibility are not claimed.

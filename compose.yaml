@@ -1,5 +1,6 @@
 services:
   finance:
+    image: douwjacobs/sente:${SENTE_TAG:-latest}
     build: .
     restart: unless-stopped
     ports:

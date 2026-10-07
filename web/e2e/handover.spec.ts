@@ -21,14 +21,14 @@ test('branding validation, stale edits, persistence and long names',async({page,
  await expect(field).not.toHaveAttribute('aria-invalid','true')
  const second=await browser.newPage();await login(second);await navigate(second,'Settings')
  await page.getByRole('button',{name:'Save workspace name',exact:true}).click()
- await expect(page).toHaveTitle(longName+' · Finance tracker')
+ await expect(page).toHaveTitle(longName+' · Sente')
  await second.getByLabel('Display name').fill('Stale name')
  await second.getByRole('button',{name:'Save workspace name',exact:true}).click()
  await expect(second.getByRole('alert')).toBeVisible()
  await second.getByRole('button',{name:'Reload saved name',exact:true}).click()
  await expect(second.getByLabel('Display name')).toHaveValue(longName)
  await second.close()
- await page.reload();await expect(page).toHaveTitle(longName+' · Finance tracker')
+ await page.reload();await expect(page).toHaveTitle(longName+' · Sente')
  await navigate(page,'Settings')
  for(const width of [1280,360]){
   await page.setViewportSize({width,height:800})
@@ -38,7 +38,7 @@ test('branding validation, stale edits, persistence and long names',async({page,
   }
  }
  await page.getByRole('button',{name:'Sign out',exact:true}).click()
- await expect(page).toHaveTitle('Finance tracker')
+ await expect(page).toHaveTitle('Sente')
  await expect(page.getByText(longName,{exact:true})).toHaveCount(0)
 })
 test('budget category creation preserves unsaved limits and chosen period',async({page})=>{
