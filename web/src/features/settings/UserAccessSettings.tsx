@@ -1,5 +1,5 @@
 import { ListStatus, ListNavigation, PagedSelect } from "../../PagedList";
-import { Plus, Pencil } from "lucide-react";
+import { Plus } from "lucide-react";
 import { api } from "../../api";
 import { ActionMenu, Button, Field, Form, Badge } from "../../ui";
 import { useTask } from "../../shared/useTask";
@@ -43,29 +43,27 @@ export function UserAccessSettings({
               {u.admin === 1 && <Badge>Administrator</Badge>}
               {u.budget_member === 1 && <Badge>Household member</Badge>}
               {u.disabled === 1 && <Badge tone="bad">Disabled</Badge>}
-              <Button
-                variant="quiet"
-                aria-label={"Edit user " + u.username}
-                onClick={() => setEditUser({ ...u })}
-              >
-                <Pencil size={16} />
-              </Button>
-              {u.id !== currentUserID && (
-                <ActionMenu label={"Actions for user " + u.username}>
-                  <Button
-                    variant="quiet" disabled={busy}
-                    onClick={() => setSecurityUser({ user: { ...u }, action: "password" })}
-                  >
-                    Reset password
-                  </Button>
-                  <Button
-                    variant="danger" disabled={busy}
-                    onClick={() => setSecurityUser({ user: { ...u }, action: "delete" })}
-                  >
-                    Delete user
-                  </Button>
-                </ActionMenu>
-              )}
+              <ActionMenu label={"Actions for user " + u.username}>
+                <Button variant="quiet" disabled={busy} onClick={() => setEditUser({ ...u })}>
+                  Edit
+                </Button>
+                {u.id !== currentUserID && (
+                  <>
+                    <Button
+                      variant="quiet" disabled={busy}
+                      onClick={() => setSecurityUser({ user: { ...u }, action: "password" })}
+                    >
+                      Reset password
+                    </Button>
+                    <Button
+                      variant="danger" disabled={busy}
+                      onClick={() => setSecurityUser({ user: { ...u }, action: "delete" })}
+                    >
+                      Delete user
+                    </Button>
+                  </>
+                )}
+              </ActionMenu>
             </div>
           </div>
         ))}

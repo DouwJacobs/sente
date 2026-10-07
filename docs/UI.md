@@ -377,3 +377,8 @@ Shared modal focus: Field marks an explicitly autofocus control; Modal focuses i
 
 
 2026-10-07 user security: Users & access provides per-user Reset password/Delete user actions for other users. Reset opens a shared dialog with new password and dependent confirmation and explains session/agent revocation. Delete explains permanent access removal and retained financial history/attribution, and requires the exact saved username in a validated field. Cancel is non-destructive; closing during a request is blocked. Own password changes remain in Security with current/new/confirmation fields and explicit copy that the current session stays active while other sessions and agent connections are revoked. Errors use shared inline fields or overlay toasts. Deleted usernames stay reserved for historical attribution; deleting oneself requires a different administrator.
+
+
+2026-10-07 owner follow-up: every password field uses the shared eye Show/Hide control, including onboarding/sign-in, user creation/reset, self-service changes and FNB credentials. Passwords begin hidden, return to hidden when cleared and keep their value/validation/autocomplete semantics when toggled. The labelled non-submit button controls its input, exposes pressed state, supports keyboard activation and has a 44px target. Pointer activation preserves input focus. User rows have one shared hamburger ActionMenu with Edit; other-user reset/delete actions remain in that same menu, with own password changes still in Security.
+
+Owner refinement: password eye buttons stay borderless with a transparent background at rest and on hover; preserve the shared visible keyboard focus outline.

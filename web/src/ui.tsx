@@ -1,5 +1,5 @@
 import {useEffect,useRef,useId,useState,Children,cloneElement,isValidElement,type ReactNode,type ButtonHTMLAttributes,type ReactElement,type FormHTMLAttributes,type ChangeEvent,type FocusEvent,type InvalidEvent,type Ref} from 'react'
-import {X,Menu} from 'lucide-react'
+import {X,Menu,Eye,EyeOff} from 'lucide-react'
 import {createPortal} from 'react-dom'
 export function Spinner(){return <span className="spinner" aria-hidden="true"/>}
 export function Loading({children='Loading'}:{children?:ReactNode}){return <span className="loading-status" role="status"><Spinner/>{children}</span>}
@@ -48,6 +48,25 @@ export function validateFields(container:HTMLElement){
 export function Form({onSubmit,children,...props}:FormHTMLAttributes<HTMLFormElement>&{ref?:Ref<HTMLFormElement>}){
  return <form {...props} noValidate onSubmit={e=>{e.preventDefault();e.stopPropagation();if(validateFields(e.currentTarget))onSubmit?.(e)}}>{children}</form>
 }
+function PasswordControl({input,label}: {input:ReactElement<Record<string,any>>;label:string}) {
+ const [shown,setShown]=useState(false)
+ useEffect(()=>{if(!input.props.value)setShown(false)},[input.props.value])
+ return (
+  <div className="password-control">
+   {cloneElement(input,{type:shown?'text':'password'})}
+   <Button
+    variant="quiet"
+    aria-label={(shown?'Hide ':'Show ')+label.toLowerCase()}
+    aria-controls={input.props.id} aria-pressed={shown}
+    disabled={input.props.disabled}
+    onPointerDown={event=>event.preventDefault()}
+    onClick={()=>setShown(value=>!value)}
+   >
+    {shown?<EyeOff aria-hidden="true"/>:<Eye aria-hidden="true"/>}
+   </Button>
+  </div>
+ )
+}
 export function Field({label,children,hint,validate,serverError}: {label:string;children:ReactNode;hint?:string;validate?:((value:string)=>string);serverError?:string}){
  const id=useId(),control=useRef<Control|null>(null)
  const[touched,setTouched]=useState(false),[error,setError]=useState('')
@@ -58,7 +77,7 @@ export function Field({label,children,hint,validate,serverError}: {label:string;
  return <div className="field"><label htmlFor={id}>{label}</label>{Children.map(children,child=>{
   if(!isValidElement(child)||typeof child.type!=='string'||!['input','select','textarea'].includes(child.type))return child
   const element=child as ReactElement<Record<string,any>>
-  return cloneElement(element,{
+  const input=cloneElement(element,{
    id,'data-autofocus':element.props.autoFocus?'true':undefined,ref:(el:Control|null)=>{control.current=el;const ref=element.props.ref;if(typeof ref==='function')ref(el);else if(ref)ref.current=el},
    'aria-invalid':message?true:undefined,
    'aria-describedby':[element.props['aria-describedby'],hint?id+'-hint':'',message?id+'-error':''].filter(Boolean).join(' ')||undefined,
@@ -66,6 +85,8 @@ export function Field({label,children,hint,validate,serverError}: {label:string;
    onBlur:(event:FocusEvent<Control>)=>{element.props.onBlur?.(event);setTouched(true);check(event.currentTarget)},
    onInvalid:(event:InvalidEvent<Control>)=>{event.preventDefault();element.props.onInvalid?.(event);setTouched(true);check(event.currentTarget)}
   })
+  return element.type==='input'&&element.props.type==='password'
+   ? <PasswordControl input={input} label={label}/> : input
  })}{hint&&<small id={id+'-hint'}>{hint}</small>}{message?<small className="field-error" id={id+'-error'} role="alert">{message}</small>:<span className="field-error-space" aria-hidden="true"/>}</div>
 }
 export function Empty({title,children}: {title:string;children?:ReactNode}){const content=Children.toArray(children),actions=content.filter(child=>isValidElement(child)&&child.type===Button),description=content.filter(child=>!actions.includes(child));return <div className="empty"><h3>{title}</h3>{description.length>0&&<div className="empty-description">{description}</div>}{actions.length>0&&<div className="empty-actions">{actions}</div>}</div>}
