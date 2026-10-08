@@ -66,7 +66,16 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   await expect(field).toHaveValue("false");
   await expect(page.getByLabel("Projected overspend", { exact:true })).toHaveValue("false");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  for (const width of [360, 1440]) {
+    await page.setViewportSize({ width, height:780 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+    for (const control of await page.locator(".notification-preferences select").all()) {
+      const box = await control.boundingBox();
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    }
+  }
+  await page.setViewportSize({ width:360, height:780 });
   await openInbox(page);
   await page.getByRole("button", { name:"Mark all as read", exact:true }).click();
   await expect(page.getByRole("button", { name:"Notifications, 0 unread", exact:true })).toBeVisible();

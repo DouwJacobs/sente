@@ -3172,5 +3172,13 @@ body:has(dialog[open]) { overflow:hidden; }
 .notification-item p { white-space:pre-wrap; }
 .notification-centre .section-head { flex-wrap:wrap; gap:12px; }
 .notification-centre .actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.notification-preferences { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.notification-preference-panel > h2 { margin:0 0 8px; }
+.notification-preference-panel > .muted { margin:0 0 16px; }
+.notification-preferences { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:24px; row-gap:8px; }
+.notification-preferences .field { display:grid; grid-template-columns:minmax(0,1fr) 120px; align-items:center; gap:4px 12px; margin:0; }
+.notification-preferences .field > label { overflow-wrap:anywhere; }
+.notification-preferences .field > select { min-height:44px; }
+.notification-preferences .field-error-space { display:none; }
+.notification-preferences .field-error { grid-column:1 / -1; }
+.notification-preference-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
 @media(max-width:760px) { .notification-preferences { grid-template-columns:minmax(0,1fr); } }

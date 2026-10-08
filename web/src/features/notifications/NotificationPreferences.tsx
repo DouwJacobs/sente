@@ -37,18 +37,16 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
   const changed = draft.filter(item => saved?.some(previous =>
     previous.type === item.type && previous.channel === item.channel && previous.enabled !== item.enabled));
   return (
-    <section className="panel">
-      <div className="section-head">
-        <h2>Notification preferences</h2>
-        <Button disabled={busy || loading} onClick={() => setRetry(v => v + 1)}>
-          Reload saved preferences
-        </Button>
-      </div>
+    <section className="panel notification-preference-panel">
+      <h2>Notification preferences</h2>
       <p className="muted">
-        Choose which messages appear in your notification centre. Changes apply to future messages; existing messages stay in your inbox.
+        Choose your in-app notifications. Changes apply to future messages.
       </p>
       {loading ? <Loading>Loading preferences</Loading> : failed ? (
-        <p>Preferences could not be loaded. Reload to try again.</p>
+        <div>
+          <p>Preferences could not be loaded. Reload to try again.</p>
+          <Button disabled={busy} onClick={() => setRetry(v => v + 1)}>Reload saved preferences</Button>
+        </div>
       ) : saved && (
         <Form onSubmit={async () => {
           if (!changed.length) return;
@@ -59,7 +57,7 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
         }}>
           <div className="notification-preferences">
             {draft.map(item => (
-              <Field key={item.type} label={notificationLabels[item.type] || item.type} hint="In-app notifications">
+              <Field key={item.type} label={notificationLabels[item.type] || item.type} >
                 <select value={String(item.enabled)} disabled={busy}
                   onChange={e => setDraft(previous => previous.map(value =>
                     value.type === item.type ? { ...value, enabled: e.target.value === "true" } : value))}>
@@ -69,9 +67,14 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
               </Field>
             ))}
           </div>
-          <Button type="submit" variant="primary" loading={busy} disabled={busy || !changed.length}>
-            Save changes
-          </Button>
+          <div className="notification-preference-actions">
+            <Button type="submit" variant="primary" loading={busy} disabled={busy || !changed.length}>
+              Save changes
+            </Button>
+            <Button variant="quiet" disabled={busy || loading} onClick={() => setRetry(v => v + 1)}>
+              Reload saved preferences
+            </Button>
+          </div>
         </Form>
       )}
     </section>
