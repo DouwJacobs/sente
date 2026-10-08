@@ -17,6 +17,7 @@ Dependencies point from app into domain packages. Statements uses money/classifi
 
 Persistence remains intentionally in app: moving a method to a separate package solely to reduce file size would force a large exported database/authorization interface and risk fragmented transactions. Focused workflow files make the existing shared services navigable:
 
+- `migrate.go` owns the sequential schema registry, connection settings, atomic upgrade transaction and version records. `migrate_legacy.go` owns the frozen pre-23 schema compatibility bridge; `migrate_legacy_data.go` owns its named historical data conversions. `merchant_migration.go` rebuilds the legacy catalogue inside the runner-owned transaction.
 - `users.go` owns user administration; `user_security.go` owns browser security mutations and shared atomic password/agent/session revocation used by offline recovery.
 - `periods.go`, `budget_targets.go`, `budget_target_queries.go`, `budget_settings.go`, `dashboard.go` separate period lifecycle, atomic targets, target reads, preferences and aggregates.
 - `transaction_queries.go`, `transactions.go`, `transaction_review.go`, `transfers.go`, `transaction_audit.go`, `transaction_metadata.go` separate authorized ledger queries, atomic editing, review, linked transfers, audit and metadata.

@@ -3,8 +3,9 @@ package app
 import "database/sql"
 
 // Rebuild only the catalogue/rule schema; preserve IDs and every ledger reference.
-func migrateGlobalMerchants(db *sql.DB) error {
-	columns, err := data(db, "PRAGMA table_info(merchants)")
+// The migration runner owns the transaction and foreign-key mode.
+func migrateGlobalMerchants(tx *sql.Tx) error {
+	columns, err := data(tx, "PRAGMA table_info(merchants)")
 	if err != nil {
 		return err
 	}
@@ -17,15 +18,6 @@ func migrateGlobalMerchants(db *sql.DB) error {
 	if !required {
 		return nil
 	}
-	if _, err = db.Exec("PRAGMA foreign_keys=OFF"); err != nil {
-		return err
-	}
-	defer db.Exec("PRAGMA foreign_keys=ON")
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 	statements := []string{
 		"CREATE TABLE merchants_new(id INTEGER PRIMARY KEY,account_id INTEGER REFERENCES accounts(id),name TEXT NOT NULL COLLATE NOCASE,logo_data TEXT NOT NULL DEFAULT '',category_id INTEGER REFERENCES categories(id),spending_group_id INTEGER REFERENCES spending_groups(id),version INTEGER NOT NULL DEFAULT 1,UNIQUE(account_id,name))",
 		"INSERT INTO merchants_new SELECT id,account_id,name,logo_data,category_id,spending_group_id,version FROM merchants",
@@ -46,5 +38,5 @@ func migrateGlobalMerchants(db *sql.DB) error {
 	if len(violations) > 0 {
 		return fail(500, "Merchant migration has invalid references")
 	}
-	return tx.Commit()
+	return nil
 }
