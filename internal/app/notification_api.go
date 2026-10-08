@@ -14,6 +14,7 @@ func (a *App) notificationRoutes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/notifications/{id}/dismiss", wrap(a.dismissNotification))
 	m.HandleFunc("GET /api/notifications/preferences", wrap(a.notificationPreferences))
 	m.HandleFunc("PUT /api/notifications/preferences", wrap(a.updateNotificationPreference))
+	m.HandleFunc("PUT /api/notifications/preferences/batch", wrap(a.updateNotificationPreferencesBatch))
 }
 
 // Apply recipient, active-user and dependency authorization BEFORE count/page.

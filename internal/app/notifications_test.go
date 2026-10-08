@@ -503,3 +503,34 @@ func TestNotificationBackupRestorePreservesPersonalState(t *testing.T) {
 		t.Fatal("restore lost retry idempotency")
 	}
 }
+
+func TestNotificationPreferenceBatchAtomicityAndIsolation(t *testing.T) {
+	e := setup(t)
+	path := "/api/notifications/preferences/batch"
+	preference := func(kind string, version int) map[string]any {
+		return map[string]any{"type": kind, "channel": "in_app", "enabled": false, "version": version}
+	}
+	// A stale second item must roll back the first item too.
+	status(t, e.req(t, 1, path, "PUT", map[string]any{"items": []any{preference("system", 0), preference("budget_threshold", 1)}}), 409)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM notification_preferences") != 0 {
+		t.Fatal("partial preference save")
+	}
+	body := map[string]any{"items": []any{preference("system", 0), preference("budget_threshold", 0)}}
+	// Audit failure on the second item must roll back every write and audit.
+	migrationExec(t, e.a.DB, `CREATE TRIGGER reject_batch_audit BEFORE INSERT ON audit WHEN json_extract(NEW.details,'$.type')='budget_threshold' BEGIN SELECT RAISE(ABORT,'synthetic audit failure'); END;`)
+	status(t, e.req(t, 1, path, "PUT", body), 500)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM notification_preferences") != 0 {
+		t.Fatal("batch survived audit failure")
+	}
+	migrationExec(t, e.a.DB, "DROP TRIGGER reject_batch_audit")
+	status(t, e.req(t, 1, path, "PUT", body), 200)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM notification_preferences WHERE user_id=1 AND enabled=0 AND version=1") != 2 {
+		t.Fatal("batch did not save")
+	}
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM notification_preferences WHERE user_id=2") != 0 {
+		t.Fatal("other user's preferences changed")
+	}
+	status(t, e.req(t, 1, path, "PUT", body), 409)
+	status(t, e.req(t, 1, path, "PUT", map[string]any{"items": []any{preference("system", 1), preference("system", 1)}}), 400)
+	status(t, e.req(t, 1, path, "PUT", map[string]any{"items": []any{}}), 400)
+}

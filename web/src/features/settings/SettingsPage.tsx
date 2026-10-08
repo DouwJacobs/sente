@@ -1,3 +1,4 @@
+import { NotificationPreferences } from "../notifications/NotificationPreferences";
 import { ConfigurationSettings } from "./ConfigurationSettings";
 import { AboutSettings } from "./AboutSettings";
 import { GeneralSettings } from "./GeneralSettings";
@@ -33,6 +34,8 @@ export function SettingsPage({
   onSectionChange: (v: string) => void;
 }) {
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [notificationsVisited, setNotificationsVisited] = useState(section === "notifications");
+  useEffect(() => { if (section === "notifications") setNotificationsVisited(true); }, [section]);
   const [mcpVisited, setMCPVisited] = useState(section === "mcp");
   useEffect(() => {
     if (section === "mcp") setMCPVisited(true);
@@ -88,6 +91,7 @@ export function SettingsPage({
         ]
       : []),
     { id: "mcp", label: "MCP" },
+    { id: "notifications", label: "Notifications" },
     { id: "security", label: "Security" },
     { id: "about", label: "About" },
   ];
@@ -126,6 +130,9 @@ export function SettingsPage({
         {(mcpVisited || active === "mcp") && (
           <MCPSettings notify={notify} refresh={refresh} />
         )}
+      </div>
+      <div {...panel("notifications")}>
+        {(notificationsVisited || active === "notifications") && <NotificationPreferences notify={notify} />}
       </div>
       <div {...panel("security")}>
         <SecuritySettings busy={busy} run={run} />
