@@ -71,7 +71,7 @@ for(const mobile of [false,true])for(const theme of ['light','dark'])test(`trans
  await picker.getByRole('button',{name:/^Uncategorized/}).click()
  await editor.getByRole('button',{name:'Save changes',exact:true}).click()
  await expect(editor).not.toBeVisible()
- await expect(page.locator('.transaction-detail').filter({hasText:'Synthetic long description'})).toContainText('Needs category')
+ await expect(page.locator('.transaction-detail').filter({hasText:'Synthetic long description'}).getByRole('img',{name:'Needs review',exact:true})).toBeVisible()
  // The group replaces the transfer checkbox, including a round trip back to category review.
  await page.locator('.transaction-detail').filter({hasText:'Synthetic long description'}).click()
  await expect(editor.getByRole('checkbox',{name:'This is a transfer, excluded from income and spending'})).toHaveCount(0)
