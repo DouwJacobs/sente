@@ -468,3 +468,38 @@ func TestNotificationInboxCapAndMaintenanceShutdown(t *testing.T) {
 		t.Fatal("startup cleanup not completed before shutdown")
 	}
 }
+
+func TestNotificationBackupRestorePreservesPersonalState(t *testing.T) {
+	e := setup(t)
+	event := syntheticNotification(1, "restore")
+	delivered := deliverSynthetic(t, e.a, event)
+	status(t, e.req(t, 1, fmt.Sprintf("/api/notifications/%d/read", delivered.ID), "POST", nil), 200)
+	status(t, e.req(t, 1, "/api/notifications/preferences", "PUT", map[string]any{"type": "system", "channel": "in_app", "enabled": false, "version": 0}), 200)
+	protected := []string{"SELECT * FROM notifications", "SELECT * FROM notification_receipts", "SELECT * FROM notification_preferences"}
+	before := migrationSnapshot(t, e.a.DB, protected...)
+	backup, err := e.a.Backup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "restored.sqlite")
+	if err := Restore(target, backup); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := Open(target, "http://localhost:8080", filepath.Join(t.TempDir(), "backups"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	if before != migrationSnapshot(t, restored.DB, protected...) {
+		t.Fatal("restored inbox/read/preferences state changed")
+	}
+	if queryInt(restored.DB, "SELECT COUNT(*) FROM sessions") != 0 {
+		t.Fatal("restore retained browser sessions")
+	}
+	if queryInt(restored.DB, "SELECT MAX(version) FROM migrations") != schemaVersion {
+		t.Fatal("restore schema mismatch")
+	}
+	if result := deliverSynthetic(t, restored, event); result.Status != "duplicate" {
+		t.Fatal("restore lost retry idempotency")
+	}
+}
