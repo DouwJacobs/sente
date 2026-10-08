@@ -40,8 +40,12 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
         working-directory: web
+      - name: Mobile responsive smoke
+        timeout-minutes: 5
+        run: npm run test:mobile
+        working-directory: web
       - name: Synthetic browser workflows
-        run: npm run test:e2e
+        run: npm run test:e2e -- --grep-invert @mobile-smoke
         working-directory: web
       - uses: actions/upload-artifact@v4
         if: failure()

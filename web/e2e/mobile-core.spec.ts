@@ -24,7 +24,7 @@ async function fits(page: Page, target: Locator, label: string, touch = false) {
 
 for (const [width, height] of [[360, 800], [390, 844], [430, 932], [640, 360]]) {
   for (const theme of ['light', 'dark']) {
-    test(`mobile core ${width}x${height} ${theme}`, async ({ page }) => {
+    test(`mobile core ${width}x${height} ${theme}`, {tag:width===360&&theme==='light'?'@mobile-smoke':[]}, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.addInitScript(t => localStorage.setItem('finance-theme', t), theme);
       const errors: string[] = [];
@@ -123,7 +123,7 @@ for (const [width, height] of [[360, 800], [390, 844], [430, 932], [640, 360]]) 
 }
 
 for (const width of [699, 700, 701, 760, 761, 1024, 1440]) {
-  test(`navigation and editor breakpoint ${width}`, async ({ page }) => {
+  test(`navigation and editor breakpoint ${width}`, {tag:width===1440?'@mobile-smoke':[]}, async ({ page }) => {
     await page.setViewportSize({ width, height: 720 });
     await signIn(page);
     const nav = page.getByRole('navigation', { name: width <= 760 ? 'Mobile navigation' : 'Main navigation', exact: true });

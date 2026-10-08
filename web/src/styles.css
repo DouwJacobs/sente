@@ -2409,10 +2409,10 @@ button.file-picker:disabled {
 .spending-bucket[open] > summary { margin-bottom:0; }
 .bucket-name { display:flex; align-items:center; gap:10px; min-width:0; overflow-wrap:anywhere; }
 .bucket-name small,.bucket-category-name small { display:block; color:var(--muted); font-weight:400; margin-top:5px; }
-.budget-actual { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; font-variant-numeric:tabular-nums; min-width:0; }
+.budget-actual { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; font-variant-numeric:tabular-nums; min-width:0; container-type:inline-size; container-name:budget-figures; }
 .budget-figure { display:flex; flex-direction:column; gap:4px; text-align:right; min-width:0; }
 .budget-figure small { color:var(--muted); font-size:11px; font-weight:400; }
-.budget-figure strong { font-size:13px; overflow-wrap:anywhere; }
+.budget-figure strong { font-size:13px; white-space:nowrap; }
 .budget-actual progress { grid-column:1/-1; width:100%; height:6px; }
 .bucket-categories { padding:0 0 12px; margin:0 0 16px; }
 .bucket-category { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.8fr); gap:24px; align-items:center; padding:18px 32px 18px 0; border-top:1px solid var(--border); }
@@ -3108,3 +3108,56 @@ body:has(dialog[open]) { overflow:hidden; }
  .workspace-compact .transaction-head { padding-block:0; min-height:44px; }
  .workspace-compact .transaction-head .check { margin:0; min-height:44px; padding:0; }
 }
+
+/* Settings keeps all sections discoverable without remounting draft panels. */
+.tabs-navigation { display:flex; align-items:center; gap:4px; min-width:0; margin-bottom:16px; }
+.tabs-navigation>.settings-tabs { flex:1; min-width:0; margin-bottom:0; }
+.tabs-navigation>.button { flex:0 0 44px; width:44px; min-height:44px; padding:0; }
+.settings-panel { min-width:0; overflow-wrap:anywhere; }
+.settings-panel .section-head>div,.settings-panel .section-head>h2 { min-width:0; }
+.settings-panel .section-head>.button { flex-shrink:0; }
+.settings-panel .line>span,.user-name { min-width:0; overflow-wrap:anywhere; }
+.settings-panel pre,.settings-panel dl,.settings-panel dd { min-width:0; max-width:100%; }
+.mcp-code { max-width:100%; overflow-x:auto; }
+.user-row>.row-meta { flex-shrink:0; }
+
+/* Figure tracks respond to their actual width, including tablet/category tracks. */
+@container budget-figures (max-width:480px) {
+ .budget-figure { grid-column:1/-1; flex-direction:row; justify-content:space-between; align-items:baseline; gap:12px; text-align:left; }
+ .budget-figure small { flex:1; min-width:0; }
+ .budget-figure strong { flex-shrink:0; }
+}
+.builder-group-header { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; }
+.builder-group-header h3 { min-width:0; overflow-wrap:anywhere; }
+.builder-group-header h3 .group-dot { flex-shrink:0; }
+.builder-group-header>.button { grid-column:2; justify-self:end; }
+.builder-group-total { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.builder-add-category { max-width:100%; overflow-wrap:anywhere; text-align:left; }
+.budget-builder-category { grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto; align-items:start; margin-bottom:16px; }
+.budget-builder-category>.button { margin-top:26px; }
+@media(max-width:760px) {
+ .settings-panel .section-head { flex-wrap:wrap; }
+ .user-row { display:grid; grid-template-columns:minmax(0,1fr); }
+ .user-row>.row-meta { flex-wrap:wrap; justify-content:flex-end; }
+ .user-row .shared-action-menu { margin-left:auto; }
+ .settings-panel .check,.mcp-permission-form .check { min-height:44px; align-items:flex-start; padding-block:8px; }
+ .settings-panel summary,.mcp-permission-form summary { min-height:44px; }
+ .settings-panel .editor-actions { flex-wrap:wrap; }
+ .settings-panel .editor-actions>.button { max-width:100%; }
+ .budget-total,.budget-periods-panel .line { flex-wrap:wrap; }
+ .builder-group-header { grid-template-columns:minmax(0,1fr); gap:8px; }
+ .builder-group-header>.button { grid-column:1; justify-self:start; }
+ .budget-builder-group { padding:12px; }
+ .budget-builder-category { grid-template-columns:minmax(0,1fr) 44px; gap:8px; }
+ .budget-builder-category>.field { grid-column:1/-1; }
+ .budget-builder-category>.button { grid-column:1/-1; justify-self:end; margin-top:0; min-height:44px; }
+ .builder-add-category { width:100%; }
+}
+
+.budget-total strong,.budget-periods-panel .line strong { white-space:nowrap; flex-shrink:0; }
+@media(max-width:760px) {
+ .settings-panel .field:has(input[type=checkbox])>label { display:flex; align-items:center; min-height:44px; }
+}
+
+.mcp-permission-form { min-width:0; overflow-wrap:anywhere; }
+.mcp-permission-form fieldset { min-width:0; }

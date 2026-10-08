@@ -1,5 +1,5 @@
 import {useEffect,useRef,useId,useState,Children,cloneElement,isValidElement,type ReactNode,type ButtonHTMLAttributes,type ReactElement,type FormHTMLAttributes,type ChangeEvent,type FocusEvent,type InvalidEvent,type Ref} from 'react'
-import {X,Menu,Eye,EyeOff,CircleCheck,CircleAlert,Info,type LucideIcon} from 'lucide-react'
+import {X,Menu,Eye,EyeOff,ChevronLeft,ChevronRight,CircleCheck,CircleAlert,Info,type LucideIcon} from 'lucide-react'
 import {createPortal} from 'react-dom'
 export function Spinner(){return <span className="spinner" aria-hidden="true"/>}
 export function Loading({children='Loading'}:{children?:ReactNode}){return <span className="loading-status" role="status"><Spinner/>{children}</span>}
@@ -25,6 +25,7 @@ type Control=HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement
 function controlError(control:Control,label:string,validate?:((value:string)=>string)){
  control.setCustomValidity('')
  const value=control.value
+ if(control instanceof HTMLInputElement&&control.type==='checkbox'&&control.required&&!control.checked)return 'Confirm this choice.'
  if(control.required&&!value.trim())return control.tagName==='SELECT'?'Choose '+label.toLowerCase()+'.':'Enter '+label.toLowerCase()+'.'
  const result=validate?.(value)
  if(result)return result
@@ -132,13 +133,57 @@ export function Toast({message,error,onDismiss,autoDismiss=true}:{message:string
  return createPortal(<div ref={ref} popover="manual" className={'toast '+(error?'error':'')} role={error?'alert':'status'} aria-atomic="true" onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)} onFocusCapture={()=>setPaused(true)} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setPaused(false)}}><span>{message}</span><Button variant="quiet" aria-label="Dismiss message" onClick={onDismiss}><X size={18}/></Button></div>,host)
 }
 
-export function Tabs({id,label,items,value,onChange}:{id:string;label:string;items:{id:string;label:string}[];value:string;onChange:(value:string)=>void}){
- return <div className="settings-tabs" role="tablist" aria-label={label}>{items.map((item,index)=><Button key={item.id} id={id+'-tab-'+item.id} role="tab" aria-selected={value===item.id} aria-controls={id+'-panel-'+item.id} tabIndex={value===item.id?0:-1} variant={value===item.id?'primary':'quiet'} onClick={()=>onChange(item.id)} onKeyDown={event=>{
-  const next=(event.key==='ArrowRight'||event.key==='ArrowDown')?(index+1)%items.length:(event.key==='ArrowLeft'||event.key==='ArrowUp')?(index+items.length-1)%items.length:event.key==='Home'?0:event.key==='End'?items.length-1:-1
-  if(next<0)return
-  event.preventDefault();onChange(items[next].id)
-  document.getElementById(id+'-tab-'+items[next].id)?.focus()
- }}>{item.label}</Button>)}</div>
+export function Tabs({id,label,items,value,onChange,overflowNavigation=false}:{
+ id:string;label:string;items:{id:string;label:string}[];value:string;
+ onChange:(value:string)=>void;overflowNavigation?:boolean
+}) {
+ const strip=useRef<HTMLDivElement>(null)
+ const [edges,setEdges]=useState({overflow:false,start:true,end:true})
+ useEffect(()=>{
+  if(!overflowNavigation)return
+  const element=strip.current
+  if(!element)return
+  const measure=()=>setEdges({
+   overflow:element.scrollWidth>element.clientWidth+1,
+   start:element.scrollLeft<=1,
+   end:element.scrollLeft+element.clientWidth>=element.scrollWidth-1,
+  })
+  const reveal=()=>{
+   const active=element.querySelector<HTMLElement>('[aria-selected="true"]')
+   if(active){
+    const bounds=element.getBoundingClientRect(),tab=active.getBoundingClientRect()
+    const delta=tab.left<bounds.left?tab.left-bounds.left:tab.right>bounds.right?tab.right-bounds.right:0
+    if(delta)element.scrollBy({left:delta})
+   }
+   measure()
+  }
+  const observer=new ResizeObserver(reveal)
+  observer.observe(element)
+  element.addEventListener('scroll',measure)
+  reveal()
+  return()=>{observer.disconnect();element.removeEventListener('scroll',measure)}
+ },[overflowNavigation,value,items.map(item=>item.id).join(',')])
+ const scroll=(direction:number)=>strip.current?.scrollBy({left:direction*strip.current.clientWidth*.75})
+ const tabs=<div ref={strip} id={id+'-tabs'} className="settings-tabs" role="tablist" aria-label={label}>
+  {items.map((item,index)=><Button key={item.id} id={id+'-tab-'+item.id}
+   role="tab" aria-selected={value===item.id} aria-controls={id+'-panel-'+item.id}
+   tabIndex={value===item.id?0:-1} variant={value===item.id?'primary':'quiet'}
+   onClick={()=>onChange(item.id)} onKeyDown={event=>{
+    const next=(event.key==='ArrowRight'||event.key==='ArrowDown')?(index+1)%items.length:
+     (event.key==='ArrowLeft'||event.key==='ArrowUp')?(index+items.length-1)%items.length:
+     event.key==='Home'?0:event.key==='End'?items.length-1:-1
+    if(next<0)return
+    event.preventDefault();onChange(items[next].id)
+    document.getElementById(id+'-tab-'+items[next].id)?.focus()
+   }}>{item.label}</Button>)}
+ </div>
+ return overflowNavigation?<div className="tabs-navigation">
+  {edges.overflow&&<Button variant="quiet" aria-label={'Scroll '+label+' left'}
+   aria-controls={id+'-tabs'} disabled={edges.start} onClick={()=>scroll(-1)}><ChevronLeft aria-hidden="true" size={18}/></Button>}
+  {tabs}
+  {edges.overflow&&<Button variant="quiet" aria-label={'Scroll '+label+' right'}
+   aria-controls={id+'-tabs'} disabled={edges.end} onClick={()=>scroll(1)}><ChevronRight aria-hidden="true" size={18}/></Button>}
+ </div>:tabs
 }
 
 export function ActionMenu({label,children}:{label:string;children:ReactNode}){

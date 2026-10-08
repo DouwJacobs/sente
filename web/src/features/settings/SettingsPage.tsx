@@ -105,6 +105,7 @@ export function SettingsPage({
       <Tabs
         id="settings"
         label="Settings sections"
+        overflowNavigation
         items={tabs}
         value={active}
         onChange={onSectionChange}

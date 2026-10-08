@@ -38,7 +38,7 @@ export function UserAccessSettings({
         <ListStatus list={userList} />
         {userList.items.map((u) => (
           <div className="line user-row" key={u.id}>
-            <strong>{u.username}</strong>
+            <strong className="user-name">{u.username}</strong>
             <div className="row-meta">
               {u.admin === 1 && <Badge>Administrator</Badge>}
               {u.budget_member === 1 && <Badge>Household member</Badge>}
