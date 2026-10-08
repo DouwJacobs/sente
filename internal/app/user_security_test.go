@@ -231,6 +231,7 @@ func TestUserSecurityRechecksSessionAndAdmin(t *testing.T) {
 func TestUserSecurityCSRFAndMigration(t *testing.T) {
 	e := setup(t)
 	// Simulate the previous schema and prove additive upgrade preserves identity/session state.
+	removePostBaselineFixtureTables(t, e.a.DB)
 	securityExec(t, e, "ALTER TABLE users DROP COLUMN deleted_at; DELETE FROM migrations WHERE version>=20; INSERT OR IGNORE INTO migrations VALUES(19)")
 	if err := migrate(e.a.DB); err != nil {
 		t.Fatal(err)

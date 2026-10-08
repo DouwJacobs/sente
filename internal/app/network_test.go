@@ -100,6 +100,7 @@ func TestNetworkRestartAndOfflineRecovery(t *testing.T) {
 	}
 	// Upgrade a schema-6 fixture without modifying existing users or sessions.
 	a.DB.Exec("DROP TABLE network_settings")
+	removePostBaselineFixtureTables(t, a.DB)
 	a.DB.Exec("DELETE FROM migrations WHERE version>=7")
 	a.DB.Exec("INSERT OR IGNORE INTO migrations VALUES(6)")
 	reopen()

@@ -123,6 +123,7 @@ func TestAcceptanceMigrationOnceAndReviewerSeen(t *testing.T) {
 	malformed := seedTransaction(t, e, 1, -400, "2026-10-21", &cat)
 	e.a.DB.Exec("UPDATE allocations SET amount_cents=-399 WHERE transaction_id=?", malformed)
 	e.a.DB.Exec("UPDATE transactions SET review_state='approved',reviewed_by=1,reviewed_at=CURRENT_TIMESTAMP WHERE id=?", approved)
+	removePostBaselineFixtureTables(t, e.a.DB)
 	e.a.DB.Exec("DELETE FROM migrations WHERE version>=10;INSERT INTO migrations VALUES(9)")
 	if err := migrate(e.a.DB); err != nil {
 		t.Fatal(err)

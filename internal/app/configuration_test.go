@@ -64,6 +64,7 @@ func TestConfigurationFreshInstallAndUpgrade(t *testing.T) {
 	e := setup(t)
 	seedTestDefaults(t, e)
 	before := queryInt(e.a.DB, "SELECT COUNT(*) FROM builtin_rules")
+	removePostBaselineFixtureTables(t, e.a.DB)
 	e.a.DB.Exec("DELETE FROM migrations WHERE version>=20; INSERT OR IGNORE INTO migrations VALUES(19)")
 	if err := migrate(e.a.DB); err != nil {
 		t.Fatal(err)

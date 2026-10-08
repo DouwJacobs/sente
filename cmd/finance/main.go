@@ -184,6 +184,7 @@ func run() error {
 			defer cancel()
 			server.Shutdown(ctx)
 		}()
+		a.StartNotificationMaintenance()
 		a.StartBackups()
 		a.StartFNBScheduler()
 		log.Printf("Sente listening on port %d", port)

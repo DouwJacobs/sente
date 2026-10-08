@@ -146,11 +146,11 @@ func TestSequentialMigrationFreshAndNoStartupRepair(t *testing.T) {
 
 func TestSequentialMigrationOrderingRollbackAndRetry(t *testing.T) {
 	db := migrationDB(t)
-	if err := migrate(db); err != nil {
+	if err := runSchemaMigrations(db, schemaMigrations[:1], migrationBaseline); err != nil {
 		t.Fatal(err)
 	}
 	calls := 0
-	steps := append([]schemaMigration{}, schemaMigrations...)
+	steps := append([]schemaMigration{}, schemaMigrations[:1]...)
 	steps = append(steps, schemaMigration{24, "synthetic schema", false, func(tx *sql.Tx, _ migrationOrigin) error {
 		calls++
 		_, err := tx.Exec("CREATE TABLE migration_probe(id INTEGER PRIMARY KEY); INSERT INTO migration_probe VALUES(1)")
@@ -244,7 +244,7 @@ func TestSequentialMigrationRejectsInvalidHistoryAndRegistry(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			db := migrationDB(t)
 			migrationExec(t, db, "CREATE TABLE migrations(version INTEGER PRIMARY KEY); INSERT INTO migrations VALUES("+tc.history+")")
-			steps := schemaMigrations
+			steps := schemaMigrations[:1]
 			target := 23
 			if tc.name == "gapped sequential" {
 				steps = append(append([]schemaMigration{}, steps...), schemaMigration{24, "one", false, noOp}, schemaMigration{25, "two", false, noOp})
@@ -262,7 +262,7 @@ func TestSequentialMigrationRejectsInvalidHistoryAndRegistry(t *testing.T) {
 
 func TestSequentialMigrationFreshBatchFailureIsAtomic(t *testing.T) {
 	db := migrationDB(t)
-	steps := append(append([]schemaMigration{}, schemaMigrations...), schemaMigration{24, "synthetic failure", false, func(tx *sql.Tx, _ migrationOrigin) error {
+	steps := append(append([]schemaMigration{}, schemaMigrations[:1]...), schemaMigration{24, "synthetic failure", false, func(tx *sql.Tx, _ migrationOrigin) error {
 		if queryInt(tx, "SELECT COUNT(*) FROM migrations WHERE version=23") != 1 {
 			t.Fatal("baseline not ordered before new migration")
 		}
@@ -340,4 +340,12 @@ CREATE TRIGGER reject_category_conversion BEFORE UPDATE ON categories BEGIN SELE
 	if queryInt(db, "SELECT COUNT(*) FROM merchants WHERE id=42") != 1 || queryInt(db, "SELECT merchant_id FROM merchant_rules WHERE id=81") != 42 {
 		t.Fatal("rebuild lost identities")
 	}
+}
+
+// Legacy workflow fixtures start from a current synthetic DB then deliberately
+// rewind its version. Remove later schemas too, matching a real pre-24 install.
+// Production migrations must never reconcile already-applied table creation.
+func removePostBaselineFixtureTables(t *testing.T, db *sql.DB) {
+	t.Helper()
+	migrationExec(t, db, "DROP TABLE notification_accounts; DROP TABLE notifications; DROP TABLE notification_receipts; DROP TABLE notification_preferences")
 }

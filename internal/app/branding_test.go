@@ -46,6 +46,7 @@ func TestBrandingMigrationAndRestart(t *testing.T) {
 	}
 	groups := queryInt(a.DB, "SELECT COUNT(*) FROM spending_groups")
 	// Simulate the previous schema: real tables survive the upgrade.
+	removePostBaselineFixtureTables(t, a.DB)
 	a.DB.Exec("DROP TABLE workspace_branding; DELETE FROM migrations WHERE version>=4; INSERT OR IGNORE INTO migrations VALUES(3)")
 	a.Close()
 	a, err = Open(path, "http://localhost:8080", filepath.Join(dir, "backups"))

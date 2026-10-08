@@ -57,6 +57,7 @@ func TestGroupCategoryBudgetsIndependentAndAtomic(t *testing.T) {
 
 func TestGroupBudgetMigrationPreservesLegacyLimits(t *testing.T) {
 	e := setup(t)
+	removePostBaselineFixtureTables(t, e.a.DB)
 	for _, statement := range []string{"DELETE FROM migrations WHERE version>=14", "INSERT OR IGNORE INTO migrations VALUES(13)", "INSERT INTO targets VALUES(1,1,200000)"} {
 		if _, err := e.a.DB.Exec(statement); err != nil {
 			t.Fatal(err)
