@@ -4,6 +4,7 @@ import {useEffect,useState} from 'react'
 import {Pencil} from 'lucide-react'
 import {api,money,decimal,cents} from './api'
 import {moneyError} from './validation'
+import {CategoryBudgetAlert,useCategoryBudgetAlert} from './features/notifications/CategoryBudgetAlert'
 import {GroupDot} from './Choices'
 import {Pagination,Modal,Button,Field,Form} from './ui'
 import type {Row,PageProps} from './shared/types'
@@ -23,10 +24,12 @@ function CategorySpending({category:c,group,period,account,hasTargets,revision,n
  const[open,setOpen]=useState(false),[editingBudget,setEditingBudget]=useState(false),[localTarget,setLocalTarget]=useState<number|null>(null)
  useEffect(()=>setLocalTarget(null),[c.target_cents])
  const targetCents=localTarget!==null?localTarget:(c.target_cents||0)
- return <><button type="button" className="bucket-category" aria-label={c.name+' transactions'} aria-haspopup="dialog" onClick={()=>setOpen(true)}><span className="bucket-category-name"><strong>{c.name}</strong>{c.pending_cents!==0&&<small>{money(c.pending_cents)} pending</small>}{c.id!==0&&<small className="category-global-total">All groups: {money(c.total_spent_cents||0)} spent{hasTargets?' · '+money(c.total_target_cents||0)+' combined budget':''}</small>}</span><BudgetActual name={group.name+' · '+c.name} target={c.target_cents||0} spent={c.spent_cents} hasBudget={hasTargets}/></button>{open&&<Modal size="wide" title={c.name+' · '+group.name} onClose={()=>setOpen(false)}><section className="spending-detail-overview" aria-label="Category summary"><div className="spending-detail-heading"><div className="category-summary-title"><h3>Category summary</h3>{canEditBudget&&c.id!==0&&<Button variant="quiet" className="category-budget-edit-button" aria-label={'Edit budget for '+c.name} title={'Edit budget for '+c.name} onClick={()=>setEditingBudget(true)}><Pencil size={15} aria-hidden="true"/></Button>}</div><span className="muted">{periodName||'Selected budget period'}</span></div><BudgetActual name={group.name+' · '+c.name} target={targetCents} spent={c.spent_cents} hasBudget={hasTargets||targetCents>0}/></section><h3 className="spending-transactions-heading">Transactions</h3><DashboardTransactions scope={{category:c.id?String(c.id):'uncategorized',group:group.id?String(group.id):'unassigned',period,account}} revision={revision} notify={notify}/></Modal>}{editingBudget&&<CategoryBudgetModal category={c} group={group} period={period} notify={notify} onClose={()=>setEditingBudget(false)} onSaved={newAmount=>{setLocalTarget(newAmount);refresh?.()}}/>}</>
+ return <><button type="button" className="bucket-category" aria-label={c.name+' transactions'} aria-haspopup="dialog" onClick={()=>setOpen(true)}><span className="bucket-category-name"><strong>{c.name}</strong>{c.pending_cents!==0&&<small>{money(c.pending_cents)} pending</small>}{c.id!==0&&<small className="category-global-total">All groups: {money(c.total_spent_cents||0)} spent{hasTargets?' · '+money(c.total_target_cents||0)+' combined budget':''}</small>}</span><BudgetActual name={group.name+' · '+c.name} target={c.target_cents||0} spent={c.spent_cents} hasBudget={hasTargets}/></button>{open&&<Modal size="wide" title={c.name+' · '+group.name} onClose={()=>setOpen(false)}><section className="spending-detail-overview" aria-label="Category summary"><div className="spending-detail-heading"><div className="category-summary-title"><h3>Category summary</h3>{canEditBudget&&c.id!==0&&<Button variant="quiet" className="category-budget-edit-button" aria-label={'Edit budget for '+c.name} title={'Edit budget for '+c.name} onClick={()=>setEditingBudget(true)}><Pencil size={15} aria-hidden="true"/></Button>}</div><span className="muted">{periodName||'Selected budget period'}</span></div><BudgetActual name={group.name+' · '+c.name} target={targetCents} spent={c.spent_cents} hasBudget={hasTargets||targetCents>0}/></section><h3 className="spending-transactions-heading">Transactions</h3><DashboardTransactions scope={{category:c.id?String(c.id):'uncategorized',group:group.id?String(group.id):'unassigned',period,account}} revision={revision} notify={notify}/></Modal>}{editingBudget&&<CategoryBudgetModal category={c} group={group} period={period} notify={notify} onClose={()=>setEditingBudget(false)} alertAvailable={!Number(account)} onSaved={newAmount=>{setLocalTarget(newAmount);refresh?.()}}/>}</>
 }
 
-function CategoryBudgetModal({category:c,group,period,onClose,onSaved,notify}:{category:Row;group:Row;period:string;onClose:()=>void;onSaved:(newAmount:number)=>void;notify:PageProps['notify']}){
+function CategoryBudgetModal({category:c,group,period,onClose,onSaved,notify,alertAvailable}:{category:Row;group:Row;period:string;onClose:()=>void;onSaved:(newAmount:number)=>void;notify:PageProps['notify'];alertAvailable:boolean}){
+ const alert=useCategoryBudgetAlert(c.id,group.id||0,alertAvailable,notify)
+ const[saveFailed,setSaveFailed]=useState(false)
  const[amount,setAmount]=useState(c.target_cents?decimal(c.target_cents):'0.00'),[future,setFuture]=useState(false),[busy,setBusy]=useState(false)
  useEffect(()=>{
   let alive=true
@@ -48,6 +51,7 @@ function CategoryBudgetModal({category:c,group,period,onClose,onSaved,notify}:{c
    const targetCents=remove?0:cents(amount)
    await api('/periods/'+period+'/budget','PUT',{
     version,
+    ...(!remove&&alertAvailable&&alert.changed&&alert.draft?{alert_preferences:[{...alert.draft,threshold:alert.draft.threshold===''?null:Number(alert.draft.threshold)}]}:{}),
     groups:[{
      group_id:group.id||0,
      remove:false,
@@ -60,16 +64,17 @@ function CategoryBudgetModal({category:c,group,period,onClose,onSaved,notify}:{c
      }]
     }]
    })
-   notify(remove?'Budget limit removed':'Budget saved')
+   notify(remove?'Budget limit removed':'Changes saved')
    onSaved(targetCents)
    onClose()
   }catch(e){
+   setSaveFailed(true)
    notify((e as Error).message,true)
   }finally{
    setBusy(false)
   }
  }
- return <Modal size="compact" title={'Edit budget · '+c.name} onClose={onClose}>
+ return <Modal size="compact" title={'Edit budget · '+c.name} onClose={()=>{if(!busy)onClose()}}>
   <Form onSubmit={e=>{e.preventDefault();void save(false)}}>
    <p className="muted">Set the budget limit for <strong>{c.name}</strong> in {group.name||'this group'}.</p>
    <Field label="Budget amount" validate={v=>moneyError(v,true)}>
@@ -82,8 +87,9 @@ function CategoryBudgetModal({category:c,group,period,onClose,onSaved,notify}:{c
     </select>
    </Field>
    {future&&<p className="footnote">Use this amount in new periods and upcoming budgets where this category isn't already included.</p>}
+  {alertAvailable&&<CategoryBudgetAlert value={alert.draft} onChange={alert.setDraft} loading={alert.loading} failed={alert.failed} onReload={alert.reload} busy={busy} saveFailed={saveFailed}/> }
    <div className="editor-actions">
-    <Button type="submit" variant="primary" loading={busy} disabled={busy}>Save budget</Button>
+    <Button type="submit" variant="primary" loading={busy} disabled={busy||alert.loading||alert.failed}>Save changes</Button>
     {c.target_cents>0&&<Button variant="quiet" disabled={busy} onClick={()=>void save(true)}>Remove limit</Button>}
     <Button onClick={onClose} disabled={busy}>Cancel</Button>
    </div>

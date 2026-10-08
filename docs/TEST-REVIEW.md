@@ -36,7 +36,7 @@ The final CI policy is:
 | Success screenshots | 6 → 0 | No assertions consumed these images. Configured failure screenshots, traces and fixture context remain; shared output-path collisions disappear. |
 | Fixture startup | Mostly 3 → 1 services/spec | Reviewed specs only use the primary port. Onboarding retains offsets 0/1 and fresh classification offsets 0/2; PWA retains a private static copy. Unlisted specs conservatively retain all three services. |
 
-The reviewed suite has **200 expanded cases in 50 spec files**, a net reduction of 60 cases across the reviewed groups. The additions include two theme geometry cases and two short editor-width cases. No entire unique financial/security workflow is deleted. Losses are explicit: full interactions no longer run at every palette/width combination, arbitrary exact styling is no longer frozen, and non-core browser groups may first run on main/manual unless their spec is edited. These are the chosen cost/coverage tradeoffs. Main still executes all retained workflows, and responsive geometry stays in the PR core.
+The reviewed suite has **200 expanded cases in 50 spec files**, a net reduction of 60 cases across the reviewed groups. The current shared checkout discovers **201 cases in 51 files** because concurrent issue #69 work added a separate budget-alert preference workflow, which this review did not consolidate. The additions include two theme geometry cases and two short editor-width cases. No entire unique financial/security workflow is deleted. Losses are explicit: full interactions no longer run at every palette/width combination, arbitrary exact styling is no longer frozen, and non-core browser groups may first run on main/manual unless their spec is edited. These are the chosen cost/coverage tradeoffs. Main still executes all retained workflows, and responsive geometry stays in the PR core.
 
 ### Measured consolidation result
 
@@ -48,7 +48,7 @@ An initial consolidated run exposed duplicate role-test titles; another exposed 
 
 ### Final validation and expanded inventory
 
-The PR profile plus all then-edited specs passed **154 cases across 35 files** in 540.096s locally (run-ucjzqjil). This measured run informed the ten-minute PR browser bound. Subsequent consolidation removed 16 additional repeated cases. A focused run passed 35 retained cases across MCP, seen, pending rules, filters, search, editor and mobile core (run-pq4mkmfh); the final MCP shape passed all six cases (run-hg8g5qxk), and the final Settings-discovery assertion passed all three representative layouts (run-kncnl6bo). The four-case Settings group also passed separately (run-4djyd9yt). All retained scenarios changed by this consolidation have passing browser evidence across these runs; the exact final PR command and complete 50-file suite have not been rerun.
+The PR profile plus all then-edited specs passed **154 cases across 35 files** in 540.096s locally (run-ucjzqjil). This measured run informed the ten-minute PR browser bound. Subsequent consolidation removed 16 additional repeated cases. A focused run passed 35 retained cases across MCP, seen, pending rules, filters, search, editor and mobile core (run-pq4mkmfh); the final MCP shape passed all six cases (run-hg8g5qxk), and the final Settings-discovery assertion passed all three representative layouts (run-kncnl6bo). The four-case Settings group also passed separately (run-4djyd9yt). All retained scenarios changed by this consolidation have passing browser evidence across these runs; the exact final PR command and complete 51-file suite have not been rerun.
 
 Frontend production build and all 15 frontend unit tests passed. The four domain packages passed with race detection. CI scope (seven) and runner (six) regression checks passed; worker (46), demo and bank DOM invariants passed during the initial slice. These are this review's verification results, not a claim that this agent ran the full backend suite against every concurrent application edit. No commit, push, PR, merge, issue closure or deployment occurred.
 
@@ -60,6 +60,7 @@ Expanded counts below come from Playwright discovery after consolidation. PR cor
 | account-discovery.spec.ts | 1 | When edited | Unmeasured |
 | account-icons.spec.ts | 2 | When edited | 3.614 |
 | audit-followup.spec.ts | 4 | When edited | Unmeasured |
+| budget-alert-preferences.spec.ts | 1 | When edited | Unmeasured |
 | budget-presentation.spec.ts | 2 | When edited | 3.657 |
 | classification-defaults.spec.ts | 3 | Core | 6.997 |
 | cohesive-flow.spec.ts | 10 | When edited | Unmeasured |

@@ -21,17 +21,19 @@ var notificationTypes = []string{"system", "budget_threshold", "budget_projectio
 // Financial events require an explicit source and every contributing account.
 // This contract is internal: no HTTP or MCP endpoint accepts arbitrary events.
 type notificationEvent struct {
-	RecipientID int64
-	Type        string
-	Severity    string
-	Title       string
-	Message     string
-	SourceKind  string
-	SourceID    int64
-	AccountIDs  []int64
-	DedupeKey   string
-	OccurredAt  time.Time
-	Dismissible bool
+	BudgetCategoryID int64 `json:",omitempty"`
+	BudgetGroupID    int64 `json:",omitempty"`
+	RecipientID      int64
+	Type             string
+	Severity         string
+	Title            string
+	Message          string
+	SourceKind       string
+	SourceID         int64
+	AccountIDs       []int64
+	DedupeKey        string
+	OccurredAt       time.Time
+	Dismissible      bool
 }
 
 type notificationDelivery struct {
@@ -57,6 +59,11 @@ func (inAppNotificationAdapter) deliver(tx *sql.Tx, e notificationEvent, receipt
 	id, err := res.LastInsertId()
 	if err != nil {
 		return 0, err
+	}
+	if e.SourceKind == "budget" && e.BudgetCategoryID > 0 {
+		if _, err := tx.Exec("INSERT INTO notification_budget_scopes VALUES(?,?,?)", id, e.BudgetCategoryID, e.BudgetGroupID); err != nil {
+			return 0, err
+		}
 	}
 	for _, account := range e.AccountIDs {
 		if _, err := tx.Exec("INSERT INTO notification_accounts VALUES(?,?)", id, account); err != nil {
@@ -196,6 +203,9 @@ func (a *App) notifyTx(tx *sql.Tx, e notificationEvent, now time.Time) (notifica
 	}
 	if err := a.authorizeNotification(tx, e); err != nil {
 		return notificationDelivery{}, err
+	}
+	if e.SourceKind == "budget" && e.BudgetCategoryID > 0 && queryInt(tx, "SELECT COUNT(*) FROM notification_budget_preferences WHERE user_id=? AND category_id=? AND group_id=? AND enabled=0", e.RecipientID, e.BudgetCategoryID, e.BudgetGroupID) > 0 {
+		return notificationDelivery{Status: "disabled"}, nil
 	}
 	if !e.OccurredAt.After(now.Add(-notificationRetention)) {
 		return notificationDelivery{Status: "expired"}, nil
