@@ -3,7 +3,7 @@ import {test,expect,type Page} from '@playwright/test'
 async function navigate(page:Page,name:string,mobile=false){
  const tab=name==='Review'?'Needs review':name==='Imports'?'Import activity':''
  const target=tab?'Transactions':name
- if(mobile&&!['Dashboard','Transactions','Accounts'].includes(target)){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:target,exact:true}).click()}
+ if(mobile&&!['Dashboard','Transactions','Review'].includes(target)){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:target,exact:true}).click()}
  else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:target,exact:true}).click()
  await expect(page.getByRole('heading',{name:target,exact:true,level:1})).toBeVisible()
  if(tab)await page.getByRole('tab',{name:new RegExp(tab)}).click();else if(name==='Transactions')await page.getByRole('tab',{name:'All transactions',exact:true}).click()
