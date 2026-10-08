@@ -25,6 +25,11 @@ class PublicationTests(unittest.TestCase):
     def test_semver_channel_order_handles_numeric_prereleases(self):
         versions=['0.1.0-beta.2','0.1.0-beta.12','0.1.0-rc.1','0.1.0','0.1.1-beta.1','0.1.1']
         self.assertEqual(sorted(reversed(versions),key=p.precedence),versions)
+    def test_public_access_explicitly_bypasses_publisher_credentials(self):
+        with patch.object(subprocess,'run',return_value=subprocess.CompletedProcess([],0,'{}','')) as call:
+            p.inspect('docker://example.invalid/image@sha256:abc',public=True)
+            self.assertIn('--no-creds',call.call_args.args[0])
+
     def test_raw_manifest_is_not_reformatted_before_digest(self):
         raw='{"schemaVersion":2,"manifests":[]} '
         with patch.object(subprocess,'run',return_value=subprocess.CompletedProcess([],0,raw,'')):

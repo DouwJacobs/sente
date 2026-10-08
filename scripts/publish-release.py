@@ -15,8 +15,8 @@ IMAGE='docker.io/douwjacobs/sente'
 def run(*args, **kwargs):
     return subprocess.check_output(args,text=True,**kwargs).strip()
 
-def inspect(reference, raw=False):
-    result=subprocess.run(['skopeo','inspect',*(['--raw'] if raw else []),reference],text=True,capture_output=True)
+def inspect(reference, raw=False, public=False):
+    result=subprocess.run(['skopeo','inspect',*(['--raw'] if raw else []),*(['--no-creds'] if public else []),reference],text=True,capture_output=True)
     if result.returncode:
         # Authentication, rate limits and transport errors must not be treated as absence.
         if 'manifest unknown' in result.stderr.lower() or 'name unknown' in result.stderr.lower():
@@ -100,6 +100,10 @@ def main():
             source='docker://'+IMAGE+'@'+published['Digest']
         info=inspect(source)
         digest=info['Digest']
+        # Public distribution must work without the publisher's registry credentials.
+        anonymous=inspect(source,public=True)
+        if not anonymous or anonymous['Digest']!=digest:
+            raise RuntimeError('The verified image must be publicly readable before completing publication')
         if prior_sha and prior_sha['Digest']!=digest:
             raise RuntimeError('Immutable SHA alias has a different digest')
         if not prior_sha:

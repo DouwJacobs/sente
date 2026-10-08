@@ -41,7 +41,8 @@ refused if it would downgrade the release line or channels. Explicit tags must i
 source reachable from one of those branches. Do not force-move or delete release tags.
 
 The owner chose public source and public images. The publisher refuses to upload
-while the GitHub source repository is private. Repository visibility changes remain
+while the GitHub source repository is private, and verifies anonymous read access to the
+published digest before creating its release or updating channel aliases. Repository visibility changes remain
 a separate owner-reviewed action.
 
 Configure repository secrets `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` with write
