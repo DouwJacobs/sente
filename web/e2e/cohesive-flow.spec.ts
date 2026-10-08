@@ -14,7 +14,7 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`cohesive
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
  await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
  const nav=page.getByRole('navigation',{name:width===360?'Mobile navigation':'Main navigation',exact:true})
- await nav.getByRole('button',{name:'Transactions',exact:true}).click();await expect(nav.getByRole('button',{name:'Review',exact:true})).toHaveCount(0)
+ await nav.getByRole('button',{name:'Transactions',exact:true}).click();await expect(nav.getByRole('button',{name:'Review',exact:true})).toHaveCount(width===360?1:0)
  await page.getByRole('tab',{name:/Import activity/}).click();await page.getByRole('button',{name:'Get transactions',exact:true}).click()
  await expect(page.locator('section.preview')).toHaveCount(1)
  expect(added).toEqual([9102])
@@ -26,7 +26,7 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`cohesive
  await expect(page.getByRole('tab',{name:'All transactions',exact:true})).toHaveAttribute('aria-selected','true');expect(added.sort()).toEqual([9101,9102])
  await expect(page.getByLabel('Budget period',{exact:true})).toHaveValue('');await expect(page.getByLabel('Accounts',{exact:true})).toHaveValue('')
  await page.getByRole('tab',{name:/Import activity/}).click();await page.locator('.activity-run>summary').click();await expect(page.locator('.activity-account')).toHaveCount(2);await expect(page.locator('.activity-account').first()).toContainText('Everyday account')
- await nav.getByRole('button',{name:'Accounts',exact:true}).click();await expect(page.locator('.account-summary').first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
+ if(width===360)await nav.getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:width===360?'More pages':'Main navigation',exact:true}).getByRole('button',{name:'Accounts',exact:true}).click();await expect(page.locator('.account-summary').first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  if(width===360){await nav.getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:'Categories',exact:true}).click()}else await nav.getByRole('button',{name:'Categories',exact:true}).click()
  await expect(page.getByRole('tab',{name:'Categories',exact:true})).toHaveAttribute('aria-selected','true');await page.getByRole('tab',{name:'Automatic rules',exact:true}).click();await expect(page.getByRole('tabpanel',{name:'Automatic rules'})).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(errors).toEqual([])
@@ -41,7 +41,7 @@ test('clean export automatically opens out-of-period transactions for review and
  await page.locator('input[type=file]').setInputFiles({name:'synthetic-cohesive.csv',mimeType:'text/csv',buffer:Buffer.from(csv)})
  await page.getByRole('button',{name:'Import statement',exact:true}).click();await expect(page.getByRole('tab',{name:'All transactions',exact:true})).toHaveAttribute('aria-selected','true')
  await expect(page.getByLabel('Budget period',{exact:true})).toHaveValue('')
- const entry=page.locator('.transaction-detail').filter({hasText:description});await expect(entry).toContainText('Unseen');await expect(entry).not.toContainText('Needs category')
+ const entry=page.locator('.transaction-detail').filter({hasText:description});await expect(entry.getByRole('img',{name:'Unseen',exact:true})).toBeVisible();await expect(entry.getByRole('img',{name:'Needs review',exact:true})).toHaveCount(0)
  const saved=await page.evaluate(async(description)=>{const rows=await fetch('/api/transactions?query='+encodeURIComponent(description)).then(r=>r.json());return rows.items.find((row:{description:string})=>row.description===description)},description);expect(saved.review_state).toBe('approved');expect(saved.seen).toBeFalsy()
  await page.getByRole('tab',{name:/Needs review/}).click();await expect(entry).toHaveCount(0)
 
@@ -64,7 +64,7 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`empty st
   })).toBeGreaterThanOrEqual(15)
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  }
- await nav.getByRole('button',{name:'Accounts',exact:true}).click();await page.getByLabel('Account management',{exact:true}).click();await page.getByRole('button',{name:'Add account',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible()
+ if(width===360)await nav.getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:width===360?'More pages':'Main navigation',exact:true}).getByRole('button',{name:'Accounts',exact:true}).click();await page.getByLabel('Account management',{exact:true}).click();await page.getByRole('button',{name:'Add account',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible()
  expect(await page.getByRole('dialog').evaluate(el=>getComputedStyle(el,'::backdrop').backgroundColor)).toBe('rgba(16, 18, 23, 0.48)')
 })
 

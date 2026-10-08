@@ -1,8 +1,8 @@
 import {PagedSelect} from './PagedList'
 import {useEffect,useState,useRef} from 'react'
-import {Plus,Pencil,Trash2} from 'lucide-react'
+import {Plus,Pause,Play,CircleCheck,Globe} from 'lucide-react'
 import {api} from './api'
-import {Button,Field,Form,Badge,Empty,Modal,validateFields,Pagination,Loading} from './ui'
+import {Button,Field,Form,StatusIcon,ActionMenu,Empty,Modal,validateFields,Pagination,Loading} from './ui'
 import {CreateCategory} from './Choices'
 import {useTask} from './shared/useTask'
 import {type PageProps,type Row} from './shared/types'
@@ -87,7 +87,32 @@ export function Rules({data,refresh,notify,revision,onAccounts,onCreateCategory}
  {loading&&<Loading>Loading rules</Loading>}{loadError&&<p role="alert">{loadError} <Button onClick={()=>setRetry(v=>v+1)}>Retry</Button></p>}
  {!rules.length&&!loading&&!loadError?<Empty title="No rules yet">{editors.length&&data.categories.length?'Add a description match and choose its category.':'Complete the setup above to start creating rules.'}</Empty>:groups.map(({key,rows,rule:r})=>{
   const editable=r.builtin?data.user.budget_member:rows.every(rule=>editors.some(a=>a.id===rule.account_id))
-  return <div className="rule-row" key={key}><div><strong>Description contains “{r.pattern}”</strong><small>{r.category_name}{r.spending_group_name?' · '+r.spending_group_name:''}</small><small title={rows.map(r=>r.account_name).join(', ')}>{scopeText(rows)}{r.direction!=='any'?' · '+(r.direction==='debit'?'Money out':'Money in'):''}</small>{!!r.builtin&&<Badge>Global fallback</Badge>}{!r.enabled&&<Badge>Paused</Badge>}</div>{editable&&<div className="toolbar-actions"><Button variant="quiet" loading={busy} disabled={busy} onClick={async()=>{if(await run(()=>api('/rules/batch','POST',{rules:rows.map(row=>({id:row.id,rule:definition(row,Number(row.account_id),!r.enabled)}))}),r.enabled?'Rule paused':'Rule resumed'))refresh()}}>{r.enabled?'Pause':'Resume'}</Button><Button variant="quiet" aria-label={'Edit rule '+r.pattern} loading={busy} disabled={busy} onClick={()=>open(rows)}><Pencil size={16}/></Button><Button variant="quiet" aria-label={'Delete rule '+r.pattern} loading={busy} disabled={busy} onClick={async()=>{if(await run(()=>api('/rules/batch','DELETE',{rules:rows.map(row=>({id:row.id,version:row.version}))}),'Rule deleted'))refresh()}}><Trash2 size={16}/></Button></div>}</div>
+  return (
+   <div className="rule-row rule-list-row" key={key}>
+    <div className="rule-list-content">
+     <strong title={'Description contains “'+r.pattern+'”'}>{r.pattern}</strong>
+     <small>{r.category_name}{r.spending_group_name?' · '+r.spending_group_name:''}</small>
+     <small title={rows.map(row=>row.account_name).join(', ')}>
+      {scopeText(rows)}{r.direction!=='any'?' · '+(r.direction==='debit'?'Money out':'Money in'):''}
+     </small>
+    </div>
+    <div className="rule-list-actions">
+     <StatusIcon label={r.enabled?'Active':'Paused'} icon={r.enabled?CircleCheck:Pause} tone={r.enabled?'good':'neutral'}/>
+     {!!r.builtin&&<StatusIcon label="Global fallback" icon={Globe}/>}
+     {editable&&(
+      <ActionMenu label={'Actions for rule '+r.pattern}>
+       <Button variant="quiet" aria-label={'Edit rule '+r.pattern} disabled={busy} onClick={()=>open(rows)}>Edit</Button>
+       <Button variant="quiet" disabled={busy} onClick={async()=>{
+        if(await run(()=>api('/rules/batch','POST',{rules:rows.map(row=>({id:row.id,rule:definition(row,Number(row.account_id),!r.enabled)}))}),r.enabled?'Rule paused':'Rule resumed'))refresh()
+       }}>{r.enabled?<Pause size={16}/>:<Play size={16}/>} {r.enabled?'Pause':'Resume'}</Button>
+       <Button variant="quiet" aria-label={'Delete rule '+r.pattern} disabled={busy} onClick={async()=>{
+        if(await run(()=>api('/rules/batch','DELETE',{rules:rows.map(row=>({id:row.id,version:row.version}))}),'Rule deleted'))refresh()
+       }}>Delete</Button>
+      </ActionMenu>
+     )}
+    </div>
+   </div>
+  )
  })}
  <Pagination page={page} total={total} loading={loading} onChange={setPage}/>
  <p className="footnote">Rules suggest categories and spending groups for you to review.</p>
