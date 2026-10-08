@@ -16,7 +16,7 @@ unless explicitly requested; automated synthetic workflows remain allowed.
 
 ## Current release work — #62, #63, #66
 
-Based on clean main at f651682 (PR #74), on `codex/release-channels`. The other agent's
+Started from f651682 (PR #74), on `codex/release-channels`, then integrated main 3bffea7 (budget hover fix). The other agent's
 budget editor and PR #73 scoped alerts are merged. Owner chose public source/images and standard GPL-3.0 after
 being informed that forks and sales are permitted; preserve upstream notices. Owner
 confirmed development pushes should create beta tags/images and main pushes stable
@@ -31,6 +31,8 @@ MCP impact: existing initialization already uses the shared build version; relea
 metadata is verified through that contract. No tools, input schemas, output allowlists,
 capabilities/consent, proposal previews/audits or financial services change. About's
 GPL/source links remain browser-only. No database migration is introduced.
+
+The merged budget-hover fix preserves neutral expanded headers, pointer exit and touch behavior; its verification remains in VERIFICATION.md.
 
 ## Remaining operational limits
 

@@ -152,3 +152,5 @@ Personal budget alert controls live in the dashboard category's nested Edit budg
 
 
 Issue #71: Add category shows the same Budget alerts section as Edit budget from the outset, with controls disabled until a category is selected and its personal settings are loaded. Leave 16px below Create expense category before the next field. Amount, recurrence and alerts save together; category selection hydrates existing saved values rather than overwriting them with defaults. Loading failures block saving and offer Reload budget. Save uses the version loaded with the displayed budget; concurrent edits retain drafts and offer explicit reload. Included zero entries expose Remove limit too.
+
+Budget spending-group cards highlight the full header, including its action area, on mouse hover. Hover uses the shared neutral interaction token only for devices with a fine hover-capable pointer, so taps do not leave a sticky hover. Expanded groups retain the normal surface and text colors; expansion does not represent selection. Moving the mouse away clears the hover even while expanded. Keyboard focus remains visible independently.

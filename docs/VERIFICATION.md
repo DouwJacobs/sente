@@ -467,6 +467,17 @@ Documentation/assets only. Captured and visually reviewed the synthetic househol
 Local Markdown/image links and PNG dimensions checked; git diff --check passed. No backend/frontend regression suite or Docker build was needed or run for documentation-only changes. No application behavior, MCP contract, consent, permissions, proposals, audit or financial service changes. No live banking, external AI client, physical-device verification, release publication or deployment.
 
 
+## Budget spending-group hover — 8 October 2026
+
+Spending-group hover covers the full card header and action area using the shared neutral token only for fine hover-capable pointers. Expanded cards retain their normal surface/text colors, and pointer exit clears hover even while expanded. Touch taps leave no sticky highlight. Keyboard focus remains visible. Category-row hover uses the same pointer restriction; UI.md records the convention.
+
+Verification: production TypeScript/Vite build, all 15 frontend unit tests and both existing category-budget browser workflows passed during this fix (run-ab8fpjbg). After removing persistent expanded-state styling, the production build and all four final mouse/touch light/dark interaction regressions passed (run-frygmqbg), covering whole-header hover, expanded neutral colors, pointer exit, collapse and keyboard focus. Diff hygiene passed. Existing nonblocking bundle-size warning remains. No manual/computer-use inspection, physical-device verification or deployment.
+
+MCP impact: browser-only styling; tools, schemas, output allowlists, permissions, consent, proposal previews/audits and shared financial services are unchanged. docs/MCP.md requires no contract change.
+
+Owner authorized a direct commit/push to main without a PR or waiting for CI. Unrelated release work is excluded.
+
+
 ## Release channels, verified images and GPL — 8 October 2026
 
 Implements release issues #62, #63 and #66 for public source/images: development beta SemVer tags and beta/development image aliases; main stable tags and main/latest aliases; immutable version/revision images; full exact-revision source gates followed by acceptance of the actual production OCI image before publication. Actions/base images are pinned; SBOM/provenance, corresponding-source archive/checksum, dependency notices, GPL-3.0-only license and upgrade/recovery guidance are included. Publication remains blocked while corresponding source is private or Docker Hub credentials are absent. No tags, images, visibility change, production deployment or issue closure has occurred locally.
