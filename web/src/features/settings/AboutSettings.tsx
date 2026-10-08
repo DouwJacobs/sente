@@ -65,7 +65,7 @@ export function AboutSettings({ notify }: { notify: PageProps["notify"] }) {
               <Button variant="secondary" onClick={retry}>Retry</Button>
             </div>
           ) : <Loading>Loading build information</Loading>}
-          <p className="footnote about-licence">Licence: no licence has been declared in the repository.</p>
+          <p className="footnote about-licence">Licence: <a href={`${repositoryURL}/blob/${info?.commit || "main"}/LICENSE`} target="_blank" rel="noopener noreferrer">GNU GPL v3</a>. No warranty. <a href={`${repositoryURL}/tree/${info?.commit || "main"}`} target="_blank" rel="noopener noreferrer">Source code</a>.</p>
         </section>
       </div>
     </section>

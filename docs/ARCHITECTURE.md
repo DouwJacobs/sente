@@ -87,7 +87,7 @@ MCP impact: account administration/passwords remain browser-only (offline recove
 
 ## Build metadata
 
-`internal/buildinfo` owns public version/revision metadata, using release linker values with Go VCS fallback. `internal/app/build_info.go` exposes it through the authenticated, non-cached browser API. `scripts/build-metadata.sh` and Docker workflow arguments derive release information from Git. `web/src/shared/buildInfo.ts` owns the typed browser contract and safe issue-report URL; Settings owns the About view. This metadata does not read the database or alter MCP consent.
+`internal/buildinfo` owns public version/revision metadata, using release linker values with Go VCS fallback. `internal/app/build_info.go` exposes it through the authenticated, non-cached browser API. `scripts/release-metadata.py` resolves strict SemVer from Git release tags and branch publication targets; `scripts/build-metadata.sh` embeds it. The reusable source verification gate and production-image acceptance precede digest-preserving OCI publication. Compose accepts the same metadata arguments. See RELEASES.md for channels and recovery. `web/src/shared/buildInfo.ts` owns the typed browser contract and safe issue-report URL; Settings owns the About view. This metadata does not read the database or alter MCP consent.
 
 
 ## MCP summaries and personal context

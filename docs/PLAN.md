@@ -91,3 +91,7 @@ PWA discovery: signed-in users receive a one-time, dismissible installation invi
 
 
 Personal budget alerts are configurable per expense-category/spending-group combination, including No spending group, and apply across saved periods. Each combination has an on/off switch covering threshold, projected overspend and actual overspend types. Its optional single whole percentage (1–100) replaces the default 75/90/100 threshold sequence. Reset to defaults enables the combination and restores that sequence. Global type/channel preferences still gate every delivery. Alerts use that combination's explicit saved budget and transaction-group allocation spending; no aggregate category or group-total duplicate is emitted. Saving settings silently consumes currently active conditions, preserving future refund/reset/re-cross behavior and projection cooldowns rather than sending historical alerts.
+
+## Releases and distribution
+
+Development pushes produce verified beta versions; main pushes produce verified stable versions. Mutable beta/development and main/latest image channels are backed by immutable SemVer/SHA tags and recorded digests. Release binaries, browser About, MCP initialization and OCI labels share metadata. Standard GPL-3.0 applies to original project code, preserving upstream/dependency licenses; forks and sales are permitted under its terms. See [release scope, compatibility and recovery](RELEASES.md).

@@ -78,3 +78,7 @@ Optional live FNB connections can discover accounts, refresh balances and fetch 
 Want to explore with invented data? Follow the [local demo guide](docs/DEMO.md).
 
 For contributors, the [development guide](docs/DEVELOPMENT.md) and [documentation index](docs/README.md) cover architecture, product behavior and verification.
+
+## License
+
+Sente is licensed under [GNU GPL v3](LICENSE), without warranty. You may modify, fork and sell it under the GPL terms. Preserve [upstream attribution](NOTICE) and provide corresponding source when distributing covered binaries. See [release channels, compatibility and recovery](docs/RELEASES.md).

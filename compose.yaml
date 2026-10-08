@@ -1,7 +1,12 @@
 services:
   finance:
-    image: douwjacobs/sente:${SENTE_TAG:-latest}
-    build: .
+    image: ${SENTE_IMAGE:-douwjacobs/sente:${SENTE_TAG:-latest}}
+    build:
+      context: .
+      args:
+        SENTE_VERSION: ${SENTE_VERSION:-dev}
+        SENTE_COMMIT: ${SENTE_COMMIT:-}
+        SENTE_BUILD_TIME: ${SENTE_BUILD_TIME:-}
     restart: unless-stopped
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-8080}:8080"

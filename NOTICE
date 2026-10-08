@@ -1,0 +1,17 @@
+Sente — Copyright (C) 2026 Douw Jacobs and contributors
+SPDX-License-Identifier: GPL-3.0-only
+
+Sente's original code is licensed under GNU GPL version 3. See LICENSE.
+Sente comes without warranty. You may modify and redistribute it under GPL-3.0.
+
+The reference connectors/fnb/upstream is fnb-api 1.0.11 by bitshiftza:
+https://github.com/bitshiftza/fnb-api
+It retains its own GPL-3.0 license and attribution. Sente's active owner worker
+adapts the bank navigation/selector concepts; upstream notices remain included
+in source distributions. The reference and active browser worker are excluded
+from the standard application image.
+
+Third-party dependencies retain their respective licenses. Image builds include
+dependency license texts under /usr/share/licenses/sente and an SBOM. Release
+source archives include the original code, build scripts and lockfiles; they do
+not include private financial data, credentials or runtime databases.
