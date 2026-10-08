@@ -458,3 +458,10 @@ MCP impact: browser presentation and shared draft ownership only; existing finan
 
 
 Issue #71 publication follow-up: the final obsolete bulk-editor selectors in handover, onboarding, responsive-geometry and workflows were updated without removing their financial/access/validation/geometry assertions. Category creation restores focus to the loaded amount field. Final build, all 15 units and all 12 additional browser workflows passed (run-i7owk12w: shared category editor 2, handover 2, onboarding 3, geometry 2, workflows 3); combined local scope is 44 distinct browser workflows. The initial PR CI run was cancelled as superseded before this follow-up; no CI pass is claimed for it. MCP/backend contracts remain unchanged.
+
+
+## 0.1.0 README and screenshots — 8 October 2026
+
+Documentation/assets only. Captured and visually reviewed the synthetic household at October 2026: desktop light dashboard (1440 × 1100 viewport), full light ledger, complete expanded dark October budget card, and dark phone dashboard (390 × 844 viewport). Phone horizontal-overflow check passed. The ledger includes all accessible demo accounts under October's date scope; dashboards use household accounts. No image contains owner financial data or browser chrome. Setup/configuration/import/recovery content was preserved in SETUP.md.
+
+Local Markdown/image links and PNG dimensions checked; git diff --check passed. No backend/frontend regression suite or Docker build was needed or run for documentation-only changes. No application behavior, MCP contract, consent, permissions, proposals, audit or financial service changes. No live banking, external AI client, physical-device verification, release publication or deployment.

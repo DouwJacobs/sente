@@ -351,3 +351,10 @@ Issue #71 publication authorization (8 October 2026): owner authorized commit, p
 
 
 Issue #71 publication follow-up: the final obsolete bulk-editor selectors in handover, onboarding, responsive-geometry and workflows were updated without removing their financial/access/validation/geometry assertions. Category creation restores focus to the loaded amount field. Final build, all 15 units and all 12 additional browser workflows passed (run-i7owk12w: shared category editor 2, handover 2, onboarding 3, geometry 2, workflows 3); combined local scope is 44 distinct browser workflows. The initial PR CI run was cancelled as superseded before this follow-up; no CI pass is claimed for it. MCP/backend contracts remain unchanged.
+
+
+## 0.1.0 README product tour — 8 October 2026
+
+Reshaped the root README around household use, with a dashboard hero, expanded dark budget categories, an October ledger and a dark phone dashboard. Detailed installation/configuration/import/recovery instructions are preserved in SETUP.md, linked from the README and documentation index. DEMO.md records capture scope. Images use only the shared invented household, seeded into its separate data/demo database; no owner data, credentials or bank sessions were committed.
+
+Owner explicitly requested screenshots, permitting targeted screenshot inspection. Captures are actual headless Chromium renders and were visually reviewed; phone dashboard has no horizontal overflow at 390 × 844. No application code, financial behavior, schema or UI convention changed. MCP tools/schemas/output allowlists/permissions/consent/proposal previews/audits/shared services are unchanged; docs/MCP.md requires no contract update. Markdown/image-link checks and diff hygiene are recorded in VERIFICATION.md. No release tagging, publishing or deployment is included.
