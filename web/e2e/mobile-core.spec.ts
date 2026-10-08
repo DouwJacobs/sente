@@ -68,10 +68,12 @@ for (const [width, height] of [[360, 800], [390, 844], [430, 932], [640, 360]]) 
       await page.getByLabel('Transaction actions', { exact: true }).click();
       await expect(page.getByRole('button', { name: 'Edit selected (1)', exact: true })).toBeVisible();
       await page.getByRole('button', { name: 'Cancel selection', exact: true }).click();
+      await page.getByRole('button', { name: /^Filters/ }).click();
       const account = (await page.getByLabel('Accounts', { exact: true }).boundingBox())!;
       const period = (await page.getByLabel('Budget period', { exact: true }).boundingBox())!;
       expect(period.y).toBeGreaterThanOrEqual(account.y + account.height);
       await expect(page.locator('.transaction-head .check')).toBeHidden();
+      await page.getByRole('button', { name: /^Filters/ }).click();
       for (const amount of await page.locator('.transaction-amount').all()) await fits(page, amount, 'amount');
       const row = page.locator('.transaction-detail').filter({ hasText: 'Synthetic long description' });
       await row.click();

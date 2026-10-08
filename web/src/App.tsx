@@ -331,7 +331,7 @@ export default function App() {
           />
         )}
         {current === "Dashboard" && user.budget_member && (
-          <div className="context-bar">
+          <div className="context-bar dashboard-scope" aria-label="Dashboard scope">
             {user.budget_member && (
               <div className="context-filter">
                 <PagedSelect
@@ -374,6 +374,7 @@ export default function App() {
               />
             </div>
             <PeriodNavigation
+              compact
               period={period}
               revision={revision}
               notify={notify}

@@ -3,7 +3,7 @@ import {X,Menu,Eye,EyeOff,CircleCheck,CircleAlert,Info,type LucideIcon} from 'lu
 import {createPortal} from 'react-dom'
 export function Spinner(){return <span className="spinner" aria-hidden="true"/>}
 export function Loading({children='Loading'}:{children?:ReactNode}){return <span className="loading-status" role="status"><Spinner/>{children}</span>}
-export function Button({children,variant='secondary',loading=false,type='button',...props}:ButtonHTMLAttributes<HTMLButtonElement>&{variant?:'primary'|'secondary'|'quiet'|'danger';loading?:boolean}){return <button {...props} type={type} disabled={props.disabled||loading} aria-busy={loading||undefined} className={'button '+variant+' '+(props.className||'')}>{loading&&<Spinner/>}{children}</button>}
+export function Button({children,variant='secondary',loading=false,type='button',...props}:ButtonHTMLAttributes<HTMLButtonElement>&{variant?:'primary'|'secondary'|'quiet'|'danger';loading?:boolean;ref?:Ref<HTMLButtonElement>}){return <button {...props} type={type} disabled={props.disabled||loading} aria-busy={loading||undefined} className={'button '+variant+' '+(props.className||'')}>{loading&&<Spinner/>}{children}</button>}
 export function PageHeader({title,description,workspace,loading=false}:{title:string;description:string;workspace:string;loading?:boolean}){
  return <div className="page-head">
   <div><p className="eyebrow">{workspace} finances</p><h1 id="page-title">{title}</h1><p className="muted">{description}</p></div>
