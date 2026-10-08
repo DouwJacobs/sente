@@ -44,7 +44,7 @@ test('desktop dashboard, keyboard review, rules, and split approval',async({page
  await page.getByRole('dialog').getByLabel('Category',{exact:true}).selectOption('2')
  await page.getByRole('dialog').getByRole('button',{name:'Save rule'}).click()
  await expect(page.getByRole('dialog')).not.toBeVisible()
- await expect(page.getByText('Description contains “Station”')).toBeVisible()
+ await expect(page.locator('.rule-list-row').filter({hasText:'Station'})).toBeVisible()
  expect(errors).toEqual([])
 })
 test('360px mobile upload, review, period preview, and both themes',async({page})=>{
