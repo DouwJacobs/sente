@@ -394,3 +394,8 @@ Every PR retains all backend race/vet, worker/demo and CI-runner checks. Relevan
 Measured overlapping checkpoint: 73 → 39 cases, summed browser test process 186.101 → 109.958s (40.9% less); whole elapsed 238.215 → 132.001s also includes a warm-build difference and concurrent shared-checkout edits. A PR selection with all then-edited specs passed 154 cases in 35 files/540.096s before another 16-case reduction. Follow-up retained groups passed (35), final MCP six passed, final Settings four passed and Settings-discovery three passed. Frontend 15 units/build, four domain race packages, scope seven and runner six checks passed; worker 46/demo/bank DOM passed in the initial slice. Exact final PR/full-browser rerun and after-change GitHub CI timing are not claimed; publication is pending.
 
 MCP impact for #55: verification only; no tool/schema/allowlist/consent/service changes. Concurrent application work is preserved. No owner exports/UI computer-use, commit, push, PR, merge, issue closure or deployment by this review.
+
+
+## PR CI follow-up — #55
+
+The first published PR run stopped at the desktop PWA identity case: the test read the manifest after observing a disabled save button, which also represents an in-flight save. The exact identity assertion is retained; the test now awaits and validates the successful PUT /api/pwa response before reading the manifest. Both phone/desktop workflows passed three repetitions each locally (six cases, run-htend9op, 16.627s total). The failed initial CI run is not a pass or a complete browser timing measurement. No application code changed.

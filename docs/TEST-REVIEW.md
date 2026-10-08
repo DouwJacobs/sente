@@ -323,3 +323,8 @@ The inspected suite has substantial relevant coverage. The clearest maintenance 
 Run npm run test:e2e -- about.spec.ts. Results live in web/test-results/run-*/timings.json, per-spec Playwright JSON, failure artifacts and three synthetic server logs. Run-specific output directories permit concurrent runs; files inside a spec remain sequential. Output is ignored, contains synthetic fixtures only, and is retained in CI for seven days on success or failure. No database or credentials are uploaded. Direct Playwright commands still use their original shared output path and should run sequentially.
 
 No MCP tools, schemas, output allowlists, consent, proposal previews/audits, application services or product behavior changed. This work affects verification infrastructure only.
+
+
+## PR CI follow-up — #55
+
+The first published PR run stopped at the desktop PWA identity case: the test read the manifest after observing a disabled save button, which also represents an in-flight save. The exact identity assertion is retained; the test now awaits and validates the successful PUT /api/pwa response before reading the manifest. Both phone/desktop workflows passed three repetitions each locally (six cases, run-htend9op, 16.627s total). The failed initial CI run is not a pass or a complete browser timing measurement. No application code changed.

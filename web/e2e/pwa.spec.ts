@@ -147,9 +147,15 @@ for (const width of [1440, 360])
     expect(manifest.name).toBe("Synthetic installed app " + width);
     await page.getByLabel("PWA name source").selectOption("branding");
     await page.getByLabel("PWA icon source").selectOption("branding");
+    const brandingSave = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/pwa" &&
+        response.request().method() === "PUT",
+    );
     await page
       .getByRole("button", { name: "Save PWA settings", exact: true })
       .click();
+    expect((await brandingSave).status()).toBe(200);
     await expect(
       page.getByRole("button", { name: "Save PWA settings", exact: true }),
     ).toBeDisabled();
