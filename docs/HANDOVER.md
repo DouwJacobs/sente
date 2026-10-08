@@ -358,3 +358,14 @@ Issue #71 publication follow-up: the final obsolete bulk-editor selectors in han
 Reshaped the root README around household use, with a dashboard hero, expanded dark budget categories, an October ledger and a dark phone dashboard. Detailed installation/configuration/import/recovery instructions are preserved in SETUP.md, linked from the README and documentation index. DEMO.md records capture scope. Images use only the shared invented household, seeded into its separate data/demo database; no owner data, credentials or bank sessions were committed.
 
 Owner explicitly requested screenshots, permitting targeted screenshot inspection. Captures are actual headless Chromium renders and were visually reviewed; phone dashboard has no horizontal overflow at 390 × 844. No application code, financial behavior, schema or UI convention changed. MCP tools/schemas/output allowlists/permissions/consent/proposal previews/audits/shared services are unchanged; docs/MCP.md requires no contract update. Markdown/image-link checks and diff hygiene are recorded in VERIFICATION.md. No release tagging, publishing or deployment is included.
+
+
+## Budget spending-group hover — 8 October 2026
+
+Spending-group hover covers the full card header and action area using the shared neutral token only for fine hover-capable pointers. Expanded cards retain their normal surface/text colors, and pointer exit clears hover even while expanded. Touch taps leave no sticky highlight. Keyboard focus remains visible. Category-row hover uses the same pointer restriction; UI.md records the convention.
+
+Verification: production TypeScript/Vite build, all 15 frontend unit tests and both existing category-budget browser workflows passed during this fix (run-ab8fpjbg). After removing persistent expanded-state styling, the production build and all four final mouse/touch light/dark interaction regressions passed (run-frygmqbg), covering whole-header hover, expanded neutral colors, pointer exit, collapse and keyboard focus. Diff hygiene passed. Existing nonblocking bundle-size warning remains. No manual/computer-use inspection, physical-device verification or deployment.
+
+MCP impact: browser-only styling; tools, schemas, output allowlists, permissions, consent, proposal previews/audits and shared financial services are unchanged. docs/MCP.md requires no contract change.
+
+Owner authorized a direct commit/push to main without a PR or waiting for CI. Unrelated release work is excluded.

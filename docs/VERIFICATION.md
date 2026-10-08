@@ -465,3 +465,14 @@ Issue #71 publication follow-up: the final obsolete bulk-editor selectors in han
 Documentation/assets only. Captured and visually reviewed the synthetic household at October 2026: desktop light dashboard (1440 × 1100 viewport), full light ledger, complete expanded dark October budget card, and dark phone dashboard (390 × 844 viewport). Phone horizontal-overflow check passed. The ledger includes all accessible demo accounts under October's date scope; dashboards use household accounts. No image contains owner financial data or browser chrome. Setup/configuration/import/recovery content was preserved in SETUP.md.
 
 Local Markdown/image links and PNG dimensions checked; git diff --check passed. No backend/frontend regression suite or Docker build was needed or run for documentation-only changes. No application behavior, MCP contract, consent, permissions, proposals, audit or financial service changes. No live banking, external AI client, physical-device verification, release publication or deployment.
+
+
+## Budget spending-group hover — 8 October 2026
+
+Spending-group hover covers the full card header and action area using the shared neutral token only for fine hover-capable pointers. Expanded cards retain their normal surface/text colors, and pointer exit clears hover even while expanded. Touch taps leave no sticky highlight. Keyboard focus remains visible. Category-row hover uses the same pointer restriction; UI.md records the convention.
+
+Verification: production TypeScript/Vite build, all 15 frontend unit tests and both existing category-budget browser workflows passed during this fix (run-ab8fpjbg). After removing persistent expanded-state styling, the production build and all four final mouse/touch light/dark interaction regressions passed (run-frygmqbg), covering whole-header hover, expanded neutral colors, pointer exit, collapse and keyboard focus. Diff hygiene passed. Existing nonblocking bundle-size warning remains. No manual/computer-use inspection, physical-device verification or deployment.
+
+MCP impact: browser-only styling; tools, schemas, output allowlists, permissions, consent, proposal previews/audits and shared financial services are unchanged. docs/MCP.md requires no contract change.
+
+Owner authorized a direct commit/push to main without a PR or waiting for CI. Unrelated release work is excluded.
