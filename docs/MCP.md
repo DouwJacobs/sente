@@ -253,3 +253,6 @@ Browser connection/consent/proposal/context writes recheck their initiating sess
 ## Browser-only branding and PWA
 
 Branding/PWA identity editing, public manifest/icons, installation, static caching and frontend update prompts are host presentation workflows. They introduce no MCP tools, input/output schema fields, financial allowlist entries, capabilities, consent, proposal effects or financial write-service changes. Public identity is explicitly described by the browser settings; existing private workspace names are not opted in automatically. Image bytes are excluded from audits. Notification registration remains explicit and uses the same root worker. See [PWA](PWA.md).
+
+
+Issue #69: personal category/spending-group budget alert switches and thresholds remain browser-only. Internal notification scope metadata is not part of inbox/MCP output. No MCP tool, input/output schema, allowlist, consent/capability, proposal preview/audit or financial write-service change is introduced.

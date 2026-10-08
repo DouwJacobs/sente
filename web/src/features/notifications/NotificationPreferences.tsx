@@ -5,6 +5,8 @@ import { useTask } from "../../shared/useTask";
 import type { PageProps } from "../../shared/types";
 import { notificationLabels, type Preference } from "./contracts";
 
+type PreferenceSnapshot = { items: Preference[] };
+
 export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
   const [saved, setSaved] = useState<Preference[] | null>(null);
   const [draft, setDraft] = useState<Preference[]>([]);
@@ -21,7 +23,7 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
     let current = true;
     setFailed(false);
     setLoading(true);
-    api<{ items: Preference[] }>("/notifications/preferences?channels=all")
+    api<PreferenceSnapshot>("/notifications/preferences?channels=all")
       .then(result => {
         if (current) {
           setSaved(result.items);
@@ -51,8 +53,11 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
         <Form onSubmit={async () => {
           if (!changed.length) return;
           await run(async () => {
-            const result = await api<{ items: Preference[] }>("/notifications/preferences/batch?channels=all", "PUT", { items: changed });
-            if (alive.current) { setSaved(result.items); setDraft(result.items); }
+            const result = await api<PreferenceSnapshot>("/notifications/preferences/batch?channels=all", "PUT", { items: changed });
+            if (alive.current) {
+              setSaved(result.items);
+              setDraft(result.items);
+            }
           }, "Notification preferences saved");
         }}>
           <div className="notification-preferences">
@@ -75,7 +80,7 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
             })}
           </div>
           <div className="notification-preference-actions">
-            <Button type="submit" variant="primary" loading={busy} disabled={busy || !changed.length}>
+            <Button type="submit" variant="primary" loading={busy} disabled={busy || (!changed.length)}>
               Save changes
             </Button>
             <Button variant="quiet" disabled={busy || loading} onClick={() => setRetry(v => v + 1)}>

@@ -108,6 +108,9 @@ func (a *App) dispatchNotificationPush(now time.Time) error {
 				if queryInt(tx, "SELECT COUNT(*) FROM notifications n WHERE n.id=? AND "+notificationPushVisibilitySQL(), append([]any{job.nid}, notificationReadArgs(job.uid)...)...) == 0 {
 					status = "permission_revoked"
 				}
+				if queryInt(tx, `SELECT COUNT(*) FROM notification_budget_scopes s JOIN notification_budget_preferences p ON p.category_id=s.category_id AND p.group_id=s.group_id WHERE s.notification_id=? AND p.user_id=? AND p.enabled=0`, job.nid, job.uid) > 0 {
+					status = "disabled"
+				}
 				if queryInt(tx, "SELECT COUNT(*) FROM notification_push_preferences WHERE user_id=? AND type=? AND enabled=1", job.uid, job.kind) == 0 {
 					status = "disabled"
 				}

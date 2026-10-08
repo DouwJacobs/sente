@@ -11,3 +11,8 @@ export const notificationLabels: Record<string, string> = {
   budget_projection: "Projected overspend", budget_overspend: "Budget overspend",
   unusual_spending: "Unusual spending", recurring_payment: "Recurring payment changes",
 };
+
+export type BudgetAlertPreference = {
+ category_id: number; group_id: number; category_name: string; group_name: string;
+ enabled: boolean; threshold: number | null; version: number;
+};

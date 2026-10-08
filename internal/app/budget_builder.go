@@ -18,8 +18,9 @@ type budgetGroupEdit struct {
 	Targets []budgetCategoryEdit `json:"targets"`
 }
 type budgetBuilderInput struct {
-	Version int64             `json:"version"`
-	Groups  []budgetGroupEdit `json:"groups"`
+	Version          int64                        `json:"version"`
+	AlertPreferences []budgetAlertPreferenceInput `json:"alert_preferences,omitempty"`
+	Groups           []budgetGroupEdit            `json:"groups"`
 }
 
 func (a *App) budgetGroupPages(w http.ResponseWriter, r *http.Request) error {
@@ -143,6 +144,16 @@ func (a *App) updateBudgetBuilder(w http.ResponseWriter, r *http.Request) error 
 		if err := syncBudgetTotalsTx(tx, id); err != nil {
 			return err
 		}
+		if err := saveBudgetAlertPreferencesTx(tx, u, b.AlertPreferences); err != nil {
+			return err
+		}
+		if err := a.baselineBudgetAlertPreferencesTx(tx, u, b.AlertPreferences); err != nil {
+			return err
+		}
+		// Personal preferences are audited by their owning service, not disclosed in
+		// the shared period budget audit payload.
+		budgetAudit := b
+		budgetAudit.AlertPreferences = nil
 		for pid := range futureChanged {
 			if _, err := tx.Exec("UPDATE periods SET version=version+1 WHERE id=?", pid); err != nil {
 				return err
@@ -150,11 +161,11 @@ func (a *App) updateBudgetBuilder(w http.ResponseWriter, r *http.Request) error 
 			if err := syncBudgetTotalsTx(tx, pid); err != nil {
 				return err
 			}
-			if err := audit(tx, u, nil, "period", pid, "upcoming_budget_categories_added", b); err != nil {
+			if err := audit(tx, u, nil, "period", pid, "upcoming_budget_categories_added", budgetAudit); err != nil {
 				return err
 			}
 		}
-		return audit(tx, u, nil, "period", id, "budget_built", b)
+		return audit(tx, u, nil, "period", id, "budget_built", budgetAudit)
 	})
 	if err != nil {
 		return err

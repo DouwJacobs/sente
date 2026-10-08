@@ -8,7 +8,7 @@ import (
 	"fmt"
 )
 
-const schemaVersion = 28
+const schemaVersion = 30
 const migrationBaseline = 23
 
 type migrationOrigin struct {
@@ -32,6 +32,8 @@ var schemaMigrations = []schemaMigration{
 	{26, "independent notification channels and evaluation generations", false, migrateNotificationChannels},
 	{27, "change-triggered notification evaluation", false, migrateNotificationSchedule},
 	{28, "branding icons and public PWA identity", false, migratePWA},
+	{29, "personal category and group budget alerts", false, migrateBudgetAlertPreferences},
+	{30, "budget alert push delivery scope", false, migrateBudgetAlertDeliveryScopes},
 }
 
 func migrate(db *sql.DB) error {

@@ -28,7 +28,7 @@ func scaledCents(value, numerator, denominator int64) int64 {
 	return result.Int64()
 }
 func alertMoney(cents int64) string { return fmt.Sprintf("R%d.%02d", cents/100, cents%100) }
-func (a *App) evaluateBudgetAlertsTx(tx *sql.Tx, u User, now time.Time) error {
+func (a *App) evaluateBudgetAlertsTx(tx *sql.Tx, u User, now time.Time, baseline ...map[string]bool) error {
 	loc, _ := time.LoadLocation("Africa/Johannesburg")
 	today := now.In(loc).Format("2006-01-02")
 	periods, err := data(tx, "SELECT id,name,start_date,end_date FROM periods WHERE start_date<=? AND end_date>=? ORDER BY start_date DESC,id DESC LIMIT 1", today, today)
@@ -48,12 +48,16 @@ func (a *App) evaluateBudgetAlertsTx(tx *sql.Tx, u User, now time.Time) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	rows, err := data(tx, `SELECT t.id,t.account_id,t.date,t.is_transfer,l.amount_cents,c.id category_id,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id WHERE a.household=1 AND a.sync_hidden=0 AND t.period_id=?`+accountScopeSQL(u), pid)
+	rows, err := data(tx, `SELECT t.id,t.account_id,t.date,t.is_transfer,COALESCE(t.spending_group_id,0) group_id,l.amount_cents,c.id category_id,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id WHERE a.household=1 AND a.sync_hidden=0 AND t.period_id=?`+accountScopeSQL(u), pid)
 	if err != nil {
 		return err
 	}
-	totals := categoryExpenseTotals(rows)
-	targets, err := data(tx, "SELECT c.id,c.name,t.amount_cents FROM targets t JOIN categories c ON c.id=t.category_id WHERE t.period_id=? AND c.kind='expense'", pid)
+	targets, err := data(tx, `SELECT c.id,c.name,b.amount_cents,b.group_id,COALESCE(g.name,'No spending group') group_name,COALESCE(pref.enabled,1) enabled,pref.threshold
+ FROM (SELECT category_id,amount_cents,COALESCE(spending_group_id,0) group_id FROM group_targets WHERE period_id=? AND included=1
+ UNION ALL SELECT category_id,amount_cents,0 FROM targets t WHERE period_id=? AND NOT EXISTS(SELECT 1 FROM group_targets gt WHERE gt.period_id=t.period_id AND gt.category_id=t.category_id)) b
+ JOIN categories c ON c.id=b.category_id LEFT JOIN spending_groups g ON g.id=b.group_id
+ LEFT JOIN notification_budget_preferences pref ON pref.user_id=? AND pref.category_id=b.category_id AND pref.group_id=b.group_id
+ WHERE c.kind='expense' ORDER BY b.group_id,c.id`, pid, pid, u.ID)
 	if err != nil {
 		return err
 	}
@@ -62,22 +66,49 @@ func (a *App) evaluateBudgetAlertsTx(tx *sql.Tx, u User, now time.Time) error {
 	date, _ := time.Parse("2006-01-02", today)
 	elapsed := int64(date.Sub(start)/(24*time.Hour)) + 1
 	days := int64(end.Sub(start)/(24*time.Hour)) + 1
+	allRows := rows
 	for _, target := range targets {
 		cid := num(target["id"])
+		gid := num(target["group_id"])
+		rows := []map[string]any{}
+		for _, row := range allRows {
+			if num(row["group_id"]) == gid {
+				rows = append(rows, row)
+			}
+		}
+		totals := categoryExpenseTotals(rows)
+		thresholds := defaultBudgetNotificationThresholds
+		if target["threshold"] != nil {
+			thresholds = []int64{num(target["threshold"])}
+		}
+		quiet := false
+		if len(baseline) > 0 {
+			quiet = baseline[0][fmt.Sprintf("%d:%d", cid, gid)]
+			if !quiet {
+				continue
+			}
+		}
+		enabled := num(target["enabled"]) == 1
+		evaluate := func(e notificationEvent, scope string, active bool, cooldown time.Duration, reason string) error {
+			if active && (!enabled || quiet) {
+				return a.consumeConditionTx(tx, e, scope, now)
+			}
+			return a.evaluateConditionTx(tx, e, scope, active, cooldown, now, reason)
+		}
 		limit := num(target["amount_cents"])
 		spent := totals[cid]
-		base := fmt.Sprintf("household-budget:%d:category:%d", pid, cid)
-		name := target["name"].(string)
-		event := notificationEvent{RecipientID: u.ID, Severity: "warning", SourceKind: "budget", SourceID: pid, AccountIDs: ids, Dismissible: true}
+		base := budgetAlertScope(pid, cid, gid)
+		name := target["name"].(string) + " · " + target["group_name"].(string)
+		event := notificationEvent{BudgetCategoryID: cid, BudgetGroupID: gid, RecipientID: u.ID, Severity: "warning", SourceKind: "budget", SourceID: pid, AccountIDs: ids, Dismissible: true}
 		// Coalesce an import jump to the highest crossed threshold. Still evaluate
 		// every lower state, consuming it without sending when a higher one wins.
 		highest := int64(0)
-		for _, threshold := range defaultBudgetNotificationThresholds {
+		for _, threshold := range thresholds {
 			if limit > 0 && ratioAtLeast(spent, limit, threshold, 100) {
 				highest = threshold
 			}
 		}
-		for _, threshold := range defaultBudgetNotificationThresholds {
+		for _, threshold := range thresholds {
 			event.Type = "budget_threshold"
 			event.Title = "Budget threshold reached"
 			event.Message = fmt.Sprintf("%s has reached %d%% of its %s budget (%s of %s).", name, threshold, p["name"], alertMoney(spent), alertMoney(limit))
@@ -87,14 +118,14 @@ func (a *App) evaluateBudgetAlertsTx(tx *sql.Tx, u User, now time.Time) error {
 				if err := a.consumeConditionTx(tx, event, fmt.Sprintf("%s:threshold:%d", base, threshold), now); err != nil {
 					return err
 				}
-			} else if err := a.evaluateConditionTx(tx, event, fmt.Sprintf("%s:threshold:%d", base, threshold), condition, 0, now, "below_threshold"); err != nil {
+			} else if err := evaluate(event, fmt.Sprintf("%s:threshold:%d", base, threshold), condition, 0, "below_threshold"); err != nil {
 				return err
 			}
 		}
 		event.Type = "budget_overspend"
 		event.Title = "Budget exceeded"
 		event.Message = fmt.Sprintf("%s is %s over its %s budget: %s spent against %s.", name, alertMoney(max(spent-limit, 0)), p["name"], alertMoney(spent), alertMoney(limit))
-		if err := a.evaluateConditionTx(tx, event, base+":overspend", spent > limit, 0, now, "at_or_below_budget"); err != nil {
+		if err := evaluate(event, base+":overspend", spent > limit, 0, "at_or_below_budget"); err != nil {
 			return err
 		}
 		spendingDays := map[string]bool{}
@@ -125,7 +156,7 @@ func (a *App) evaluateBudgetAlertsTx(tx *sql.Tx, u User, now time.Time) error {
 		if elapsed >= days {
 			reason = "period_complete"
 		}
-		if err := a.evaluateConditionTx(tx, event, base+":projection", significant, 24*time.Hour, now, reason); err != nil {
+		if err := evaluate(event, base+":projection", significant, 24*time.Hour, reason); err != nil {
 			return err
 		}
 	}

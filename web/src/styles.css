@@ -3218,3 +3218,13 @@ body:has(dialog[open]) { overflow:hidden; }
 .brand-mark { overflow:hidden; }
 .brand-mark > .brand-icon { display:block; width:32px; height:32px; max-width:100%; object-fit:contain; }
 .settings-panel .settings-save-actions { border-top:0; padding-top:0; margin-top:16px; }
+
+
+.category-alert-form { margin-top:16px; }
+.category-alert-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
+.category-alert-heading-actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.category-alert-heading>span { font-size:14px; }
+.category-alert-heading .category-alert-toggle { width:44px; min-height:44px; padding:0; flex-shrink:0; }
+.category-alert-form .field { margin:0; }
+.category-alert-form .field-error-space { display:none; }
+.category-alert-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; }

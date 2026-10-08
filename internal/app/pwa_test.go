@@ -108,11 +108,11 @@ func TestPWAIconValidationAndRevokedActor(t *testing.T) {
 }
 func TestPWAMigrationRollbackRetryPreservation(t *testing.T) {
 	e := setup(t)
-	migrationExec(t, e.a.DB, "DROP TABLE app_identity; DELETE FROM migrations WHERE version=28")
+	migrationExec(t, e.a.DB, "DROP TABLE notification_budget_scopes; DROP TABLE notification_budget_preferences; DROP TABLE app_identity; DELETE FROM migrations WHERE version>=28")
 	protected := []string{"SELECT * FROM transactions", "SELECT * FROM allocations", "SELECT * FROM grants", "SELECT * FROM sessions", "SELECT * FROM workspace_branding", "SELECT * FROM audit", "SELECT * FROM mcp_tokens"}
 	before := migrationSnapshot(t, e.a.DB, protected...)
 	steps := append([]schemaMigration(nil), schemaMigrations...)
-	steps[len(steps)-1].apply = func(tx *sql.Tx, origin migrationOrigin) error {
+	steps[28-migrationBaseline].apply = func(tx *sql.Tx, origin migrationOrigin) error {
 		if err := migratePWA(tx, origin); err != nil {
 			return err
 		}

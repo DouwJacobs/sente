@@ -49,7 +49,11 @@ func (a *App) notificationPreferences(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	send(w, map[string]any{"items": items})
+	budget, err := readBudgetAlertPreferences(a.DB, Current(r))
+	if err != nil {
+		return err
+	}
+	send(w, map[string]any{"items": items, "budget_items": budget})
 	return nil
 }
 
@@ -70,16 +74,21 @@ func (a *App) updateNotificationPreference(w http.ResponseWriter, r *http.Reques
 
 func (a *App) updateNotificationPreferencesBatch(w http.ResponseWriter, r *http.Request) error {
 	var input struct {
-		Items []notificationPreferenceInput `json:"items"`
+		Items       []notificationPreferenceInput `json:"items"`
+		BudgetItems []budgetAlertPreferenceInput  `json:"budget_items"`
 	}
 	if err := decode(r, &input); err != nil {
 		return err
 	}
-	return a.saveNotificationPreferences(w, r, input.Items)
+	return a.saveNotificationPreferences(w, r, input.Items, input.BudgetItems)
 }
 
-func (a *App) saveNotificationPreferences(w http.ResponseWriter, r *http.Request, inputs []notificationPreferenceInput) error {
-	if len(inputs) == 0 || len(inputs) > 2*len(notificationTypes) {
+func (a *App) saveNotificationPreferences(w http.ResponseWriter, r *http.Request, inputs []notificationPreferenceInput, scoped ...[]budgetAlertPreferenceInput) error {
+	var budgetInputs []budgetAlertPreferenceInput
+	if len(scoped) > 0 {
+		budgetInputs = scoped[0]
+	}
+	if (len(inputs) == 0 && len(budgetInputs) == 0) || len(inputs) > 2*len(notificationTypes) {
 		return fail(400, "Choose at least one notification preference")
 	}
 	seen := make(map[string]bool)
@@ -91,7 +100,11 @@ func (a *App) saveNotificationPreferences(w http.ResponseWriter, r *http.Request
 	}
 	uid := Current(r).ID
 	var items []notificationPreference
+	var budgetItems []budgetAlertPreference
 	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := saveBudgetAlertPreferencesTx(tx, u, budgetInputs); err != nil {
+			return err
+		}
 		for _, input := range inputs {
 			var version int64
 			var err error
@@ -126,11 +139,18 @@ func (a *App) saveNotificationPreferences(w http.ResponseWriter, r *http.Request
 			read = readAllNotificationPreferences
 		}
 		items, err = read(tx, uid)
+		if err != nil {
+			return err
+		}
+		if err := a.baselineBudgetAlertPreferencesTx(tx, u, budgetInputs); err != nil {
+			return err
+		}
+		budgetItems, err = readBudgetAlertPreferences(tx, u)
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	send(w, map[string]any{"items": items})
+	send(w, map[string]any{"items": items, "budget_items": budgetItems})
 	return nil
 }
