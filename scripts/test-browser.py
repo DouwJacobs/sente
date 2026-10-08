@@ -115,7 +115,8 @@ def main():
                         server_env = {**env, "E2E_BINARY": str(binary),
                                       "E2E_WORK": str(work / f"fixture-{index}-{offset}"),
                                       "E2E_PORT": str(port + offset),
-                                      "E2E_EMPTY": "1" if offset else "0"}
+                                      "E2E_EMPTY": "1" if offset else "0",
+                                      "E2E_NOTIFICATIONS": "1" if Path(spec).name == "notifications.spec.ts" else "0"}
                         servers.append(subprocess.Popen(
                             [sys.executable, str(ROOT / "scripts/e2e-server.py")],
                             cwd=ROOT, env=server_env, stdout=log, stderr=subprocess.STDOUT,

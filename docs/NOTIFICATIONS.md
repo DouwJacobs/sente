@@ -1,6 +1,6 @@
 # Notification foundation
 
-Issues #29 and #30 introduce backend infrastructure; this branch also supplies the backend preferences needed by #31. No financial alert producer, notification centre, browser permission prompt, service worker or external delivery is enabled by this foundation. The existing Toast component remains transient request feedback. User-visible notifications begin when the separately specified producers and centre are implemented.
+Issues #29 and #30 introduce backend infrastructure; this branch also supplies the backend preferences needed by #31. The browser notification centre and personal preference controls build on this foundation. Financial alert producers, browser permission prompts, service workers and external delivery remain follow-ups. The existing Toast component remains transient request feedback. User-visible notifications begin when the separately specified producers and centre are implemented.
 
 ## Producer and delivery contract
 
@@ -22,7 +22,7 @@ Validation/authorization run before dedupe, so an exact retry cannot bypass revo
 
 ## Browser APIs
 
-All endpoints use existing cookie authentication, origin checks, CSRF for writes, JSON error conventions and `Cache-Control: no-store`. Inbox responses never expose recipients, account dependencies, dedupe/event hashes or delivery receipts. Source kind/ID are structured references, not arbitrary URLs, and are returned only after current permission checks. The future UI must navigate through the existing authorized loaders and handle deletion or permission changes safely.
+All endpoints use existing cookie authentication, origin checks, CSRF for writes, JSON error conventions and `Cache-Control: no-store`. Inbox responses never expose recipients, account dependencies, dedupe/event hashes or delivery receipts. Source kind/ID are structured references, not arbitrary URLs, and are returned only after current permission checks. The notification centre navigates through existing authorized loaders and handles deletion or permission changes safely.
 
 | Endpoint | Contract |
 | --- | --- |
@@ -36,7 +36,7 @@ All endpoints use existing cookie authentication, origin checks, CSRF for writes
 
 List/count share a SQL snapshot, and writes recheck the actor's session under the write lock. Each query applies recipient and privacy predicates before count/paging. Old messages disappear if a dependency becomes hidden/inaccessible/private (for budgets), the user loses household membership, or their source disappears or moves to an uncaptured account. Dependency account IDs deliberately retain tombstones instead of cascading away when an account disappears. Administrators cannot inspect another user's inbox. Permission restoration can make a still-retained record visible again. Read-all does not silently mark inaccessible messages read.
 
-Offset paging is newest-first; additions can shift later pages, so the future centre should refresh from page zero after mutations/new delivery. Counts reflect current permission and retention state, not the number of stored private/inaccessible payloads.
+Offset paging is newest-first; additions can shift later pages, so the centre refreshes from page zero after mutations and periodic/focus refreshes. Counts reflect current permission and retention state, not the number of stored private/inaccessible payloads.
 
 ## Persistence, retention and lifecycle
 
@@ -50,4 +50,6 @@ Serving runs cleanup at startup and every 24 hours; delivery/state writes also c
 
 Notifications and preferences are browser-only personal communication workflows for now. Existing MCP connections have not consented to reading these potentially financial messages. No new tools, schema fields, allowlists, permissions, consent, proposal previews/audits or financial write semantics are added; no notifications are appended to MCP session context. A future MCP notification capability must require explicit consent and the same authorized service boundaries.
 
-Follow-ups: #31 Settings preferences UI; #32 accessible notification centre and deep-link workflow; #33–#37 deterministic financial producers; #38 producer reset/coalescing/cooldowns; #39 opt-in browser push/outbox/PWA integration; #40 bounded redacted administrator diagnostics. No frontend or financial policy has been silently introduced here.
+Implemented browser workflows (#31–#32): header bell with current unread count, paged All/Unread/Read inbox, explicit read/read-all/dismiss actions, authorized source navigation, and Settings notification preferences. Counts refresh every 30 seconds while visible, on focus and after personal state writes. Inbox snapshots are discarded while reloading; failed writes reload current accessible records. Preferences are saved individually using optimistic versions; failed saves retain the draft and explicit Reload saved preferences discards drafts. Drafts survive Settings section changes. Only the currently available in-app channel is shown; no push opt-in is inferred.
+
+Follow-ups: #33–#37 deterministic financial producers; #38 producer reset/coalescing/cooldowns; #39 opt-in browser push/outbox/PWA integration; #40 bounded redacted administrator diagnostics. No frontend or financial policy has been silently introduced here.

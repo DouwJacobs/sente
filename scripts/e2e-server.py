@@ -54,6 +54,9 @@ if os.environ.get("E2E_EMPTY") != "1":
     if os.environ.get("E2E_EMPTY_ACCOUNTS") == "1":
         for table in ("allocations", "transactions", "rules", "grants", "targets", "categories", "accounts"):
             db.execute("DELETE FROM " + table)
+    if os.environ.get("E2E_NOTIFICATIONS") == "1":
+        import runpy
+        runpy.run_path(str(root / "scripts/e2e-notifications.py"))["seed"](db)
     db.commit(); db.close()
 proc=subprocess.Popen([str(binary),"serve"],env=env)
 def stop(*_):

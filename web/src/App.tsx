@@ -1,3 +1,5 @@
+import { NotificationCentre } from "./features/notifications/NotificationCentre";
+import { NotificationNavigation } from "./features/notifications/NotificationNavigation";
 import { useSession } from "./features/auth/useSession";
 import { SessionScreen } from "./features/auth/SessionScreen";
 import { useWorkspaceData } from "./features/workspace/useWorkspaceData";
@@ -287,6 +289,7 @@ export default function App() {
           setSettingsSection("about");
           go("Settings");
         }}
+        notificationNavigation={<NotificationNavigation active={current === "Notifications"} onOpen={() => go("Notifications")} />}
         onSearch={() => setSearchOpen(true)}
         onSignOut={() =>
           signOut(async () => {
@@ -508,6 +511,12 @@ export default function App() {
         {current === "Categories" && (
           <Categories {...props} onAccounts={() => go("Accounts")} />
         )}
+        {current === "Notifications" && <NotificationCentre notify={notify}
+          onPreferences={() => { setSettingsSection("notifications"); go("Settings"); }}
+          onSource={(kind, id) => {
+            if (kind === "budget") { go("Budgets"); setPeriod(String(id)); setAccount(""); }
+            else viewTransactions({ account: String(id) });
+          }} />}
         {current === "Settings" && (
           <SettingsPage
             {...props}

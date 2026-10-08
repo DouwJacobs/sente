@@ -51,6 +51,7 @@ export function WorkspaceShell({
   onAbout,
   onReview,
   reviewActive,
+  notificationNavigation,
   children,
 }: {
   user: Row;
@@ -68,6 +69,7 @@ export function WorkspaceShell({
   onAbout: () => void;
   onReview: () => void;
   reviewActive: boolean;
+  notificationNavigation: ReactNode;
   children: ReactNode;
 }) {
   const { info } = useBuildInfo();
@@ -168,6 +170,7 @@ export function WorkspaceShell({
           </span>
           <span className="desktop-label">Personal finance</span>
           <div className="top-actions">
+            {notificationNavigation}
             <Button
               variant="quiet"
               className="topbar-search-btn topbar-icon"
