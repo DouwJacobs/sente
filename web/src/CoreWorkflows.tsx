@@ -1,5 +1,5 @@
 import {MerchantLogoField} from './MerchantAvatar'
-import {ChevronLeft,ChevronRight} from 'lucide-react'
+import {ChevronLeft,ChevronRight,RotateCcw} from 'lucide-react'
 import {useEffect,useState} from 'react'
 import {api,cents,money,download} from './api'
 import {Button,Field,Form,Modal,Loading,Badge,Empty,Pagination} from './ui'
@@ -37,10 +37,10 @@ export function AccountHealth({revision,notify,onBanking,onImports}:{revision:nu
  if(!items)return <Loading>Loading import health</Loading>
  return <section className="panel"><div className="section-head"><h2>Transaction import health</h2><div className="toolbar-actions"><Button onClick={onBanking}>Banking</Button><Button onClick={onImports}>Import activity</Button></div></div>{items.map(a=><div className="line health-row" key={a.id}><div><strong>{a.name}</strong><small>Balance date: {a.balance_date||'Unavailable'}</small><small>Last successful transaction import/check: {a.last_imported?a.last_imported+' UTC':'Never'}</small>{a.last_fetched&&a.last_fetched!==a.last_imported&&<small>Last fetch: {a.last_fetched} UTC</small>}{a.next_due&&<small>Next due: {new Date(a.next_due*1000).toLocaleString()}</small>}<small>Coverage may be incomplete{a.import_issues?' · '+a.import_issues+' imports need attention':''}.</small></div><Badge tone={a.state==='ready'?'good':a.state==='needs_attention'?'bad':'pending'}>{String(a.state).replaceAll('_',' ')}</Badge></div>)}<Pagination page={page} total={total} onChange={setPage}/></section>
 }
-export function PeriodNavigation({period,revision,onChange,notify}:{period:string;revision:number;onChange:(id:string)=>void;notify:PageProps['notify']}){
+export function PeriodNavigation({period,revision,onChange,notify,compact=false}:{period:string;revision:number;onChange:(id:string)=>void;notify:PageProps['notify'];compact?:boolean}){
  const[nav,setNav]=useState<Row|null>(null)
  useEffect(()=>{let alive=true;api('/periods/navigation?period='+period).then(v=>alive&&setNav(v)).catch(e=>notify(e.message,true));return()=>{alive=false}},[period,revision])
- return <nav className="toolbar-actions period-navigation" aria-label="Budget periods"><Button variant="quiet" aria-label="Previous period" disabled={!nav?.previous} title={nav?.previous?.name} onClick={()=>onChange(String(nav!.previous.id))}><ChevronLeft size={18}/></Button><Button variant="quiet" disabled={!nav?.current} onClick={()=>onChange(String(nav!.current.id))}>Current period</Button><Button variant="quiet" aria-label="Next period" disabled={!nav?.next} title={nav?.next?.name} onClick={()=>onChange(String(nav!.next.id))}><ChevronRight size={18}/></Button></nav>
+ return <nav className="toolbar-actions period-navigation" aria-label="Budget periods"><Button variant="quiet" aria-label="Previous period" disabled={!nav?.previous} title={nav?.previous?.name} onClick={()=>onChange(String(nav!.previous.id))}><ChevronLeft size={18}/></Button><Button variant="quiet" aria-label="Current period" title="Current period" disabled={!nav?.current} onClick={()=>onChange(String(nav!.current.id))}>{compact?<RotateCcw size={16} aria-hidden="true"/>:"Current period"}</Button><Button variant="quiet" aria-label="Next period" disabled={!nav?.next} title={nav?.next?.name} onClick={()=>onChange(String(nav!.next.id))}><ChevronRight size={18}/></Button></nav>
 }
 export function DailyGuide({period,remaining,hasTargets,account}:{period:Row;remaining:number;hasTargets:boolean;account:string}){
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Johannesburg',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())

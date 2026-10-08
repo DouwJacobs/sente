@@ -5,7 +5,7 @@ async function login(page:Page){
 async function navigate(page:Page,name:string,mobile=false){
  const tab=name==='Review'?'Needs review':name==='Imports'?'Import activity':''
  const target=tab?'Transactions':name
- if(mobile&&!['Dashboard','Transactions','Accounts'].includes(target)){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:target,exact:true}).click()}
+ if(mobile&&!['Dashboard','Transactions','Review'].includes(target)){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:target,exact:true}).click()}
  else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:target,exact:true}).click()
  await expect(page.getByRole('heading',{name:target,exact:true,level:1})).toBeVisible()
  if(tab)await page.getByRole('tab',{name:new RegExp(tab)}).click()
@@ -71,19 +71,19 @@ test('fresh installation starts empty and imports optional editable defaults',as
  await page.getByRole('button',{name:'Import configuration',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Preview: Sente starter',exact:true})).toHaveCount(0)
  await navigate(page,'Categories')
- const row=page.locator('.rule-row').filter({hasText:'Description contains “Monthly Account Fee”'})
- await expect(row.getByText('Global fallback',{exact:true})).toBeVisible()
+ const row=page.locator('.rule-row').filter({hasText:'Monthly Account Fee'})
+ await expect(row.getByRole('img',{name:'Global fallback',exact:true})).toBeVisible()
  await expect(row.getByText('Bank charges · Bank Fees',{exact:true})).toBeVisible()
- await row.getByRole('button',{name:'Pause',exact:true}).click()
- await expect(row.getByText('Paused',{exact:true})).toBeVisible()
- await row.getByRole('button',{name:'Resume',exact:true}).click()
- await expect(row.getByText('Paused',{exact:true})).toHaveCount(0)
- await row.getByRole('button',{name:'Edit rule Monthly Account Fee',exact:true}).click()
+ await row.locator('summary').click();await row.getByRole('button',{name:'Pause',exact:true}).click()
+ await expect(row.getByRole('img',{name:'Paused',exact:true})).toBeVisible()
+ await row.locator('summary').click();await row.getByRole('button',{name:'Resume',exact:true}).click()
+ await expect(row.getByRole('img',{name:'Paused',exact:true})).toHaveCount(0)
+ await row.locator('summary').click();await row.getByRole('button',{name:'Edit rule Monthly Account Fee',exact:true}).click()
  const edit=page.getByRole('dialog',{name:'Edit rule',exact:true})
  await edit.getByLabel('Description contains',{exact:true}).fill('Monthly Account Fee updated')
  await edit.getByRole('button',{name:'Save rule',exact:true}).click()
  await expect(edit).not.toBeVisible()
- await expect(page.getByText('Description contains “Monthly Account Fee updated”',{exact:true})).toBeVisible()
+ await expect(page.getByText('Monthly Account Fee updated',{exact:true})).toBeVisible()
  await page.getByRole('tab',{name:'Categories',exact:true}).click()
  await expect(page.getByText('Groceries',{exact:true})).toBeVisible()
  await page.getByRole('navigation',{name:'List pages'}).getByRole('button',{name:'Next',exact:true}).click()

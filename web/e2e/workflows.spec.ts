@@ -10,7 +10,7 @@ async function login(page:Page){
 async function navigate(page:Page,name:string,mobile=false){
  const tab=name==='Review'?'Needs review':name==='Imports'?'Import activity':''
  const target=tab?'Transactions':name
- if(mobile&&!['Dashboard','Transactions','Accounts'].includes(target)){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:target,exact:true}).click()}
+ if(mobile&&!['Dashboard','Transactions','Review'].includes(target)){await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:target,exact:true}).click()}
  else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:target,exact:true}).click()
  await expect(page.getByRole('heading',{name:target,exact:true,level:1})).toBeVisible()
  if(tab)await page.getByRole('tab',{name:new RegExp(tab)}).click()
@@ -44,7 +44,7 @@ test('desktop dashboard, keyboard review, rules, and split approval',async({page
  await page.getByRole('dialog').getByLabel('Category',{exact:true}).selectOption('2')
  await page.getByRole('dialog').getByRole('button',{name:'Save rule'}).click()
  await expect(page.getByRole('dialog')).not.toBeVisible()
- await expect(page.getByText('Description contains “Station”')).toBeVisible()
+ await expect(page.locator('.rule-list-row').filter({hasText:'Station'})).toBeVisible()
  expect(errors).toEqual([])
 })
 test('360px mobile upload, review, period preview, and both themes',async({page})=>{

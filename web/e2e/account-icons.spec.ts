@@ -7,7 +7,8 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`account 
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
  await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click()
  const nav=page.getByRole('navigation',{name:width===360?'Mobile navigation':'Main navigation',exact:true})
- await nav.getByRole('button',{name:'Accounts',exact:true}).click()
+ if(width===360)await nav.getByRole('button',{name:'More',exact:true}).click()
+ await page.getByRole('navigation',{name:width===360?'More pages':'Main navigation',exact:true}).getByRole('button',{name:'Accounts',exact:true}).click()
  const rows=page.locator('.account-summary');await expect(rows).toHaveCount(5)
  const labels=['Credit card account','Savings account','Home loan account','Transactional account','Account type unavailable']
  for(let i=0;i<labels.length;i++)await expect(rows.nth(i).getByRole('img',{name:labels[i],exact:true})).toBeVisible()

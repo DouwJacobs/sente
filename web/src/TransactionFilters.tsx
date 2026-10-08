@@ -1,5 +1,6 @@
 import {Button,Field} from './ui'
-import {useState} from 'react'
+import {useState,useRef,useId} from 'react'
+import {Search,SlidersHorizontal,X} from 'lucide-react'
 import {cents} from './api'
 import {moneyError} from './validation'
 import {PagedSelect} from './PagedList'
@@ -26,18 +27,26 @@ type TransactionFiltersProps={
  unassigned:boolean;onUnassignedChange:(value:boolean)=>void
 }
 export function TransactionFilters({data,revision,value,onChange,onClear,active,imports,account,period,onAccountChange,onPeriodChange,unassigned,onUnassignedChange}:TransactionFiltersProps){
- const[expanded,setExpanded]=useState(false)
+ const[expanded,setExpanded]=useState(false),toggle=useRef<HTMLButtonElement>(null),panelId=useId()
  const summaries=[value.category&&(value.category==='uncategorized'?'Uncategorized':'Category: '+(data.categories.find(c=>String(c.id)===value.category)?.name||'#'+value.category)),value.group&&(value.group==='unassigned'?'No spending group':'Group: '+(data.spendingGroups.find(g=>String(g.id)===value.group)?.name||'#'+value.group)),value.direction&&(value.direction==='out'?'Money out':'Money in'),!imports&&value.acceptance&&(value.acceptance==='needs_category'?'Needs category':'Accepted'),!imports&&value.seen&&(value.seen==='0'?'Unseen':'Seen'),!imports&&value.date_from&&'From '+value.date_from,!imports&&value.date_to&&'To '+value.date_to,!imports&&value.minimum&&'Minimum '+value.minimum,!imports&&value.maximum&&'Maximum '+value.maximum,!imports&&value.merchant&&'Merchant selected',!imports&&value.tag&&'Tag selected'].filter(Boolean)
  const selectedPeriod=unassigned?undefined:data.periods.find(p=>String(p.id)===period)
- return <section className="panel transaction-filters" aria-label="Transaction filters">
- <div className="transaction-filter-header"><h2>Find transactions</h2><div className="toolbar-actions"><Button aria-expanded={expanded} aria-controls="transaction-extra-filters" onClick={()=>setExpanded(!expanded)}>Filters{summaries.length?` (${summaries.length})`:""}</Button>{active&&<Button variant="quiet" onClick={onClear}>Clear filters</Button>}</div></div>
+ const scopeSummary=[account?(data.accounts.find(a=>String(a.id)===account)?.name||'Selected account'):'All accounts',!imports&&(unassigned?'No budget period':selectedPeriod?.name||'All periods')].filter(Boolean).join(' · ')
+ return <section className="transaction-filters transaction-controls" aria-label="Transaction filters" onKeyDown={e=>{if(expanded&&e.key==='Escape'){e.preventDefault();setExpanded(false);toggle.current?.focus()}}}>
+ <div className="transaction-control-bar">
+  <div className="transaction-filter-search compact-search">
+   <Search size={17} aria-hidden="true"/>
+   <Field label="Search transactions"><input type="search" placeholder="Search transactions" value={value.query} onChange={e=>onChange({...value,query:e.target.value})}/></Field>
+  </div>
+  <Button variant="quiet" ref={toggle} aria-label={'Filters'+(summaries.length?` (${summaries.length})`:'')} aria-expanded={expanded} aria-controls={panelId} onClick={()=>setExpanded(!expanded)}><SlidersHorizontal size={18} aria-hidden="true"/><span className="filter-button-text">Filters{summaries.length?` (${summaries.length})`:''}</span></Button>
+  {active&&<Button variant="quiet" aria-label="Clear filters" title="Clear filters" onClick={onClear}><X size={18} aria-hidden="true"/></Button>}
+ </div>
+ <div className="transaction-scope-summary" aria-label="Current transaction scope">{scopeSummary}{summaries.length>0&&<span> · {summaries.length} {summaries.length===1?'filter':'filters'} active</span>}</div>
+ <div id={panelId} className="transaction-filter-disclosure" hidden={!expanded}>
  <div className="transaction-search-grid">
   <div className="context-filter"><PagedSelect url="/accounts" label="Accounts" optionLabel={a=>a.name+(a.household?'':' · Private')} value={account} onChange={onAccountChange} options={data.accounts} empty="All accessible accounts" revision={revision}/></div>
   {!imports&&data.user.budget_member&&<div className="context-filter"><PagedSelect url="/periods" label="Budget period" hint={unassigned?'Household transactions with no budget period; excludes entries marked outside budgeting.':selectedPeriod?selectedPeriod.start_date+' – '+selectedPeriod.end_date:undefined} optionLabel={p=>p.name} specialOptions={[{value:'unassigned',label:'Not assigned to a budget period'}]} value={unassigned?'unassigned':period} onChange={value=>{onUnassignedChange(value==='unassigned');onPeriodChange(value==='unassigned'?'':value)}} options={data.periods} empty="All periods" revision={revision}/></div>}
-  <div className="transaction-filter-search"><Field label="Search transactions"><input type="search" placeholder="Search descriptions" value={value.query} onChange={e=>onChange({...value,query:e.target.value})}/></Field></div>
  </div>
  {summaries.length>0&&<div className="active-filter-summary" aria-label="Active filters">{summaries.map(label=><span key={String(label)}>{label}</span>)}</div>}
- <div id="transaction-extra-filters" hidden={!expanded}>
  <div className={'transaction-filter-grid'+(imports?' transaction-filter-grid-imports':'')}>
   <div className="context-filter"><PagedSelect url="/categories" label="Filter by category" empty="All categories" specialOptions={[{value:'uncategorized',label:'Uncategorized'}]} options={data.categories} revision={revision} value={value.category} onChange={category=>onChange({...value,category})}/></div>
   <div className="context-filter"><PagedSelect url="/spending-groups" label="Filter by spending group" empty="All spending groups" specialOptions={[{value:'unassigned',label:'Not assigned'}]} options={data.spendingGroups} revision={revision} value={value.group} onChange={group=>onChange({...value,group})}/></div>

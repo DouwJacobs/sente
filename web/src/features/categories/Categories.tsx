@@ -5,9 +5,9 @@ import { usePagedList, ListStatus, ListNavigation } from "../../PagedList";
 import { Rules } from "../../Rules";
 import { GroupDot } from "../../Choices";
 import { useEffect, useState } from "react";
-import { Plus, Pencil, ChevronRight } from "lucide-react";
+import { Plus, Pencil, ChevronRight, CircleMinus, CirclePlus } from "lucide-react";
 import { api } from "../../api";
-import { Button, Field, Form, Badge, Empty, Modal, Tabs } from "../../ui";
+import { Button, Field, Form, StatusIcon, Empty, Modal, Tabs } from "../../ui";
 import { useTask } from "../../shared/useTask";
 import { type PageProps, type Row } from "../../shared/types";
 export function Categories({
@@ -170,39 +170,39 @@ export function Categories({
                   Create categories for the income and expenses you track.
                 </Empty>
               ) : (
-                categoryList.items.map((c) => (
-                  <div className="classification-group-entry" key={c.id}>
-                    <button
-                      type="button"
-                      className="line classification-category-row"
-                      key={c.id}
-                      title={"View transactions for " + c.name}
-                      onClick={() =>
-                        viewTransactions({ category: String(c.id) })
-                      }
-                    >
-                      <span>
-                        {c.name}
-                        {c.archived ? " · Archived" : ""}
-                      </span>
-                      <span className="toolbar-actions">
-                        <Badge>
-                          {c.kind === "expense" ? "Expense" : "Income"}
-                        </Badge>
-                        <ChevronRight size={16} aria-hidden="true" />
-                      </span>
-                    </button>
-                    {data.user.budget_member && (
-                      <Button
-                        variant="quiet"
-                        aria-label={"Edit " + c.name}
-                        onClick={() => setCategoryEdit(c)}
+                <div className="spending-group-grid category-list">
+                  {categoryList.items.map((c) => (
+                    <div className="classification-group-entry" key={c.id}>
+                      <button
+                        type="button"
+                        className="choice-row classification-category-row"
+                        key={c.id}
+                        title={"View transactions for " + c.name}
+                        onClick={() =>
+                          viewTransactions({ category: String(c.id) })
+                        }
                       >
-                        <Pencil size={16} />
-                      </Button>
-                    )}
-                  </div>
-                ))
+                        <span>
+                          {c.name}
+                          {c.archived ? " · Archived" : ""}
+                        </span>
+                        <span className="toolbar-actions">
+                          <StatusIcon label={c.kind === "expense" ? "Expense" : "Income"} icon={c.kind === "expense" ? CircleMinus : CirclePlus}/>
+                          <ChevronRight size={16} aria-hidden="true" />
+                        </span>
+                      </button>
+                      {data.user.budget_member && (
+                        <Button
+                          variant="quiet"
+                          aria-label={"Edit " + c.name}
+                          onClick={() => setCategoryEdit(c)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
               <ListNavigation list={categoryList} />
             </section>
