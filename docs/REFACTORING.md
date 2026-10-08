@@ -66,3 +66,7 @@ Notification producers: `notification_budget_producers.go` uses `budget_notifica
 `features/notifications/NotificationSettings.tsx` owns the Notifications Settings subtab composition, preserving preference/device panels while exposing compact diagnostics only to administrators.
 
 `notification_schedule_schema.go` owns migration 27 source-revision triggers; `notification_maintenance.go` separates source/date evaluation from persisted push delivery deadlines.
+
+`internal/app/pwa.go` owns bounded PNG normalization/rendering, public manifest/icons and authorized PWA settings; `pwa_schema.go` owns immutable migration 28. `branding.go` retains workspace-name/logo saves. `features/pwa/PWAProvider.tsx` owns installation/update lifecycle; `features/settings/BrandingSettings`, `PWASettings` and `IconField` own draft-preserving forms. Vite generates the root push/PWA worker's exact asset allowlist and revision. See PWA.md for cache/authentication boundaries.
+
+`features/pwa/PWAInstallInvitation.tsx` owns signed-in installation discovery. `installInvitationPreference.ts` shares the browser-local suppression flag with native install actions in PWAProvider; this preference contains no financial/user data and grants no permissions.

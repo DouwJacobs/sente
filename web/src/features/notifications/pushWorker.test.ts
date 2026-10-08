@@ -14,9 +14,10 @@ function worker() {
   return { handlers, notifications, links };
 }
 describe("privacy-preserving push worker", () => {
-  it("only registers push/click handlers and uses generic lock-screen text", async () => {
+  it("retains push/click integration and uses generic lock-screen text", async () => {
     const { handlers, notifications } = worker();
-    expect(Object.keys(handlers).sort()).toEqual(["notificationclick", "push"]);
+    expect(handlers.push).toBeTypeOf("function");
+    expect(handlers.notificationclick).toBeTypeOf("function");
     let pending: Promise<unknown> = Promise.resolve();
     handlers.push({ data: { json: () => ({ title: "Private merchant", body: "Account balance secret", tag: "a".repeat(32), url: "/?notifications=1&message=12" }) }, waitUntil: (value: Promise<unknown>) => { pending = value; } });
     await pending;

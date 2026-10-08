@@ -14,7 +14,6 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { PixelMark } from "../../PixelScene";
 import { Button, PageHeader } from "../../ui";
 import type { Data, Row } from "../../shared/types";
 const nav = [
@@ -127,7 +126,7 @@ export function WorkspaceShell({
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">
-            <PixelMark />
+            <img width={32} height={32} className="brand-icon" src={data.branding.logo || "/sente.svg"} onError={event=>{if(!event.currentTarget.src.endsWith("/sente.svg")) event.currentTarget.src="/sente.svg";}} alt="" />
           </span>
           <div className="brand-text">
             <span title={data.branding.display_name}>
@@ -165,6 +164,7 @@ export function WorkspaceShell({
       </aside>
       <div className="workspace">
         <header className="topbar">
+          <img width={28} height={28} className="brand-icon mobile-brand-icon" src={data.branding.logo || "/sente.svg"} onError={event=>{if(!event.currentTarget.src.endsWith("/sente.svg")) event.currentTarget.src="/sente.svg";}} alt="" />
           <span className="mobile-brand" title={data.branding.display_name}>
             {data.branding.display_name}
           </span>

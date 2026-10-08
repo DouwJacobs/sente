@@ -249,3 +249,7 @@ Notification inbox/preference APIs are authenticated browser workflows. Notifica
 ## Security hardening and credential retention
 
 Browser connection/consent/proposal/context writes recheck their initiating session and current roles within the mutation transaction. MCP prepare/apply/replay retain existing token/current-role/account/consent checks. No tool, schema, output allowlist, capability or approval grant expands. Serving cleans expired credential rows hourly; used refresh hashes remain while their original credential is live, so reuse still revokes the connection. Expired connections cascade their existing credentials/proposals while audit history remains. See [security hardening](SECURITY-HARDENING.md) for the exact policy and separate browser-read guarantees.
+
+## Browser-only branding and PWA
+
+Branding/PWA identity editing, public manifest/icons, installation, static caching and frontend update prompts are host presentation workflows. They introduce no MCP tools, input/output schema fields, financial allowlist entries, capabilities, consent, proposal effects or financial write-service changes. Public identity is explicitly described by the browser settings; existing private workspace names are not opted in automatically. Image bytes are excluded from audits. Notification registration remains explicit and uses the same root worker. See [PWA](PWA.md).

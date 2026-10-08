@@ -325,6 +325,9 @@ func validDate(s string) bool {
 func (a *App) Handler(static string) http.Handler {
 	mux := http.NewServeMux()
 	a.oauthRoutes(mux)
+	mux.HandleFunc("GET /manifest.webmanifest", wrap(a.publicManifest))
+	mux.HandleFunc("GET /branding/icon.png", wrap(a.publicIcon))
+	mux.HandleFunc("GET /pwa/icon/{size}/{purpose}", wrap(a.publicIcon))
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { send(w, map[string]string{"status": "ok"}) })
 	mux.HandleFunc("GET /api/setup", wrap(a.setupStatus))
 	mux.HandleFunc("POST /api/setup", wrap(a.setupAdmin))
@@ -356,7 +359,7 @@ func (a *App) Handler(static string) http.Handler {
 		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'")
-		if r.URL.Path == "/push-sw.js" {
+		if r.URL.Path == "/push-sw.js" || r.URL.Path == "/manifest.webmanifest" || r.URL.Path == "/branding/icon.png" || strings.HasPrefix(r.URL.Path, "/pwa/icon/") || (!strings.Contains(filepath.Base(r.URL.Path), ".") && !strings.HasPrefix(r.URL.Path, "/assets/")) || r.URL.Path == "/index.html" {
 			w.Header().Set("Cache-Control", "no-store")
 		}
 		if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -525,6 +528,8 @@ func (a *App) routes() http.Handler {
 	m.HandleFunc("POST /api/periods/{id}/preview", wrap(a.previewPeriod))
 	m.HandleFunc("PUT /api/periods/{id}", wrap(a.updatePeriod))
 	m.HandleFunc("PUT /api/targets/{id}", wrap(a.updateTargets))
+	m.HandleFunc("GET /api/pwa", wrap(a.pwaSettings))
+	m.HandleFunc("PUT /api/pwa", wrap(a.updatePWA))
 	m.HandleFunc("GET /api/branding", wrap(a.branding))
 	m.HandleFunc("PUT /api/branding", wrap(a.updateBranding))
 	m.HandleFunc("GET /api/settings", wrap(a.settings))
