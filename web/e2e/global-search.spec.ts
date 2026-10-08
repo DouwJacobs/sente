@@ -1,6 +1,7 @@
+import { desktopPhoneCases } from './coverage-cases';
 import {test,expect} from '@playwright/test'
 
-for(const width of [1440,360])for(const theme of ['light','dark'])test('shared search and group editor '+width+' '+theme,async({page})=>{
+for(const {width,theme} of desktopPhoneCases)test('shared search and group editor '+width+' '+theme,async({page})=>{
  await page.setViewportSize({width,height:844})
  await page.addInitScript(theme=>localStorage.setItem('finance-theme',theme),theme)
  await page.goto('/')

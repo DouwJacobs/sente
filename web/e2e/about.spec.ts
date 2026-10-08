@@ -1,7 +1,7 @@
+import { desktopPhoneCases } from './coverage-cases';
 import { test, expect } from "@playwright/test";
 
-for (const width of [1440, 360]) {
-  for (const theme of ["light", "dark"]) {
+for (const {width,theme} of desktopPhoneCases) {
     test(`About and safe issue reporting at ${width}px in ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.addInitScript((value) => localStorage.setItem("finance-theme", value), theme);
@@ -43,7 +43,6 @@ for (const width of [1440, 360]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
       // No report is sent or external tab opened during these checks.
     });
-  }
 }
 
 test("About retries a failed metadata request without losing the report link", async ({ page }) => {

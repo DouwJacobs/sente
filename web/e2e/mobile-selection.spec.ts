@@ -1,3 +1,4 @@
+import { desktopPhoneCases } from './coverage-cases';
 import { test, expect } from '@playwright/test';
 
 test('mobile selection cancels on movement and cancellation, supports keyboard, and exits when empty', async ({ page }) => {
@@ -37,7 +38,7 @@ test('mobile selection cancels on movement and cancellation, supports keyboard, 
   await expect(page.getByRole('dialog')).toHaveCount(1);
 });
 
-for (const width of [360, 1440]) for (const theme of ['light', 'dark']) {
+for (const {width,theme} of desktopPhoneCases) {
   test(`categories reuse spending group list ${width} ${theme}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.addInitScript(t => localStorage.setItem('finance-theme', t), theme);

@@ -23,7 +23,6 @@ test('desktop dashboard, keyboard review, rules, and split approval',async({page
  await expect(page.getByRole('heading',{name:'Spending by group'})).toBeVisible()
  await expect(page.getByText(/Includes .* pending/)).toBeVisible()
  await noOverflow(page)
- await page.screenshot({path:'test-results/dashboard-desktop.png',fullPage:true})
  await navigate(page,'Review')
  await page.getByRole('button').filter({hasText:'Synthetic long description'}).click()
  const dialog=page.getByRole('dialog')
@@ -50,14 +49,12 @@ test('desktop dashboard, keyboard review, rules, and split approval',async({page
 test('360px mobile upload, review, period preview, and both themes',async({page})=>{
  await page.setViewportSize({width:360,height:800})
  await login(page);await noOverflow(page)
- await page.screenshot({path:'test-results/dashboard-mobile-light.png',fullPage:true})
  await navigate(page,'Settings',true)
  await page.getByRole('combobox',{name:'Appearance',exact:true}).selectOption('dark')
  await expect(page.locator('html')).toHaveAttribute('data-theme','dark')
  await noOverflow(page)
  await navigate(page,'Dashboard',true)
  await expect(page.getByRole('heading',{name:'Spending by group'})).toBeVisible()
- await page.screenshot({path:'test-results/dashboard-mobile-dark.png',fullPage:true})
  await navigate(page,'Imports',true);await page.getByText('Upload a bank export',{exact:true}).click()
  const csv='ACCOUNT TRANSACTION HISTORY\n\nName:,Synthetic\nAccount:,12345678901,Fusion\nBalance:,100.00\n\nDate, Amount, Balance, Description\n2026/10/27,-12.34,100.00,Market mobile purchase\n'
  await page.locator('input[type=file]').setInputFiles({name:'mobile.csv',mimeType:'text/csv',buffer:Buffer.from(csv)})

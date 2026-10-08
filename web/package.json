@@ -8,7 +8,8 @@
   "build": "tsc -b && vite build",
   "test": "vitest run",
   "test:e2e": "python3 ../scripts/test-browser.py",
-  "test:mobile": "python3 ../scripts/test-browser.py mobile-core.spec.ts mobile-edge-layout.spec.ts mobile-budget-settings.spec.ts --grep @mobile-smoke"
+  "test:mobile": "python3 ../scripts/test-browser.py mobile-core.spec.ts mobile-edge-layout.spec.ts mobile-budget-settings.spec.ts settings.spec.ts --grep @mobile-smoke",
+  "test:pr": "python3 ../scripts/test-browser.py --suite pr"
  },
  "dependencies": {
   "lucide-react": "^0.468.0",

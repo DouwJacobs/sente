@@ -18,6 +18,11 @@ jobs:
       CI: "true"
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Select frontend verification
+        id: scope
+        run: python3 scripts/ci-scope.py
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
@@ -28,28 +33,50 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Backend tests and race detection
-        run: go test -race ./...
+        shell: bash
+        run: |
+          mkdir -p work/test-audit
+          go test -race -json -timeout=10m ./... | tee work/test-audit/backend.jsonl
       - name: Go vet
         run: go vet ./...
+      - name: CI scope regression checks
+        run: python3 scripts/ci-scope.test.py && python3 scripts/test-browser.test.py
+      - name: Active FNB worker invariants
+        run: node --test connectors/fnb/owner/*.test.mjs
+      - name: Synthetic demo invariants
+        run: python3 scripts/test_demo.py
       - name: Install frontend dependencies
+        if: steps.scope.outputs.frontend == 'true'
         run: npm ci
         working-directory: web
       - name: Frontend tests and production build
+        if: steps.scope.outputs.frontend == 'true'
         run: npm test && npm run build
         working-directory: web
       - name: Install Chromium
+        if: steps.scope.outputs.frontend == 'true'
         run: npx playwright install --with-deps chromium
         working-directory: web
-      - name: Mobile responsive smoke
-        timeout-minutes: 5
-        run: npm run test:mobile
+      - name: Synthetic bank DOM invariants
+        if: steps.scope.outputs.frontend == 'true'
+        run: node scripts/test-fnb-dom.mjs
+      - name: Pull-request browser workflows
+        if: github.event_name == 'pull_request' && steps.scope.outputs.frontend == 'true'
+        timeout-minutes: 10
+        env:
+          E2E_CHANGED_SPECS: ${{ steps.scope.outputs.browser_specs }}
+        run: npm run test:pr
         working-directory: web
-      - name: Synthetic browser workflows
-        run: npm run test:e2e -- --grep-invert @mobile-smoke
+      - name: Complete synthetic browser suite
+        if: github.event_name != 'pull_request' && steps.scope.outputs.frontend == 'true'
+        timeout-minutes: 20
+        run: npm run test:e2e
         working-directory: web
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: always()
         with:
-          name: browser-test-results
-          path: web/test-results/
+          name: verification-results-and-timings
+          path: |
+            web/test-results/
+            work/test-audit/backend.jsonl
           retention-days: 7

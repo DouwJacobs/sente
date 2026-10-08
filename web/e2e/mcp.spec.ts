@@ -1,3 +1,4 @@
+import { desktopPhoneCases } from './coverage-cases';
 import {test,expect,type Page} from '@playwright/test'
 import {createHash} from 'node:crypto'
 test.setTimeout(180000)
@@ -29,7 +30,7 @@ async function connect(page:Page,name:string,write=true){
 }
 
 
-for(const width of [1440,360])for(const theme of ['light','dark'])test(`MCP settings and approved agent changes ${width} ${theme}`,async({page})=>{
+for(const {width,theme} of desktopPhoneCases)test(`MCP settings and approved agent changes ${width} ${theme}`,async({page})=>{
  await page.setViewportSize({width,height:900})
  await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme)
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
@@ -171,7 +172,7 @@ test('OAuth read-only default and connection revocation',async({page})=>{
  expect((await page.request.post('/oauth/token',{form:{grant_type:'refresh_token',client_id:client,refresh_token:credentials.refresh_token,resource:endpoint}})).status()).toBe(400)
 })
 
-for (const width of [1440, 360]) for (const theme of ['light', 'dark']) test(`Saved MCP context and explicit sharing ${width} ${theme}`, async ({page}) => {
+for (const {width,theme} of desktopPhoneCases) test(`Saved MCP context and explicit sharing ${width} ${theme}`, async ({page}) => {
  await page.setViewportSize({width, height:900})
  await page.addInitScript(t => localStorage.setItem('finance-theme', t), theme)
  const name = `Synthetic context ${width} ${theme}`

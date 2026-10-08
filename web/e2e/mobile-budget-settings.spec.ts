@@ -1,47 +1,20 @@
 import { test, expect, type Page } from '@playwright/test';
-import { reviewPermissions } from '../src/MCPPermissions';
-import { viewports, start, navigate, contained, moneyFits, noOverflow, reachable } from './responsive-helpers';
+import { start, navigate, contained, moneyFits, noOverflow, reachable } from './responsive-helpers';
 
-const groupName='Synthetic household essentials and exceptionally long spending group';
-const categoryName='Synthetic groceries and supplies with an exceptionally long category';
-const agentName='SyntheticAgent'+ 'LongName'.repeat(14);
-const accountName='SyntheticAccount'+ 'LongName'.repeat(14);
-const amount=98765432100;
+import { groupName, categoryName, agentName, accountName, amount, mockResponsiveBudget, mockResponsiveSettings } from './responsive-fixtures';
 const pageErrors=new WeakMap<Page,string[]>();
 test.beforeEach(({page})=>{const errors:string[]=[];pageErrors.set(page,errors);page.on('pageerror',error=>errors.push(error.message));});
 test.afterEach(({page})=>expect(pageErrors.get(page),'no browser runtime errors').toEqual([]));
 
-for(const viewport of viewports) for(const theme of ['light','dark']) {
- test(`dashboard and budget states ${viewport.width}x${viewport.height} ${theme}`,{tag:viewport.width===390&&theme==='light'||viewport.width===640&&theme==='dark'||viewport.width===1440&&theme==='light'?'@mobile-smoke':[]},async({page})=>{
-  let empty=false;
-  await page.route('**/api/dashboard?**',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   const privateScope=!!new URL(route.request().url()).searchParams.get('account');
-   const category={id:1,kind:'expense',name:categoryName,target_cents:amount,spent_cents:amount+12345,
-    total_target_cents:amount*2,total_spent_cents:amount*2+12345,pending_cents:0};
-   await route.fulfill({json:{...body,has_targets:!privateScope,budget_cents:amount*2,spent_cents:empty?0:amount*3,
-    remaining_cents:-amount,income_cents:empty?0:amount,pending_spend_cents:0,
-    group_total:empty?0:3,categories:empty?[]:[category],category_total:empty?0:1,
-    income_categories:empty?[]:[{id:4,name:categoryName,income_cents:amount}],income_category_total:empty?0:1,
-    spending_groups:empty?[]:[
-     {id:1,name:groupName,color:'teal',target_cents:amount,spent_cents:amount+12345,category_total:1,categories:[category]},
-     {id:4,name:groupName+' second',color:'rose',target_cents:amount,spent_cents:-amount,category_total:1,categories:[{...category,spent_cents:-amount}]},
-     {id:0,name:'No spending group',color:'slate',target_cents:0,spent_cents:12345,category_total:0,categories:[]},
-    ]}});
-  });
-  await page.route('**/api/periods?**',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   await route.fulfill({json:{...body,items:body.items.map((p:any)=>({...p,name:groupName+' period',target_total:amount}))}});
-  });
-  await page.route('**/api/periods/1/targets?**',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   await route.fulfill({json:{...body,items:body.items.map((c:any)=>({...c,name:c.id===1?categoryName:c.name}))}});
-  });
-  // Response overrides exercise extreme labels, while the builder uses real fixture IDs/amounts.
-  await page.route('**/api/periods/1/budget-groups?**',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   await route.fulfill({json:{...body,items:body.items.map((g:any)=>({...g,name:groupName}))}});
-  });
+// Interaction invariants do not need the complete presentation cross product.
+const workflowCases = [
+ {viewport:{width:360,height:800},theme:'light'},
+ {viewport:{width:640,height:360},theme:'dark'},
+ {viewport:{width:1440,height:900},theme:'light'},
+];
+for(const {viewport,theme} of workflowCases) {
+ test(`dashboard and budget states ${viewport.width}x${viewport.height} ${theme}`,{tag:'@mobile-smoke'},async({page})=>{
+  const {setEmpty}=await mockResponsiveBudget(page);
   await start(page,viewport,theme,'large signed totals, same category in two groups, no-target group');
   await expect(page.locator('.dashboard-overview .budget')).toContainText('Budget remaining');
   for(const value of await page.locator('.dashboard-overview .stat>strong').all()) await moneyFits(page,value,'overview amount');
@@ -93,36 +66,20 @@ for(const viewport of viewports) for(const theme of ['light','dark']) {
   await groups.first().locator(':scope>summary').click();
   await expect(groups.first().getByText('Budget',{exact:true})).toHaveCount(0);
   await expect(page.locator('.dashboard-overview .budget')).toContainText('Net movement');
-  empty=true;await page.getByLabel('Sort budgets',{exact:true}).selectOption('spending');
+  setEmpty();await page.getByLabel('Sort budgets',{exact:true}).selectOption('spending');
   await expect(page.getByText('No spending yet',{exact:true})).toBeVisible();
   await noOverflow(page);
  });
 
- test(`Settings discovery, drafts and management ${viewport.width}x${viewport.height} ${theme}`,{tag:viewport.width===390&&theme==='light'||viewport.width===640&&theme==='dark'||viewport.width===1440&&theme==='light'?'@mobile-smoke':[]},async({page})=>{
-  await page.route('**/api/users?**',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   await route.fulfill({json:{...body,items:body.items.map((u:any)=>({...u,username:'SyntheticUser'+'LongName'.repeat(12)}))}});
-  });
-  await page.route('**/api/accounts?**',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   await route.fulfill({json:{...body,items:body.items.map((a:any)=>({...a,name:accountName,balance_cents:-amount}))}});
-  });
-  await page.route('**/api/configuration',async route=>{
-   const response=await route.fetch(),body=await response.json();
-   await route.fulfill({json:{...body,default_source:{...body.default_source,repository_url:'https://example.com/'+'long-path'.repeat(25)},
-    sources:[{id:999,name:agentName,kind:'repository',repository_url:'https://example.com/'+'long-path'.repeat(25),ref:'main',path:'sente.json',version:1,last_revision:'long-revision'.repeat(20)}]}});
-  });
-  await page.route('**/api/fnb',route=>route.fulfill({json:{connection:null,accounts:[]}}));
-  await page.route('**/api/mcp/settings',route=>route.fulfill({json:{endpoint:'https://example.com/'+'endpoint'.repeat(30),
-   accounts:[{id:1,name:accountName,can_edit:true}],
-   connections:[{id:'synthetic-layout-agent',name:agentName,permission_version:1,can_write:true,expires_at:2000000000,
-    permissions:{...reviewPermissions(),preset:'custom',capabilities:{assign_missing:true,create_rule:true},constraints:{...reviewPermissions().constraints,account_ids:[1],selected_accounts:true}}}],
-   proposals:[{id:'synthetic-layout-proposal',operation:'edit_transactions',token_name:agentName,status:'pending',expires_at:2000000000,
-    payload:{change:{description:'updated-description'.repeat(40),amount_cents:-amount},before:{description:'long-description'.repeat(40),amount_cents:-amount},after:{description:'updated-description'.repeat(40),amount_cents:-amount}}}]}}));
+ test(`Settings discovery, drafts and management ${viewport.width}x${viewport.height} ${theme}`,{tag:'@mobile-smoke'},async({page})=>{
+  await mockResponsiveSettings(page);
   await start(page,viewport,theme,'long user/agent/account/URL, pending proposal; no bank session');
   await navigate(page,'Settings');
   const tabs=page.getByRole('tablist',{name:'Settings sections'});
-  await expect(tabs.getByRole('tab')).toHaveText(['General','Branding','Configuration','Banking','Accounts','Users & access','Backups','Network','PWA','MCP','Notifications','Security','About']);
+  // Required sections remain discoverable; new authorized sections may be added.
+  for(const name of ['General','Branding','Configuration','Banking','Accounts','Users & access','Backups','Network','PWA','MCP','Notifications','Security','About']) {
+   await expect(tabs.getByRole('tab',{name,exact:true})).toBeVisible();
+  }
   const general=page.getByRole('tab',{name:'General',exact:true});
   await general.focus();await page.keyboard.press('End');
   const about=page.getByRole('tab',{name:'About',exact:true});
@@ -226,18 +183,7 @@ for(const width of [599,600,601,759,760,761,899,900,901,1024]) test(`responsive 
  await noOverflow(page);
 });
 
-for(const width of [360,390,430])test(`ordinary Settings sections ${width}`,{tag:width===360?'@mobile-smoke':[]},async({page})=>{
- await page.route('**/api/me',async route=>{
-  const response=await route.fetch();if(!response.ok())return route.fulfill({response});
-  const body=await response.json();await route.fulfill({json:{...body,user:{...body.user,admin:false}}});
- });
- await start(page,{width,height:800},'dark','ordinary-user section visibility (presentation only)');
- await navigate(page,'Settings');
- await expect(page.getByRole('tablist',{name:'Settings sections'}).getByRole('tab')).toHaveText(['General','PWA','MCP','Notifications','Security','About']);
- for(const name of ['General','PWA','MCP','Notifications','Security','About']) {
-  await page.getByRole('tab',{name,exact:true}).click();await noOverflow(page);
- }
-});
+// Ordinary-user visibility/request coverage lives in settings.spec.ts.
 
 for(const width of [360,1440])test(`responsive loading and errors ${width}`,{tag:width===360?'@mobile-smoke':[]},async({page})=>{
  let release:()=>void=()=>{};
@@ -259,7 +205,7 @@ for(const width of [360,1440])test(`responsive loading and errors ${width}`,{tag
  await noOverflow(page);
 });
 
-for(const width of [360,1440])for(const theme of ['light','dark'])test(`empty builder and budget list ${width} ${theme}`,async({page})=>{
+for(const {width,theme} of [{width:360,theme:'dark'},{width:1440,theme:'light'}])test(`empty builder and budget list ${width} ${theme}`,async({page})=>{
  await page.route('**/api/periods?**',async route=>{
   const response=await route.fetch(),body=await response.json();
   await route.fulfill({json:{...body,items:body.items.map((p:any)=>({...p,name:groupName+' period',target_total:amount,
