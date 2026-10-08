@@ -26,7 +26,10 @@ func (a *App) updateSettings(w http.ResponseWriter, r *http.Request) error {
 	if b.Day < 1 || b.Day > 31 {
 		return fail(400, "Start day must be 1–31")
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
 		if _, err := tx.Exec("UPDATE settings SET start_day=? WHERE id=1", b.Day); err != nil {
 			return err
 		}

@@ -38,7 +38,6 @@ func markSeen(tx *sql.Tx, user, id, version int64) error {
 }
 
 func (a *App) transactionSeen(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	var b struct {
 		Seen  *bool `json:"seen"`
 		Items []struct {
@@ -52,7 +51,7 @@ func (a *App) transactionSeen(w http.ResponseWriter, r *http.Request) error {
 	if b.Seen == nil || len(b.Items) == 0 || len(b.Items) > 100 {
 		return fail(400, "Choose seen or unseen and select 1–100 transactions")
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		for _, item := range b.Items {
 			var account, version int64
 			if err := tx.QueryRow("SELECT account_id,version FROM transactions WHERE id=?", item.ID).Scan(&account, &version); err != nil {

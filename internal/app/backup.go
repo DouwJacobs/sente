@@ -27,6 +27,12 @@ func lockDB(path string) (*os.File, error) {
 func (a *App) Backup() (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	return a.backupLocked()
+}
+
+// VACUUM INTO cannot run in a SQL transaction. The shared write mutex keeps
+// permission revocations serialized with authorization and snapshot creation.
+func (a *App) backupLocked() (string, error) {
 	if err := os.MkdirAll(a.BackupDir, 0700); err != nil {
 		return "", err
 	}
@@ -112,7 +118,16 @@ func (a *App) backupNow(w http.ResponseWriter, r *http.Request) error {
 	if err := requireAdmin(Current(r)); err != nil {
 		return err
 	}
-	if _, err := a.Backup(); err != nil {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	u, err := browserActor(a.DB, r)
+	if err != nil {
+		return err
+	}
+	if err = requireAdmin(u); err != nil {
+		return err
+	}
+	if _, err = a.backupLocked(); err != nil {
 		return err
 	}
 	success(w)

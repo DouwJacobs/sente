@@ -42,11 +42,8 @@ func (a *App) updatePersonalMCPContext(w http.ResponseWriter, r *http.Request) e
 	if !utf8.ValidString(b.Content) || utf8.RuneCountInString(b.Content) > mcpContextLimit || b.Version < 0 {
 		return fail(400, "Use no more than 6000 characters of context")
 	}
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, false); err != nil {
-			return err
-		}
-		current, err := readPersonalMCPContext(tx, Current(r).ID)
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		current, err := readPersonalMCPContext(tx, u.ID)
 		if err != nil {
 			return err
 		}
@@ -54,15 +51,15 @@ func (a *App) updatePersonalMCPContext(w http.ResponseWriter, r *http.Request) e
 			return fail(409, "Your context changed in another session. Reload it before saving.")
 		}
 		if current.Version == 0 {
-			_, err = tx.Exec("INSERT INTO mcp_user_context(user_id,content,version) VALUES(?,?,1)", Current(r).ID, b.Content)
+			_, err = tx.Exec("INSERT INTO mcp_user_context(user_id,content,version) VALUES(?,?,1)", u.ID, b.Content)
 		} else {
-			_, err = tx.Exec("UPDATE mcp_user_context SET content=?,version=version+1 WHERE user_id=? AND version=?", b.Content, Current(r).ID, b.Version)
+			_, err = tx.Exec("UPDATE mcp_user_context SET content=?,version=version+1 WHERE user_id=? AND version=?", b.Content, u.ID, b.Version)
 		}
 		if err != nil {
 			return err
 		}
 		// Audit the action and size, never the user's potentially sensitive prose.
-		return audit(tx, Current(r), nil, "mcp_context", Current(r).ID, "updated", map[string]any{"version": b.Version + 1, "characters": utf8.RuneCountInString(b.Content)})
+		return audit(tx, u, nil, "mcp_context", u.ID, "updated", map[string]any{"version": b.Version + 1, "characters": utf8.RuneCountInString(b.Content)})
 	})
 	if err != nil {
 		return err

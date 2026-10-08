@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -24,6 +26,9 @@ func (a *App) refreshFNB(owner int64, manual bool) error {
 	return err
 }
 func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]ParsedFile, error) {
+	return a.runFNBRequest(owner, manual, transactions, nil, scope...)
+}
+func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *http.Request, scope ...int64) ([]ParsedFile, error) {
 	select {
 	case <-a.stop:
 		return nil, fail(503, "Tracker is stopping")
@@ -45,6 +50,14 @@ func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]
 	var disabled bool
 	if err := a.DB.QueryRow("SELECT id,username,admin,budget_member,disabled FROM users WHERE id=?", owner).Scan(&u.ID, &u.Username, &u.Admin, &u.Member, &disabled); err != nil || disabled || !u.Admin {
 		return nil, fail(403, "Connection owner must be an enabled administrator")
+	}
+	if request != nil {
+		cookie, err := request.Cookie("finance_session")
+		if err != nil {
+			return nil, fail(401, "Please sign in again")
+		}
+		u.browserSession = hash(cookie.Value)
+		u.browserCSRF = request.Header.Get("X-CSRF-Token")
 	}
 	var secret []byte
 	var interval int
@@ -108,7 +121,18 @@ func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]
 	}
 	runID := credentials.RunID
 	now := time.Now().UTC().Format(time.RFC3339)
-	if _, err := a.DB.Exec("UPDATE fnb_connections SET state='refreshing',last_attempt=?,last_error='',last_diagnostics='{}',version=version+1 WHERE user_id=?", now, owner); err != nil {
+	if err := a.fnbWrite(u, func(tx *sql.Tx, actor User) error {
+		if selected > 0 && !ruleAccess(tx, a, actor, selected) {
+			return fail(403, "Account editor access required")
+		}
+		for _, target := range targets {
+			if !ruleAccess(tx, a, actor, target.ID) {
+				return fail(403, "Account access changed")
+			}
+		}
+		_, err := tx.Exec("UPDATE fnb_connections SET state='refreshing',last_attempt=?,last_error='',last_diagnostics='{}',version=version+1 WHERE user_id=?", now, owner)
+		return err
+	}); err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
@@ -129,6 +153,10 @@ func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]
 	var previews []ParsedFile
 	snapshot, err := provider(ctx, credentials, debug)
 	credentials = fnbCredentials{}
+	if ctx.Err() != nil {
+		snapshot = fnbSnapshot{Error: "CONNECTOR_TIMEOUT", Diagnostics: map[string]int{"refresh_timed_out": 1}}
+		err = nil
+	}
 	code := "REFRESH_FAILED"
 	if err == nil && snapshot.Error != "" {
 		code = snapshot.Error

@@ -228,7 +228,7 @@ func rulesetActor(q queryer, actor *User) (User, error) {
 		return rulesetUser(q)
 	}
 	var u User
-	err := q.QueryRow("SELECT id,username,admin,budget_member FROM users WHERE id=? AND disabled=0", actor.ID).Scan(&u.ID, &u.Username, &u.Admin, &u.Member)
+	err := q.QueryRow("SELECT id,username,admin,budget_member FROM users WHERE id=? AND disabled=0 AND deleted_at IS NULL", actor.ID).Scan(&u.ID, &u.Username, &u.Admin, &u.Member)
 	if err != nil || !u.Admin || !u.Member {
 		return User{}, fail(403, "Administrator access and budget membership required")
 	}

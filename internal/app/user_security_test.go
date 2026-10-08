@@ -217,12 +217,12 @@ func TestUserSecurityRechecksSessionAndAdmin(t *testing.T) {
 	r.Header.Set("X-CSRF-Token", "csrf")
 	r = r.WithContext(context.WithValue(r.Context(), authKey, authContext{User: e.owner, CSRF: "csrf"}))
 	securityExec(t, e, "UPDATE users SET admin=0 WHERE id=1")
-	err := e.a.write(func(tx *sql.Tx) error { return userSecurityActorTx(tx, r, true) })
+	err := e.a.browserWrite(r, func(tx *sql.Tx, u User) error { return requireAdmin(u) })
 	if err == nil {
 		t.Fatal("stale admin accepted")
 	}
 	securityExec(t, e, "DELETE FROM sessions WHERE user_id=1")
-	err = e.a.write(func(tx *sql.Tx) error { return userSecurityActorTx(tx, r, false) })
+	err = e.a.browserWrite(r, func(tx *sql.Tx, u User) error { return nil })
 	if err == nil {
 		t.Fatal("revoked session accepted")
 	}

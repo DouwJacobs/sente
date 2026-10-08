@@ -29,7 +29,12 @@ func (a *App) saveSpendingGroup(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	id := parseID(r)
-	err := a.write(func(tx *sql.Tx) error { return saveSpendingGroupTx(tx, u, &id, b) })
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
+		return saveSpendingGroupTx(tx, u, &id, b)
+	})
 	if err != nil {
 		return err
 	}

@@ -85,9 +85,9 @@ func (a *App) createLabel(w http.ResponseWriter, r *http.Request) error {
 		return e
 	}
 	var id, version int64
-	e := a.write(func(tx *sql.Tx) error {
+	e := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		var e error
-		id, e = labelID(tx, Current(r), a, b.Account, b.Kind, b.Name, true)
+		id, e = labelID(tx, u, a, b.Account, b.Kind, b.Name, true)
 		if e != nil {
 			return e
 		}
@@ -106,7 +106,7 @@ func (a *App) createLabel(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 			if b.Logo != nil {
-				if e = updateMerchantLogo(tx, a, Current(r), id, version, *b.Logo); e != nil {
+				if e = updateMerchantLogo(tx, a, u, id, version, *b.Logo); e != nil {
 					return e
 				}
 				version++
@@ -137,8 +137,7 @@ func (a *App) updateLabel(w http.ResponseWriter, r *http.Request) error {
 	if e := decode(r, &b); e != nil {
 		return e
 	}
-	u := Current(r)
-	e := a.write(func(tx *sql.Tx) error {
+	e := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		if b.Kind != "merchant" {
 			return fail(400, "Only merchants can be updated")
 		}

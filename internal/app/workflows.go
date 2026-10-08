@@ -402,7 +402,7 @@ func (a *App) bulkApply(w http.ResponseWriter, r *http.Request) error {
 		return fail(400, "Wrong preview type")
 	}
 	count := 0
-	e := a.write(func(tx *sql.Tx) error {
+	e := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		exact, _, e := a.prepareBulk(tx, u, v.Request)
 		if e != nil {
 			return e

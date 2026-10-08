@@ -31,7 +31,10 @@ func (a *App) fnbDebug(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		res, err := tx.Exec("UPDATE fnb_connections SET debug_browser=?,version=version+1 WHERE user_id=? AND version=? AND state!='refreshing'", b.Debug, u.ID, b.Version)
 		if err != nil {
 			return err

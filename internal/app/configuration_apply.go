@@ -16,8 +16,8 @@ func (a *App) configurationApply(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	summary := &RulesetImportSummary{}
-	err := a.write(func(tx *sql.Tx) error {
-		u, err := rulesetActor(tx, ptrUser(Current(r)))
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		u, err := rulesetActor(tx, ptrUser(u))
 		if err != nil {
 			return err
 		}
@@ -94,8 +94,8 @@ func (a *App) configurationForget(w http.ResponseWriter, r *http.Request) error 
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	err := a.write(func(tx *sql.Tx) error {
-		u, err := rulesetActor(tx, ptrUser(Current(r)))
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		u, err := rulesetActor(tx, ptrUser(u))
 		if err != nil {
 			return err
 		}

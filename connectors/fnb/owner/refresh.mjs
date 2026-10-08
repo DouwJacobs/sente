@@ -3,6 +3,7 @@
 import {mkdtemp,rm,access} from 'node:fs/promises'
 import {tmpdir,homedir} from 'node:os'
 import {join} from 'node:path'
+import {createInterface} from 'node:readline'
 import {normalizeAccounts,ProbeError} from './accounts.mjs'
 import {fetchTransactions,resolveMaskedCreditAccounts} from './transactions.mjs'
 export function exactBalance(text){
@@ -242,23 +243,45 @@ export function workerFailure(err,phase,aborted=false){
  const error=err instanceof ProbeError&&allowed.includes(err.code)?err.code:aborted?'CONNECTOR_TIMEOUT':phase<=4?'CONNECTOR_START_FAILED':'REFRESH_FAILED'
  return {accounts:[],skipped:0,error,diagnostics:{...(err instanceof ProbeError?err.diagnostics||{}:{}),refresh_phase:phase,...(aborted?{refresh_timed_out:1}:{})}}
 }
+// First bounded JSON line contains credentials; later frames contain cancellation only.
+export function readWorkerInput(stream,abort){
+ const control=createInterface({input:stream,crlfDelay:Infinity})
+ return new Promise((resolve,reject)=>{
+  let received=false
+  control.on('line',line=>{
+   try{
+    if(Buffer.byteLength(line)>16384)throw new Error('input limit')
+    const value=JSON.parse(line)
+    if(!received){received=true;resolve({credentials:value,control})}
+    else if(value.cancel===true)abort.abort()
+   }catch{abort.abort();if(!received)reject(new ProbeError('REFRESH_FAILED'))}
+  })
+  control.on('close',()=>{if(!received)reject(new ProbeError('REFRESH_FAILED'));else abort.abort()})
+  stream.on('error',()=>{abort.abort();if(!received)reject(new ProbeError('REFRESH_FAILED'))})
+ })
+}
+
 export async function main(){
- let browser,context,profile;let result,phase=1
+ let browser,context,profile,control;let result,phase=1
+ process.stderr.write(`FNB_WORKER_PID ${process.pid}\n`)
  const abort=new AbortController()
  const cancel=()=>abort.abort()
  process.on('SIGINT',cancel);process.on('SIGTERM',cancel)
  const timeout=setTimeout(cancel,205000)
  try{
-  let input='';for await(const chunk of process.stdin){input+=chunk;if(input.length>16384)throw new ProbeError('REFRESH_FAILED')}
-  const credentials=JSON.parse(input);input=''
+  const input=await readWorkerInput(process.stdin,abort)
+  const credentials=input.credentials;control=input.control
   if(typeof credentials.username!=='string'||typeof credentials.password!=='string'||!credentials.username||!credentials.password||!Array.isArray(credentials.hidden||[]))throw new ProbeError('REFRESH_FAILED')
   phase=2
   const {default:puppeteer}=await import('puppeteer-core')
   phase=3
-  profile=await mkdtemp(join(tmpdir(),'finance-fnb-refresh-'))
+  if(abort.signal.aborted)throw new ProbeError('REFRESH_FAILED')
+  profile=credentials.profile_directory||await mkdtemp(join(tmpdir(),'finance-fnb-refresh-'))
   const env={};for(const key of ['PATH','Path','SYSTEMROOT','SystemRoot','WINDIR','TEMP','TMP','HOME','USERPROFILE','LOCALAPPDATA','APPDATA','DISPLAY','WAYLAND_DISPLAY','XDG_RUNTIME_DIR'])if(process.env[key])env[key]=process.env[key]
   phase=4
   browser=await puppeteer.launch({executablePath:await executable(),headless:!credentials.visible,pipe:true,userDataDir:profile,env,timeout:30000})
+  const browserPID=browser.process()?.pid;if(browserPID)process.stderr.write(`FNB_BROWSER_PID ${browserPID}\n`)
+  if(abort.signal.aborted)throw new ProbeError('REFRESH_FAILED')
   context=await browser.createBrowserContext();const page=await context.newPage();if(credentials.visible)await page.bringToFront()
   phase=5
   result=await loginAndAccounts(page,credentials,abort.signal)
@@ -275,10 +298,13 @@ export async function main(){
   result=workerFailure(err,phase,abort.signal.aborted)
  }finally{
   if(context)result=await finishBankSession(context,result)
-  clearTimeout(timeout);process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel)
+  clearTimeout(timeout)
   try{await context?.close()}catch{};try{await browser?.close()}catch{}
   if(profile){try{await rm(profile,{recursive:true,force:true})}catch{result={accounts:[],skipped:0,error:'REFRESH_FAILED',diagnostics:{refresh_phase:8,profile_cleanup_failed:1}}}}
+  control?.removeAllListeners('close');control?.close();process.stdin.destroy()
+  process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel)
  }
+ if(abort.signal.aborted)result=workerFailure(null,phase,true)
  process.stdout.write(JSON.stringify(result))
 }
 // Import-safe for synthetic unit tests; no browser is launched on import.

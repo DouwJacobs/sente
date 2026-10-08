@@ -6,7 +6,6 @@ import (
 )
 
 func (a *App) linkTransfer(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	var b struct {
 		Left         int64 `json:"left_id"`
 		Right        int64 `json:"right_id"`
@@ -19,7 +18,7 @@ func (a *App) linkTransfer(w http.ResponseWriter, r *http.Request) error {
 	if b.Left == b.Right {
 		return fail(400, "Choose two different transactions")
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		accounts := []int64{}
 		amounts := []int64{}
 		versions := []int64{b.LeftVersion, b.RightVersion}
@@ -70,9 +69,8 @@ func (a *App) linkTransfer(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func (a *App) unlinkTransfer(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	id := parseID(r)
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		var left, right int64
 		if err := tx.QueryRow("SELECT left_id,right_id FROM transfer_links WHERE left_id=? OR right_id=?", id, id).Scan(&left, &right); err != nil {
 			return fail(404, "Transfer link not found")

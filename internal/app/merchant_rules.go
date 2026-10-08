@@ -38,7 +38,7 @@ func (a *App) saveMerchantRule(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	id := parseID(r)
-	if err := a.write(func(tx *sql.Tx) error { return a.writeMerchantRule(tx, Current(r), &id, b) }); err != nil {
+	if err := a.browserWrite(r, func(tx *sql.Tx, u User) error { return a.writeMerchantRule(tx, u, &id, b) }); err != nil {
 		return err
 	}
 	send(w, map[string]any{"id": id})

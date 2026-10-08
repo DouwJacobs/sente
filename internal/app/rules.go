@@ -69,13 +69,12 @@ func (a *App) rules(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func (a *App) saveRule(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	var b ruleInput
 	if err := decode(r, &b); err != nil {
 		return err
 	}
 	id := parseID(r)
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		return a.writeRule(tx, u, &id, &b)
 	})
 	if err != nil {
@@ -146,8 +145,7 @@ func (a *App) batchRules(w http.ResponseWriter, r *http.Request) error {
 	if len(b.Rules) == 0 || len(b.Rules) > 10000 {
 		return fail(400, "Choose 1–10000 account rules")
 	}
-	u := Current(r)
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		if b.AllCurrent {
 			if r.Method == "DELETE" || len(b.Rules) != 1 || b.Rules[0].ID != 0 {
 				return fail(400, "All current accounts applies only to a new rule")
@@ -213,7 +211,6 @@ func (a *App) batchRules(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func (a *App) deleteRule(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	id := parseID(r)
 	var b struct {
 		Version int64 `json:"version,omitempty"`
@@ -221,7 +218,7 @@ func (a *App) deleteRule(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		if id < 0 {
 			return a.deleteBuiltinRule(tx, u, id, b.Version)
 		}
@@ -354,8 +351,7 @@ func (a *App) previewRule(w http.ResponseWriter, r *http.Request) error {
 		return fail(400, "Provide a description and debit/credit direction")
 	}
 	var result any
-	err := a.write(func(tx *sql.Tx) error {
-		u := Current(r)
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		if !b.AllCurrent {
 			row, err := a.previewRuleRow(tx, u, b)
 			result = row

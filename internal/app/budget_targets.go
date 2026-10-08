@@ -17,7 +17,12 @@ func (a *App) updateTargets(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	if err := a.write(func(tx *sql.Tx) error { return updateTargetsTx(tx, u, id, b) }); err != nil {
+	if err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
+		return updateTargetsTx(tx, u, id, b)
+	}); err != nil {
 		return err
 	}
 	success(w)

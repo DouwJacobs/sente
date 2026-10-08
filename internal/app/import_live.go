@@ -95,11 +95,7 @@ func (a *App) annotateLiveDuplicates(q queryer, account int64, p *ParsedFile) er
 // Importing and rule application do not depend on an open browser UI. Bad data
 // and conflicting bank IDs remain in Import activity, outside category review.
 func (a *App) autoCommitFNB(u User, previews []ParsedFile) error {
-	return a.write(func(tx *sql.Tx) error {
-		var active bool
-		if err := tx.QueryRow("SELECT admin=1 AND disabled=0,budget_member FROM users WHERE id=?", u.ID).Scan(&active, &u.Member); err != nil || !active {
-			return fail(403, "Connection access revoked")
-		}
+	return a.fnbWrite(u, func(tx *sql.Tx, u User) error {
 		targets, err := a.fnbTargets(tx, u)
 		if err != nil {
 			return err

@@ -444,7 +444,7 @@ func (a *App) rebalanceApply(w http.ResponseWriter, r *http.Request) error {
 	if exact.Kind != "rebalance" || exact.Period != parseID(r) {
 		return fail(400, "Wrong preview type")
 	}
-	e := a.write(func(tx *sql.Tx) error {
+	e := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		before, e := a.rebalanceState(tx, u, exact.Period, exact.Input)
 		if e != nil {
 			return e

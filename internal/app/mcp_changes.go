@@ -416,7 +416,7 @@ func (a *App) executeMCPChange(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	return result, nil
 }
 func (a *App) mcpTokenActive(q queryer, i mcpIdentity) bool {
-	return queryInt(q, "SELECT COUNT(*) FROM mcp_tokens t JOIN users u ON u.id=t.user_id WHERE t.id=? AND t.user_id=? AND t.can_write=1 AND t.expires_at>? AND u.disabled=0 AND u.admin=? AND u.budget_member=?", i.TokenID, i.User.ID, time.Now().Unix(), i.User.Admin, i.User.Member) == 1
+	return queryInt(q, "SELECT COUNT(*) FROM mcp_tokens t JOIN users u ON u.id=t.user_id WHERE t.id=? AND t.user_id=? AND t.can_write=1 AND t.expires_at>? AND u.disabled=0 AND u.deleted_at IS NULL AND u.admin=? AND u.budget_member=?", i.TokenID, i.User.ID, time.Now().Unix(), i.User.Admin, i.User.Member) == 1
 }
 func (a *App) mcpApplyTool(ctx context.Context, _ *mcp.CallToolRequest, in mcpProposalID) (*mcp.CallToolResult, any, error) {
 	identity := ctx.Value(mcpKey).(mcpIdentity)
@@ -527,8 +527,7 @@ func (a *App) mcpSettings(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func (a *App) revokeMCPToken(w http.ResponseWriter, r *http.Request) error {
-	err := a.write(func(tx *sql.Tx) error {
-		u := Current(r)
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		res, err := tx.Exec("DELETE FROM mcp_tokens WHERE id=? AND user_id=?", parseID(r), u.ID)
 		if err != nil {
 			return err
@@ -583,7 +582,7 @@ func (a *App) decideMCPProposal(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	if err := a.write(func(tx *sql.Tx) error { return a.decideMCPProposalTx(tx, Current(r), r.PathValue("id"), b.Approve) }); err != nil {
+	if err := a.browserWrite(r, func(tx *sql.Tx, u User) error { return a.decideMCPProposalTx(tx, u, r.PathValue("id"), b.Approve) }); err != nil {
 		return err
 	}
 	success(w)
@@ -607,9 +606,9 @@ func (a *App) decideMCPProposalBatch(w http.ResponseWriter, r *http.Request) err
 		}
 		seen[id] = true
 	}
-	if err := a.write(func(tx *sql.Tx) error {
+	if err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		for _, id := range b.IDs {
-			if err := a.decideMCPProposalTx(tx, Current(r), id, b.Approve); err != nil {
+			if err := a.decideMCPProposalTx(tx, u, id, b.Approve); err != nil {
 				return err
 			}
 		}

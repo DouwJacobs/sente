@@ -26,12 +26,8 @@ func (a *App) applyFNBSnapshot(u User, snapshot fnbSnapshot, observed string) er
 			}
 		}
 	}
-	return a.write(func(tx *sql.Tx) error {
+	return a.fnbWrite(u, func(tx *sql.Tx, u User) error {
 		// Recheck permissions after network work; no grant or preference changes occur during sync.
-		var active bool
-		if err := tx.QueryRow("SELECT admin=1 AND disabled=0,budget_member FROM users WHERE id=?", u.ID).Scan(&active, &u.Member); err != nil || !active {
-			return fail(403, "Connection access revoked")
-		}
 		for _, row := range snapshot.Accounts {
 			var balance any = nil
 			observedTime, err := time.Parse(time.RFC3339, observed)

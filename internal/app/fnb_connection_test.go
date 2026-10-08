@@ -251,7 +251,7 @@ func TestFNBWindowsStdinTransportSyntheticOnly(t *testing.T) {
 		t.Skip("Windows Node unavailable")
 	}
 	runner := filepath.Join(t.TempDir(), "synthetic-worker.mjs")
-	script := `let input='';for await(const chunk of process.stdin)input+=chunk;const value=JSON.parse(input);if(value.username!=='synthetic-only'||value.password!=='synthetic-only'||value.hidden[0]!=='123456')process.exit(1);process.stdout.write(JSON.stringify({accounts:[{name:'Synthetic',bank_id:'001234',balance_decimal:'0.01'}],skipped:0}))`
+	script := `const {createInterface}=await import('node:readline');const control=createInterface({input:process.stdin});const value=await new Promise(resolve=>control.once('line',line=>resolve(JSON.parse(line))));control.close();process.stdin.destroy();if(value.username!=='synthetic-only'||value.password!=='synthetic-only'||value.hidden[0]!=='123456')process.exit(1);process.stdout.write(JSON.stringify({accounts:[{name:'Synthetic',bank_id:'001234',balance_decimal:'0.01'}],skipped:0}))`
 	if err := os.WriteFile(runner, []byte(script), 0600); err != nil {
 		t.Fatal(err)
 	}

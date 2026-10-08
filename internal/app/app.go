@@ -62,14 +62,18 @@ type App struct {
 	backupWG               sync.WaitGroup
 	notificationOnce       sync.Once
 	notificationWG         sync.WaitGroup
+	authMaintenanceOnce    sync.Once
+	authMaintenanceWG      sync.WaitGroup
 	lock                   *os.File
 }
 type User struct {
-	MCPAccounts []int64 `json:"-"`
-	ID          int64   `json:"id"`
-	Username    string  `json:"username"`
-	Admin       bool    `json:"admin"`
-	Member      bool    `json:"budget_member"`
+	browserSession string
+	browserCSRF    string
+	MCPAccounts    []int64 `json:"-"`
+	ID             int64   `json:"id"`
+	Username       string  `json:"username"`
+	Admin          bool    `json:"admin"`
+	Member         bool    `json:"budget_member"`
 }
 type authContext struct {
 	User User
@@ -132,6 +136,7 @@ func (a *App) Close() error {
 	close(a.stop)
 	a.backupWG.Wait()
 	a.notificationWG.Wait()
+	a.authMaintenanceWG.Wait()
 	a.fnbWG.Wait()
 	a.fnbMu.Lock()
 	defer a.fnbMu.Unlock()
@@ -366,7 +371,7 @@ func (a *App) protect(next http.Handler) http.HandlerFunc {
 			return
 		}
 		var auth authContext
-		err = a.DB.QueryRow("SELECT u.id,u.username,u.admin,u.budget_member,s.csrf FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at>? AND u.disabled=0", hash(cookie.Value), time.Now().Unix()).Scan(&auth.User.ID, &auth.User.Username, &auth.User.Admin, &auth.User.Member, &auth.CSRF)
+		err = a.DB.QueryRow("SELECT u.id,u.username,u.admin,u.budget_member,s.csrf FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND s.expires_at>? AND u.disabled=0 AND u.deleted_at IS NULL", hash(cookie.Value), time.Now().Unix()).Scan(&auth.User.ID, &auth.User.Username, &auth.User.Admin, &auth.User.Member, &auth.CSRF)
 		if err != nil {
 			wrap(func(http.ResponseWriter, *http.Request) error { return fail(401, "Session expired") })(w, r)
 			return
@@ -387,20 +392,9 @@ func (a *App) login(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	host := a.clientIP(r)
-	a.loginMu.Lock()
-	now := time.Now()
-	recent := []time.Time{}
-	for _, t := range a.attempts[host] {
-		if now.Sub(t) < 15*time.Minute {
-			recent = append(recent, t)
-		}
-	}
-	if len(recent) >= 10 {
-		a.loginMu.Unlock()
+	if !a.authAttempt(host, 10, time.Now()) {
 		return fail(429, "Too many attempts; try again in 15 minutes")
 	}
-	a.attempts[host] = append(recent, now)
-	a.loginMu.Unlock()
 	var u User
 	var password string
 	err := a.DB.QueryRow("SELECT id,username,password,admin,budget_member FROM users WHERE username=? AND disabled=0", body.Username).Scan(&u.ID, &u.Username, &password, &u.Admin, &u.Member)
@@ -453,7 +447,10 @@ func (a *App) routes() http.Handler {
 	}))
 	m.HandleFunc("POST /api/logout", wrap(func(w http.ResponseWriter, r *http.Request) error {
 		c, _ := r.Cookie("finance_session")
-		_, err := a.DB.Exec("DELETE FROM sessions WHERE token=?", hash(c.Value))
+		err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+			_, err := tx.Exec("DELETE FROM sessions WHERE token=? AND user_id=?", hash(c.Value), u.ID)
+			return err
+		})
 		http.SetCookie(w, &http.Cookie{Name: "finance_session", Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: a.Secure, SameSite: http.SameSiteStrictMode})
 		success(w)
 		return err

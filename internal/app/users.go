@@ -34,11 +34,30 @@ func (a *App) createUser(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	id, err := a.CreateUser(b.Username, b.Password, b.Admin, b.Member)
+	b.Username = strings.TrimSpace(b.Username)
+	if len(b.Username) < 2 || len(b.Username) > 80 {
+		return fail(400, "Use a username of 2–80 characters and password of 12–72 bytes")
+	}
+	digest, err := passwordDigest(b.Password)
 	if err != nil {
 		return err
 	}
-	if err := audit(a.DB, u, nil, "user", id, "created", map[string]any{"username": b.Username, "admin": b.Admin, "budget_member": b.Member}); err != nil {
+	var id int64
+	err = a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
+		res, err := tx.Exec("INSERT INTO users(username,password,admin,budget_member) VALUES(?,?,?,?)", b.Username, digest, b.Admin, b.Member)
+		if err != nil {
+			return fail(409, "Username already exists")
+		}
+		id, err = res.LastInsertId()
+		if err != nil {
+			return err
+		}
+		return audit(tx, u, nil, "user", id, "created", map[string]any{"username": b.Username, "admin": b.Admin, "budget_member": b.Member})
+	})
+	if err != nil {
 		return err
 	}
 	send(w, map[string]int64{"id": id})
@@ -64,8 +83,8 @@ func (a *App) updateUser(w http.ResponseWriter, r *http.Request) error {
 	if len(b.Username) < 2 || len(b.Username) > 80 {
 		return fail(400, "Username must be 2–80 characters")
 	}
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, true); err != nil {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
 			return err
 		}
 		var wasAdmin bool

@@ -10,10 +10,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 func runFNBProvider(ctx context.Context, credentials fnbCredentials, manual bool) (fnbSnapshot, error) {
-	var snapshot fnbSnapshot
+	return runFNBProviderGrace(ctx, credentials, manual, fnbCleanupGrace)
+}
+func runFNBProviderGrace(ctx context.Context, credentials fnbCredentials, manual bool, grace time.Duration) (snapshot fnbSnapshot, returned error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return snapshot, err
@@ -34,19 +37,27 @@ func runFNBProvider(ctx context.Context, credentials fnbCredentials, manual bool
 	if runner == "" {
 		runner = filepath.Join(cwd, "connectors/fnb/owner/refresh.mjs")
 	}
-	payload, _ := json.Marshal(map[string]any{"username": credentials.Username, "password": credentials.Password, "visible": manual, "hidden": credentials.Hidden, "transaction_accounts": credentials.TransactionAccounts, "run_id": credentials.RunID})
 	nodeEnv, bridgeErr := fnbNodeEnvironment(ctx, executable)
 	if bridgeErr != nil {
 		return fnbSnapshot{Error: "CONNECTOR_START_FAILED", Diagnostics: map[string]int{"connector_interop_failed": 1}}, nil
 	}
+	profileHost, profileWorker, profileErr := fnbProfile(ctx, executable, nodeEnv)
+	if profileErr != nil {
+		return fnbSnapshot{Error: "CONNECTOR_START_FAILED", Diagnostics: map[string]int{"connector_process_failed": 1}}, nil
+	}
+	defer func() {
+		if err := os.RemoveAll(profileHost); err != nil {
+			snapshot = fnbSnapshot{Error: "CONNECTOR_START_FAILED", Diagnostics: map[string]int{"profile_cleanup_failed": 1}}
+			returned = nil
+		}
+	}()
+	payload, _ := json.Marshal(map[string]any{"username": credentials.Username, "password": credentials.Password, "visible": manual, "hidden": credentials.Hidden, "transaction_accounts": credentials.TransactionAccounts, "run_id": credentials.RunID, "profile_directory": profileWorker})
 	cmd := exec.CommandContext(ctx, executable, runner)
 	cmd.Env = nodeEnv
-	cmd.Stdin = bytes.NewReader(payload)
 	defer clear(payload)
 	var output bytes.Buffer
 	cmd.Stdout = &limitedFNBWriter{writer: &output, remaining: 16 << 20}
-	cmd.Stderr = io.Discard
-	if err = cmd.Run(); err != nil {
+	if err = runFNBCommand(ctx, cmd, payload, grace); err != nil {
 		code := "CONNECTOR_START_FAILED"
 		diagnostics := map[string]int{"connector_process_failed": 1}
 		if ctx.Err() != nil {

@@ -78,7 +78,10 @@ func (a *App) fnbConnect(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	err = a.write(func(tx *sql.Tx) error {
+	err = a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		if exists {
 			res, err := tx.Exec("UPDATE fnb_connections SET secret=?,state='ready',last_error='',next_due=NULL,interval_hours=0,version=version+1 WHERE user_id=? AND version=?", secret, u.ID, b.Version)
 			if err != nil {
@@ -122,7 +125,10 @@ func (a *App) fnbSchedule(w http.ResponseWriter, r *http.Request) error {
 	if b.Hours > 0 {
 		due = time.Now().Add(time.Duration(b.Hours) * time.Hour).Unix()
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		res, err := tx.Exec("UPDATE fnb_connections SET interval_hours=?,next_due=?,version=version+1 WHERE user_id=? AND version=? AND state!='refreshing'", b.Hours, due, u.ID, b.Version)
 		if err != nil {
 			return err
@@ -145,7 +151,10 @@ func (a *App) fnbDisconnect(w http.ResponseWriter, r *http.Request) error {
 	}
 	a.fnbMu.Lock()
 	defer a.fnbMu.Unlock()
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		if _, err := tx.Exec("DELETE FROM fnb_connections WHERE user_id=?", u.ID); err != nil {
 			return err
 		}
@@ -169,7 +178,10 @@ func (a *App) fnbVisibility(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		var id sql.NullInt64
 		if err := tx.QueryRow("SELECT account_id FROM fnb_discoveries WHERE user_id=? AND bank_id=?", u.ID, b.BankID).Scan(&id); err != nil {
 			return fail(404, "Discovered account not found")
@@ -209,7 +221,7 @@ func (a *App) fnbRefresh(w http.ResponseWriter, r *http.Request) error {
 	if b.AccountID < 0 {
 		return fail(400, "Choose an account")
 	}
-	if _, err := a.runFNB(u.ID, true, false, b.AccountID); err != nil {
+	if _, err := a.runFNBBrowser(r, false, b.AccountID); err != nil {
 		return err
 	}
 	success(w)

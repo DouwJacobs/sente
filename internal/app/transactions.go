@@ -37,14 +37,13 @@ type transactionInput struct {
 }
 
 func (a *App) editTransaction(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	id := parseID(r)
 	var b transactionInput
 	if err := decode(r, &b); err != nil {
 		return err
 	}
 	application := pendingRuleResult{}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		var err error
 		application, err = a.editTransactionTx(tx, u, id, b)
 		return err

@@ -59,7 +59,10 @@ func (a *App) updateBudgetBuilder(w http.ResponseWriter, r *http.Request) error 
 	if len(b.Groups) == 0 || len(b.Groups) > 1000 {
 		return fail(400, "Choose budget groups to save")
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
 		res, err := tx.Exec("UPDATE periods SET version=version+1 WHERE id=? AND version=?", id, b.Version)
 		if err != nil {
 			return err

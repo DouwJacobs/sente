@@ -319,8 +319,7 @@ func (a *App) updateMCPPermissions(w http.ResponseWriter, r *http.Request) error
 	if !b.Consent {
 		return fail(400, "Confirm the displayed connection permissions")
 	}
-	err := a.write(func(tx *sql.Tx) error {
-		u := Current(r)
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		id := parseID(r)
 		var write bool
 		var raw string

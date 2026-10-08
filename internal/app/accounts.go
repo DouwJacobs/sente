@@ -48,7 +48,10 @@ func (a *App) createAccount(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var id int64
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		res, err := tx.Exec("INSERT INTO accounts(name,bank_id,household) VALUES(?,?,?)", strings.TrimSpace(b.Name), strings.TrimSpace(b.BankID), b.Household)
 		if err != nil {
 			return fail(409, "Bank account already exists")
@@ -78,7 +81,10 @@ func (a *App) updateAccount(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	id := parseID(r)
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		var oldBank string
 		if err := tx.QueryRow("SELECT bank_id FROM accounts WHERE id=?", id).Scan(&oldBank); err != nil {
 			return fail(404, "Account not found")
@@ -134,7 +140,10 @@ func (a *App) grant(w http.ResponseWriter, r *http.Request) error {
 	if b.Role != "viewer" && b.Role != "editor" && b.Role != "" {
 		return fail(400, "Role must be viewer or editor, or empty to revoke")
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		if queryInt(tx, "SELECT COUNT(*) FROM users WHERE id=? AND deleted_at IS NULL", b.UserID) == 0 || queryInt(tx, "SELECT COUNT(*) FROM accounts WHERE id=?", b.AccountID) == 0 {
 			return fail(404, "User or account not found")
 		}
@@ -193,7 +202,14 @@ func (a *App) createCategory(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var id int64
-	err := a.write(func(tx *sql.Tx) error { var err error; id, err = createCategoryTx(tx, Current(r), b); return err })
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
+		var err error
+		id, err = createCategoryTx(tx, u, b)
+		return err
+	})
 	if err != nil {
 		return err
 	}
@@ -264,7 +280,10 @@ func (a *App) accountVisibility(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	id := parseID(r)
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		if !a.can(tx, u, id, true) {
 			return fail(403, "Account editor access required")
 		}

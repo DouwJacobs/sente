@@ -18,12 +18,13 @@ Dependencies point from app into domain packages. Statements uses money/classifi
 Persistence remains intentionally in app: moving a method to a separate package solely to reduce file size would force a large exported database/authorization interface and risk fragmented transactions. Focused workflow files make the existing shared services navigable:
 
 - `migrate.go` owns the sequential schema registry, connection settings, atomic upgrade transaction and version records. `migrate_legacy.go` owns the frozen pre-23 schema compatibility bridge; `migrate_legacy_data.go` owns its named historical data conversions. `merchant_migration.go` rebuilds the legacy catalogue inside the runner-owned transaction.
+- `browser_write.go` owns transaction-scoped browser actor/session refresh; `auth_maintenance.go` owns bounded login/OAuth buckets and serving credential retention.
 - `users.go` owns user administration; `user_security.go` owns browser security mutations and shared atomic password/agent/session revocation used by offline recovery.
 - `periods.go`, `budget_targets.go`, `budget_target_queries.go`, `budget_settings.go`, `dashboard.go` separate period lifecycle, atomic targets, target reads, preferences and aggregates.
 - `transaction_queries.go`, `transactions.go`, `transaction_review.go`, `transfers.go`, `transaction_audit.go`, `transaction_metadata.go` separate authorized ledger queries, atomic editing, review, linked transfers, audit and metadata.
 - `configuration.go`, `configuration_state.go`, `configuration_preview.go`, `configuration_apply.go`, `configuration_repository.go` separate source contracts, configuration snapshots/diffs, validation previews, atomic application and public Git fetching. `ruleset.go` owns the shared portable import/export writers.
 - `labels.go`, `categories.go`, `merchant_rules.go`, `merchant_matching.go` separate catalogue workflows and merchant matching/persistence.
-- `fnb_credentials.go`, `fnb_connection.go`, `fnb_runner.go`, `fnb_snapshots.go`, `fnb_provider.go`, `fnb_scheduler.go`, `fnb_diagnostics.go` separate encrypted storage, settings endpoints, serialized jobs, snapshot application, bounded subprocess IO, scheduling and allowlisted diagnostics.
+- `fnb_credentials.go`, `fnb_connection.go`, `fnb_runner.go`, `fnb_snapshots.go`, `fnb_provider.go`, `fnb_scheduler.go`, `fnb_diagnostics.go`, `fnb_authorization.go`, `fnb_process.go` separate encrypted storage, settings endpoints, serialized jobs, snapshot application, bounded subprocess IO, scheduling and allowlisted diagnostics.
 
 Authorization, versions, source identities, exact proposal effects and audit remain checked inside the existing serialized writes. MCP calls these same services. No input schema, output allowlist, capability, consent or endpoint changes accompany this refactor.
 
