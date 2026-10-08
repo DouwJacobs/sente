@@ -23,6 +23,7 @@ import (
 	"time"
 
 	problemerror "finance-tracker/internal/problem"
+	webpush "github.com/SherClockHolmes/webpush-go"
 
 	"golang.org/x/crypto/bcrypt"
 	_ "modernc.org/sqlite"
@@ -60,6 +61,8 @@ type App struct {
 	backupError            string
 	setupToken             string
 	backupWG               sync.WaitGroup
+	pushSender             func(context.Context, webpush.Subscription, string, string, string, string, int64) (int, error)
+	notificationWake       chan struct{}
 	notificationOnce       sync.Once
 	notificationWG         sync.WaitGroup
 	lock                   *os.File
@@ -126,7 +129,7 @@ func Open(path, publicURL, backupDir string) (*App, error) {
 		return nil, errors.New("PUBLIC_URL must be an absolute URL")
 	}
 	opened = true
-	return &App{DB: db, PublicURL: strings.TrimRight(publicURL, "/"), Secure: u.Scheme == "https", BackupDir: backupDir, setupToken: randomToken(), attempts: map[string][]time.Time{}, stop: make(chan struct{}), lock: lock}, nil
+	return &App{DB: db, PublicURL: strings.TrimRight(publicURL, "/"), Secure: u.Scheme == "https", BackupDir: backupDir, setupToken: randomToken(), attempts: map[string][]time.Time{}, stop: make(chan struct{}), notificationWake: make(chan struct{}, 1), pushSender: sendBrowserPush, lock: lock}, nil
 }
 func (a *App) Close() error {
 	close(a.stop)
@@ -183,6 +186,17 @@ func (a *App) ResetPassword(username, password string) error {
 	})
 }
 func (a *App) write(fn func(*sql.Tx) error) error {
+	if err := a.writeQuiet(fn); err != nil {
+		return err
+	}
+	select {
+	case a.notificationWake <- struct{}{}:
+	default:
+	}
+	return nil
+}
+
+func (a *App) writeQuiet(fn func(*sql.Tx) error) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	tx, err := a.DB.Begin()
@@ -337,6 +351,9 @@ func (a *App) Handler(static string) http.Handler {
 		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'")
+		if r.URL.Path == "/push-sw.js" {
+			w.Header().Set("Cache-Control", "no-store")
+		}
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			w.Header().Set("Cache-Control", "no-store")
 		}

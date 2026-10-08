@@ -122,7 +122,7 @@ for(const viewport of viewports) for(const theme of ['light','dark']) {
   await start(page,viewport,theme,'long user/agent/account/URL, pending proposal; no bank session');
   await navigate(page,'Settings');
   const tabs=page.getByRole('tablist',{name:'Settings sections'});
-  await expect(tabs.getByRole('tab')).toHaveCount(10);
+  await expect(tabs.getByRole('tab')).toHaveText(['General','Configuration','Banking','Accounts','Users & access','Backups','Network','MCP','Notifications','Security','About']);
   const general=page.getByRole('tab',{name:'General',exact:true});
   await general.focus();await page.keyboard.press('End');
   const about=page.getByRole('tab',{name:'About',exact:true});
@@ -233,8 +233,8 @@ for(const width of [360,390,430])test(`ordinary Settings sections ${width}`,{tag
  });
  await start(page,{width,height:800},'dark','ordinary-user section visibility (presentation only)');
  await navigate(page,'Settings');
- await expect(page.getByRole('tablist',{name:'Settings sections'}).getByRole('tab')).toHaveText(['General','MCP','Security','About']);
- for(const name of ['General','MCP','Security','About']) {
+ await expect(page.getByRole('tablist',{name:'Settings sections'}).getByRole('tab')).toHaveText(['General','MCP','Notifications','Security','About']);
+ for(const name of ['General','MCP','Notifications','Security','About']) {
   await page.getByRole('tab',{name,exact:true}).click();await noOverflow(page);
  }
 });
