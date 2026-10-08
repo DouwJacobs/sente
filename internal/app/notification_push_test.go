@@ -296,3 +296,47 @@ func TestNotificationPushOnlyReadDismissAndExpiry(t *testing.T) {
 		t.Fatal("no-device channel queued work")
 	}
 }
+
+// A request admitted before credential revocation must not create keys/devices,
+// remove a device or enqueue a test when its mutation begins later.
+func TestNotificationPushAdmittedCredentialRevocation(t *testing.T) {
+	for _, action := range []string{"setup", "register", "remove", "test"} {
+		for _, revoke := range []struct {
+			name, sql string
+			code      int
+		}{
+			{"session", "DELETE FROM sessions WHERE user_id=1", 401},
+			{"csrf", "UPDATE sessions SET csrf='rotated' WHERE user_id=1", 403},
+		} {
+			t.Run(action+"/"+revoke.name, func(t *testing.T) {
+				e := setup(t)
+				path, method := "/api/notifications/push/subscriptions", "POST"
+				var body any = map[string]any{"setup": true}
+				if action == "register" {
+					body = syntheticPush(t, "revoked-register")
+				}
+				if action == "remove" || action == "test" {
+					id := registerSyntheticPush(t, e, 1, syntheticPush(t, "revoked-device"))
+					path = fmt.Sprintf("/api/notifications/push/subscriptions/%d", id)
+					body = nil
+					method = "DELETE"
+					if action == "test" {
+						path += "/test"
+						method = "POST"
+					}
+				}
+				tables := []string{"notification_push_config", "notification_push_subscriptions", "notification_push_outbox", "audit"}
+				before := make([]int64, len(tables))
+				for i, table := range tables {
+					before[i] = queryInt(e.a.DB, "SELECT COUNT(*) FROM "+table)
+				}
+				status(t, admittedMutation(t, e, path, method, body, revoke.sql), revoke.code)
+				for i, table := range tables {
+					if queryInt(e.a.DB, "SELECT COUNT(*) FROM "+table) != before[i] {
+						t.Fatalf("revoked %s changed %s", action, table)
+					}
+				}
+			})
+		}
+	}
+}

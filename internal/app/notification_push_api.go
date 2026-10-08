@@ -119,10 +119,7 @@ func (a *App) registerPush(w http.ResponseWriter, r *http.Request) error {
 	}
 	var id int64
 	var public string
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, false); err != nil {
-			return err
-		}
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		_, key, err := pushKeysTx(tx)
 		if err != nil {
 			return err
@@ -131,7 +128,7 @@ func (a *App) registerPush(w http.ResponseWriter, r *http.Request) error {
 		if input.Setup {
 			return nil
 		}
-		uid := Current(r).ID
+		uid := u.ID
 		var owner int64
 		err = tx.QueryRow("SELECT id,user_id FROM notification_push_subscriptions WHERE endpoint=?", sub.Endpoint).Scan(&id, &owner)
 		if err == nil && owner != uid {
@@ -157,7 +154,7 @@ func (a *App) registerPush(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 		}
-		return audit(tx, Current(r), nil, "notification_push", id, "registered", map[string]any{"device_id": id})
+		return audit(tx, u, nil, "notification_push", id, "registered", map[string]any{"device_id": id})
 	})
 	if err != nil {
 		return err
@@ -170,11 +167,8 @@ func (a *App) removePush(w http.ResponseWriter, r *http.Request) error {
 	if id <= 0 {
 		return fail(400, "Choose a device")
 	}
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, false); err != nil {
-			return err
-		}
-		result, err := tx.Exec("DELETE FROM notification_push_subscriptions WHERE id=? AND user_id=?", id, Current(r).ID)
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		result, err := tx.Exec("DELETE FROM notification_push_subscriptions WHERE id=? AND user_id=?", id, u.ID)
 		if err != nil {
 			return err
 		}
@@ -182,7 +176,7 @@ func (a *App) removePush(w http.ResponseWriter, r *http.Request) error {
 		if n == 0 {
 			return fail(404, "Device unavailable")
 		}
-		return audit(tx, Current(r), nil, "notification_push", id, "removed", map[string]any{"device_id": id})
+		return audit(tx, u, nil, "notification_push", id, "removed", map[string]any{"device_id": id})
 	})
 	if err != nil {
 		return err
@@ -192,11 +186,8 @@ func (a *App) removePush(w http.ResponseWriter, r *http.Request) error {
 }
 func (a *App) testPush(w http.ResponseWriter, r *http.Request) error {
 	id := parseID(r)
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, false); err != nil {
-			return err
-		}
-		if queryInt(tx, "SELECT COUNT(*) FROM notification_push_subscriptions WHERE id=? AND user_id=? AND enabled=1", id, Current(r).ID) != 1 {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if queryInt(tx, "SELECT COUNT(*) FROM notification_push_subscriptions WHERE id=? AND user_id=? AND enabled=1", id, u.ID) != 1 {
 			return fail(404, "Device unavailable")
 		}
 		now := time.Now()
