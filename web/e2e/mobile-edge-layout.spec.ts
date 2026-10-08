@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 test.use({ screenshot: 'only-on-failure' });
 
 for (const width of [360, 390, 430]) {
-  test(`long mobile values ${width}`, async ({ page }) => {
+  test(`long mobile values ${width}`, {tag:width===360?'@mobile-smoke':[]}, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.route('**/api/branding', async route => {
       const response = await route.fetch();

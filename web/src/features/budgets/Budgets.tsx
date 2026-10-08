@@ -77,6 +77,7 @@ export function Budgets({
       <div
         role="tabpanel"
         id="budgets-panel-periods"
+        className="budget-periods-panel"
         aria-labelledby="budgets-tab-periods"
         hidden={budgetTab !== "periods"}
       >

@@ -259,3 +259,11 @@ input[type=file]:not(:disabled)::file-selector-button:hover { background:var(--i
 .classification-category-row:hover,.classification-group-entry>.choice-row:hover,.spending-panel button.bucket-category:hover{background:var(--interaction-hover);color:var(--text)}
 
 .income-bucket .budget-actual{grid-template-columns:minmax(100px,1fr);justify-items:end}.income-bucket .budget-figure{text-align:right}
+
+/* Keep exceptional totals complete; ordinary totals retain the compact grid. */
+.dashboard-overview .stat>strong { white-space:nowrap; }
+.dashboard-overview.long-values { grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); }
+.dashboard-overview.long-values .stat:nth-child(n) { border:0; }
+.dashboard-overview.long-values .stat { container-type:inline-size; }
+.dashboard-overview.long-values .stat>strong { font-size:clamp(16px,7cqw,24px); }
+.dashboard-overview.long-values .stat.budget>strong { font-size:clamp(18px,8cqw,28px); }

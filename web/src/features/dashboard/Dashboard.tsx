@@ -97,6 +97,8 @@ export function Dashboard({
   const expense = d.categories.filter(
     (c: Row) => c.kind === "expense" && (c.target_cents || c.spent_cents),
   );
+  const longTotals = [d.budget_cents, d.remaining_cents, d.income_cents, d.spent_cents,
+    d.income_cents - d.spent_cents].some(value => money(value).length > 14);
   return (
     <>
       {loading && <Loading>Loading this period</Loading>}
@@ -114,7 +116,7 @@ export function Dashboard({
           />
         </Modal>
       )}
-      <section className="stats dashboard-overview" aria-label="Period totals">
+      <section className={"stats dashboard-overview" + (longTotals ? " long-values" : "")} aria-label="Period totals">
         <Stat
           tone="budget"
           label={d.has_targets ? "Budget remaining" : "Net movement"}
