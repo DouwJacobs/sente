@@ -184,6 +184,7 @@ func run() error {
 			defer cancel()
 			server.Shutdown(ctx)
 		}()
+		a.StartCredentialMaintenance()
 		a.StartNotificationMaintenance()
 		a.StartBackups()
 		a.StartFNBScheduler()

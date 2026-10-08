@@ -3,27 +3,9 @@ package app
 import (
 	"database/sql"
 	"net/http"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
-
-// Recheck the initiating session and role within the serialized write, after hashing.
-func userSecurityActorTx(tx *sql.Tx, r *http.Request, admin bool) error {
-	cookie, err := r.Cookie("finance_session")
-	if err != nil {
-		return fail(401, "Please sign in again")
-	}
-	var isAdmin bool
-	err = tx.QueryRow(`SELECT u.admin FROM users u JOIN sessions s ON s.user_id=u.id WHERE u.id=? AND u.disabled=0 AND u.deleted_at IS NULL AND s.token=? AND s.csrf=? AND s.expires_at>?`, Current(r).ID, hash(cookie.Value), r.Header.Get("X-CSRF-Token"), time.Now().Unix()).Scan(&isAdmin)
-	if err != nil {
-		return fail(401, "Please sign in again")
-	}
-	if admin && !isAdmin {
-		return fail(403, "Administrator access required")
-	}
-	return nil
-}
 
 func passwordDigest(password string) (string, error) {
 	if len(password) < 12 || len(password) > 72 {
@@ -59,7 +41,6 @@ func setUserPasswordTx(tx *sql.Tx, id int64, digest, keepSession string) error {
 }
 
 func (a *App) changePassword(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	var b struct {
 		Old string `json:"old_password"`
 		New string `json:"new_password"`
@@ -75,10 +56,7 @@ func (a *App) changePassword(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return fail(401, "Please sign in again")
 	}
-	err = a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, false); err != nil {
-			return err
-		}
+	err = a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		var old string
 		if err := tx.QueryRow("SELECT password FROM users WHERE id=?", u.ID).Scan(&old); err != nil {
 			return err
@@ -118,8 +96,8 @@ func (a *App) adminPassword(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	err = a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, true); err != nil {
+	err = a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
 			return err
 		}
 		var version int64
@@ -154,8 +132,8 @@ func (a *App) deleteUser(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, true); err != nil {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
 			return err
 		}
 		var username string

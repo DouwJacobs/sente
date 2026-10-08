@@ -118,11 +118,8 @@ func (a *App) changeNotificationState(w http.ResponseWriter, r *http.Request, op
 		return fail(400, "Choose a notification")
 	}
 	var unread int64
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, false); err != nil {
-			return err
-		}
-		uid := Current(r).ID
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		uid := u.ID
 		if err := pruneNotificationsTx(tx, time.Now()); err != nil {
 			return err
 		}

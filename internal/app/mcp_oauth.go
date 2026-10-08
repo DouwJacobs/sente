@@ -101,31 +101,9 @@ func (a *App) oauthRoutes(mux *http.ServeMux) {
 
 // Separate buckets from password sign-in; no cookie credentials authorize these endpoints.
 func (a *App) oauthRate(r *http.Request, limit int) bool {
-	a.loginMu.Lock()
-	defer a.loginMu.Unlock()
-	now := time.Now()
-	key := "oauth:" + r.URL.Path + ":" + a.clientIP(r)
-	for k, values := range a.attempts {
-		if len(values) == 0 || now.Sub(values[len(values)-1]) > 15*time.Minute {
-			delete(a.attempts, k)
-		}
-	}
-	values := a.attempts[key]
-	recent := []time.Time{}
-	for _, v := range values {
-		if now.Sub(v) < 15*time.Minute {
-			recent = append(recent, v)
-		}
-	}
-	if len(recent) >= limit {
-		return false
-	}
-	if len(a.attempts) >= 4096 && len(recent) == 0 {
-		return false
-	}
-	a.attempts[key] = append(recent, now)
-	return true
+	return a.authAttempt("oauth:"+r.URL.Path+":"+a.clientIP(r), limit, time.Now())
 }
+
 func (a *App) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	if !a.oauthRate(r, 60) {
 		oauthError(w, 429, "temporarily_unavailable")
@@ -263,7 +241,7 @@ func (a *App) oauthRequest(tx *sql.Tx, r *http.Request) (oauthRequest, error) {
 }
 func (a *App) mcpAuthorization(w http.ResponseWriter, r *http.Request) error {
 	var b oauthRequest
-	err := a.write(func(tx *sql.Tx) error { var err error; b, err = a.oauthRequest(tx, r); return err })
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error { var err error; b, err = a.oauthRequest(tx, r); return err })
 	if err != nil {
 		return err
 	}
@@ -285,7 +263,7 @@ func (a *App) decideMCPAuthorization(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 	callback := ""
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		b, err := a.oauthRequest(tx, r)
 		if err != nil {
 			return err
@@ -297,7 +275,7 @@ func (a *App) decideMCPAuthorization(w http.ResponseWriter, r *http.Request) err
 		if decision.Allow {
 			p := legacyMCPPermissions(decision.Write)
 			if decision.Permissions != nil {
-				p, err = a.validateMCPPermissions(tx, Current(r), *decision.Permissions)
+				p, err = a.validateMCPPermissions(tx, u, *decision.Permissions)
 				if err != nil {
 					return err
 				}
@@ -306,11 +284,11 @@ func (a *App) decideMCPAuthorization(w http.ResponseWriter, r *http.Request) err
 			if decision.Write && !strings.Contains(b.Scope, mcpWriteScope) {
 				return fail(400, "Agent did not request change proposals")
 			}
-			if queryInt(tx, "SELECT COUNT(*) FROM mcp_tokens WHERE user_id=? AND expires_at>?", Current(r).ID, time.Now().Unix()) >= 20 {
+			if queryInt(tx, "SELECT COUNT(*) FROM mcp_tokens WHERE user_id=? AND expires_at>?", u.ID, time.Now().Unix()) >= 20 {
 				return fail(400, "Revoke an existing connection before adding another")
 			}
 			permissions, _ := json.Marshal(p)
-			res, err := tx.Exec("INSERT INTO mcp_tokens(user_id,name,token_hash,client_id,can_write,expires_at,permissions) VALUES(?,?,?,?,?,?,?)", Current(r).ID, b.Name, hash(randomToken()), b.Client, decision.Write, time.Now().Add(90*24*time.Hour).Unix(), string(permissions))
+			res, err := tx.Exec("INSERT INTO mcp_tokens(user_id,name,token_hash,client_id,can_write,expires_at,permissions) VALUES(?,?,?,?,?,?,?)", u.ID, b.Name, hash(randomToken()), b.Client, decision.Write, time.Now().Add(90*24*time.Hour).Unix(), string(permissions))
 			if err != nil {
 				return err
 			}
@@ -319,7 +297,7 @@ func (a *App) decideMCPAuthorization(w http.ResponseWriter, r *http.Request) err
 			if _, err = tx.Exec("INSERT INTO mcp_oauth_codes(token_hash,connection_id,client_id,redirect_uri,challenge,resource,expires_at) VALUES(?,?,?,?,?,?,?)", hash(code), id, b.Client, b.Redirect, b.Challenge, a.mcpResource(), time.Now().Add(5*time.Minute).Unix()); err != nil {
 				return err
 			}
-			if err = audit(tx, Current(r), nil, "mcp", id, "connection_approved", map[string]any{"client_name": b.Name, "can_write": decision.Write, "permissions": p}); err != nil {
+			if err = audit(tx, u, nil, "mcp", id, "connection_approved", map[string]any{"client_name": b.Name, "can_write": decision.Write, "permissions": p}); err != nil {
 				return err
 			}
 			q.Set("code", code)

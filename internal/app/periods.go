@@ -109,7 +109,10 @@ func (a *App) createPeriod(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var id int64
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
 		preview, err := periodChanges(tx, 0, b)
 		if err != nil {
 			return err
@@ -270,7 +273,10 @@ func (a *App) updatePeriod(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	id := parseID(r)
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
 		preview, err := periodChanges(tx, id, b)
 		if err != nil {
 			return err

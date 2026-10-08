@@ -13,7 +13,7 @@ Start with the [project README](../README.md) for installation and everyday use.
 | [Verification](VERIFICATION.md) | Latest checks and limits of the available evidence |
 | [Future work](FUTURE.md) | Unresolved product decisions |
 
-Task-specific references: [MCP](MCP.md), [offline rulesets](RULESETS.md), [demo data](DEMO.md), [reverse proxy](REVERSE-PROXY.md) and [FNB runtime](FNB-RUNTIME.md) and [notification foundation](NOTIFICATIONS.md).
+Task-specific references: [MCP](MCP.md), [offline rulesets](RULESETS.md), [demo data](DEMO.md), [reverse proxy](REVERSE-PROXY.md) and [FNB runtime](FNB-RUNTIME.md) and [notification foundation](NOTIFICATIONS.md) and [security hardening](SECURITY-HARDENING.md).
 
 These guides describe current behavior. Keep requirements in PLAN, implementation contracts in ARCHITECTURE, and visual/interaction conventions in UI; link to them instead of copying a decision into several dated logs. HANDOVER should remain a short operational entry point. VERIFICATION records the latest change and links to older evidence.
 

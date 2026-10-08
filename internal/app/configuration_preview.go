@@ -13,7 +13,7 @@ import (
 )
 
 func (a *App) configurationPreview(w http.ResponseWriter, r *http.Request) error {
-	u, err := rulesetActor(a.DB, ptrUser(Current(r)))
+	_, err := rulesetActor(a.DB, ptrUser(Current(r)))
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (a *App) configurationPreview(w http.ResponseWriter, r *http.Request) error
 	id := randomToken()
 	var changes []configurationChange
 	var summary *RulesetImportSummary
-	err = a.write(func(tx *sql.Tx) error {
+	err = a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		actor, e := rulesetActor(tx, &u)
 		if e != nil {
 			return e

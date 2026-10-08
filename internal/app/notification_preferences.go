@@ -91,10 +91,7 @@ func (a *App) saveNotificationPreferences(w http.ResponseWriter, r *http.Request
 	}
 	uid := Current(r).ID
 	var items []notificationPreference
-	err := a.write(func(tx *sql.Tx) error {
-		if err := userSecurityActorTx(tx, r, false); err != nil {
-			return err
-		}
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		for _, input := range inputs {
 			var version int64
 			var err error
@@ -119,7 +116,7 @@ func (a *App) saveNotificationPreferences(w http.ResponseWriter, r *http.Request
 			if err != nil {
 				return err
 			}
-			if err := audit(tx, Current(r), nil, "notification_preferences", uid, "updated", map[string]any{"type": input.Type, "channel": input.Channel, "enabled": *input.Enabled, "version": version + 1}); err != nil {
+			if err := audit(tx, u, nil, "notification_preferences", uid, "updated", map[string]any{"type": input.Type, "channel": input.Channel, "enabled": *input.Enabled, "version": version + 1}); err != nil {
 				return err
 			}
 		}

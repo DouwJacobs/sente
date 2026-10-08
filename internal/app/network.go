@@ -138,7 +138,10 @@ func (a *App) saveNetwork(w http.ResponseWriter, r *http.Request) error {
 	if b.Version < 1 {
 		return fail(400, "Reload network settings before saving")
 	}
-	if err := a.write(func(tx *sql.Tx) error {
+	if err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		result, err := tx.Exec("UPDATE network_settings SET enabled=?,public_url=?,trusted_proxies=?,version=version+1 WHERE id=1 AND version=?", b.Enabled, b.PublicURL, b.TrustedProxies, b.Version)
 		if err != nil {
 			return err
@@ -176,7 +179,10 @@ func (a *App) restartNetwork(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	if err := a.write(func(tx *sql.Tx) error {
+	if err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		var version int64
 		if err := tx.QueryRow("SELECT version FROM network_settings WHERE id=1").Scan(&version); err != nil {
 			return err

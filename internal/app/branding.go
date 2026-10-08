@@ -32,7 +32,10 @@ func (a *App) updateBranding(w http.ResponseWriter, r *http.Request) error {
 	if utf8.RuneCountInString(b.Name) < 2 || utf8.RuneCountInString(b.Name) > 60 {
 		return fail(400, "Use a workspace name of 2–60 characters")
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireAdmin(u); err != nil {
+			return err
+		}
 		result, err := tx.Exec("UPDATE workspace_branding SET display_name=?,version=version+1 WHERE id=1 AND version=?", b.Name, b.Version)
 		if err != nil {
 			return err

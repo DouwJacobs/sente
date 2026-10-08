@@ -157,7 +157,7 @@ func (a *App) previewImport(w http.ResponseWriter, r *http.Request) error {
 	}
 	result := []ParsedFile{}
 	batchSeen := map[string]map[string]any{}
-	err = a.write(func(tx *sql.Tx) error {
+	err = a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		if !ruleAccess(tx, a, u, account) {
 			return fail(403, "Account access changed")
 		}
@@ -234,7 +234,6 @@ type importCommitOptions struct {
 }
 
 func (a *App) commitImport(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	id := parseID(r)
 	var b importCommitOptions
 	if err := decode(r, &b); err != nil {
@@ -242,7 +241,7 @@ func (a *App) commitImport(w http.ResponseWriter, r *http.Request) error {
 	}
 	inserted := 0
 	skipped := 0
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		return a.commitStagedImport(tx, u, id, b, &inserted, &skipped)
 	})
 	if err != nil {

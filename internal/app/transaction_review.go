@@ -6,7 +6,6 @@ import (
 )
 
 func (a *App) review(w http.ResponseWriter, r *http.Request) error {
-	u := Current(r)
 	var b struct {
 		Items []struct {
 			ID      int64 `json:"id"`
@@ -19,7 +18,7 @@ func (a *App) review(w http.ResponseWriter, r *http.Request) error {
 	if len(b.Items) == 0 || len(b.Items) > 100 {
 		return fail(400, "Select 1–100 transactions")
 	}
-	err := a.write(func(tx *sql.Tx) error {
+	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		for _, item := range b.Items {
 			var account, amount int64
 			var transfer bool

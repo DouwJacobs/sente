@@ -34,7 +34,7 @@ func (a *App) fnbTransactions(w http.ResponseWriter, r *http.Request) error {
 	if err := requireAdmin(u); err != nil {
 		return err
 	}
-	previews, err := a.runFNB(u.ID, true, true)
+	previews, err := a.runFNBBrowser(r, true)
 	if err != nil {
 		return err
 	}
@@ -54,11 +54,7 @@ func (a *App) stageFNBTransactions(u User, targets []fnbTarget, snapshot fnbSnap
 		reports[report.BankID] = report
 	}
 	previews := []ParsedFile{}
-	err := a.write(func(tx *sql.Tx) error {
-		var active bool
-		if err := tx.QueryRow("SELECT admin=1 AND disabled=0,budget_member FROM users WHERE id=?", u.ID).Scan(&active, &u.Member); err != nil || !active {
-			return fail(403, "Connection access revoked")
-		}
+	err := a.fnbWrite(u, func(tx *sql.Tx, u User) error {
 		current, err := a.fnbTargets(tx, u)
 		if err != nil {
 			return err

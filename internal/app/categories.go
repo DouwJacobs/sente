@@ -58,7 +58,10 @@ func (a *App) updateCategory(w http.ResponseWriter, r *http.Request) error {
 		return fail(400, "Use a category name of 1–100 characters")
 	}
 	id := parseID(r)
-	e := a.write(func(tx *sql.Tx) error {
+	e := a.browserWrite(r, func(tx *sql.Tx, u User) error {
+		if err := requireMember(u); err != nil {
+			return err
+		}
 		return updateCategoryTx(tx, u, id, b)
 	})
 	if e != nil {
