@@ -116,6 +116,7 @@ func TestRuleStaleStageRequiresNewPreview(t *testing.T) {
 func TestRuleMigrationPreservesLegacyDefaults(t *testing.T) {
 	e := setup(t)
 	e.a.DB.Exec("DROP TABLE rules")
+	removePostBaselineFixtureTables(t, e.a.DB)
 	_, err := e.a.DB.Exec("CREATE TABLE rules(id INTEGER PRIMARY KEY,user_id INTEGER NOT NULL REFERENCES users(id),account_id INTEGER NOT NULL REFERENCES accounts(id),pattern TEXT NOT NULL,category_id INTEGER NOT NULL REFERENCES categories(id),priority INTEGER NOT NULL DEFAULT 0); INSERT INTO rules VALUES(7,1,1,'Market',1,9); DELETE FROM migrations WHERE version>=8; INSERT OR IGNORE INTO migrations VALUES(7)")
 	if err != nil {
 		t.Fatal(err)

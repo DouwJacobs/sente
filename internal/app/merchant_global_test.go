@@ -110,6 +110,7 @@ func TestMerchantLegacyMigrationPreservesReferences(t *testing.T) {
 	workflowExec(t, e, "DROP TABLE merchant_rules; DROP TABLE merchants; CREATE TABLE merchants(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL REFERENCES accounts(id),name TEXT NOT NULL COLLATE NOCASE,UNIQUE(account_id,name)); CREATE TABLE merchant_rules(id INTEGER PRIMARY KEY,account_id INTEGER NOT NULL REFERENCES accounts(id),merchant_id INTEGER NOT NULL REFERENCES merchants(id),pattern TEXT NOT NULL,direction TEXT NOT NULL DEFAULT 'any',priority INTEGER NOT NULL DEFAULT 0,enabled INTEGER NOT NULL DEFAULT 1,version INTEGER NOT NULL DEFAULT 1); INSERT INTO merchants VALUES(42,1,'Legacy'); INSERT INTO merchant_rules VALUES(81,1,42,'seed','any',5,1,3)")
 	workflowExec(t, e, "UPDATE transactions SET merchant_id=42 WHERE id=?", id)
 	workflowExec(t, e, "PRAGMA foreign_keys=ON")
+	removePostBaselineFixtureTables(t, e.a.DB)
 	workflowExec(t, e, "DELETE FROM migrations WHERE version>=17; INSERT INTO migrations(version) VALUES(16)")
 	for i := 0; i < 2; i++ {
 		if err := migrate(e.a.DB); err != nil {
@@ -242,6 +243,7 @@ func TestMerchantDuplicateRuleMigration(t *testing.T) {
 	}
 
 	// Trigger migration
+	removePostBaselineFixtureTables(t, e.a.DB)
 	workflowExec(t, e, "DELETE FROM migrations WHERE version>=18; INSERT OR IGNORE INTO migrations(version) VALUES(17)")
 	if err := migrate(e.a.DB); err != nil {
 		t.Fatal(err)
@@ -259,4 +261,3 @@ func TestMerchantDuplicateRuleMigration(t *testing.T) {
 		t.Fatalf("unexpected merged pattern: %q", pattern)
 	}
 }
-

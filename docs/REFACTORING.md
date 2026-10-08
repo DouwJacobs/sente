@@ -57,3 +57,5 @@ Build information belongs to `internal/buildinfo`; the browser adapter is `inter
 MCP `mcp_aggregates.go` owns filtered aggregate read adapters; `mcp_context.go` owns context storage/browser writes/session delivery; queue hydration remains in `mcp_transactions.go`. Frontend `features/mcp` owns the personal-context form/draft; shared consent fields remain usable by OAuth and Settings.
 
 MCP Settings composes `features/mcp/MCPConnectionCard.tsx` and `MCPProposalCard.tsx` for connection summaries and exact change presentation; parent request locks, selection and permission drafts remain in MCPSettings.
+
+Notification infrastructure belongs in `internal/app/notifications.go` (event/service/adapter), `notification_schema.go` (immutable migration 24), `notification_api.go` (browser inbox/state), `notification_preferences.go` (personal settings) and `notification_maintenance.go` (serving lifecycle). Producers use the shared authorized transaction service rather than writing inbox rows or receipts independently. No frontend feature is added by the backend foundation. See NOTIFICATIONS.md for privacy and retry contracts.

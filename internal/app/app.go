@@ -60,6 +60,8 @@ type App struct {
 	backupError            string
 	setupToken             string
 	backupWG               sync.WaitGroup
+	notificationOnce       sync.Once
+	notificationWG         sync.WaitGroup
 	lock                   *os.File
 }
 type User struct {
@@ -129,6 +131,7 @@ func Open(path, publicURL, backupDir string) (*App, error) {
 func (a *App) Close() error {
 	close(a.stop)
 	a.backupWG.Wait()
+	a.notificationWG.Wait()
 	a.fnbWG.Wait()
 	a.fnbMu.Lock()
 	defer a.fnbMu.Unlock()
@@ -428,6 +431,7 @@ func (a *App) routes() http.Handler {
 	m := http.NewServeMux()
 	a.workflowRoutes(m)
 	a.configurationRoutes(m)
+	a.notificationRoutes(m)
 	m.HandleFunc("GET /api/build", wrap(a.buildInfo))
 	m.HandleFunc("GET /api/mcp/context", wrap(a.personalMCPContext))
 	m.HandleFunc("PUT /api/mcp/context", wrap(a.updatePersonalMCPContext))

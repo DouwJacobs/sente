@@ -82,6 +82,7 @@ func TestMCPPermissionsMigrationPreservesLegacyGrants(t *testing.T) {
 	e := setup(t)
 	read := mcpToken(t, e, 1, false)
 	write := mcpToken(t, e, 1, true)
+	removePostBaselineFixtureTables(t, e.a.DB)
 	if _, err := e.a.DB.Exec("ALTER TABLE mcp_tokens DROP COLUMN permission_version; ALTER TABLE mcp_tokens DROP COLUMN permissions; DELETE FROM migrations WHERE version>=13; INSERT OR IGNORE INTO migrations VALUES(12)"); err != nil {
 		t.Fatal(err)
 	}

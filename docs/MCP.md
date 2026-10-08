@@ -241,3 +241,7 @@ A saved period without an account uses household assigned-period scope, excludin
 `compare_financial_periods` accepts 2–12 distinct positive `period_ids` and optional account/category/merchant/query filters, preserves requested order and uses the same arithmetic in one snapshot. Unknown periods or access errors reject the whole result. Existing `get_budget_summary`, `get_budget_limits` and `get_budget_trends` remain authoritative for budget status and limits. New aggregate reads add no write permissions or automatic approval types.
 
 Review queue allocation hydration uses one query for the already authorized returned page, none for an empty page. Allocation-ID order, cursor/version, privacy and output fields remain unchanged; lookahead and unrelated entries are not hydrated.
+
+## Browser-only notification infrastructure
+
+Notification inbox/preference APIs are authenticated browser workflows. Notification messages, source references, preferences, receipts and account dependencies are not MCP tool output or saved session context. Existing connection consent does not expand to personal notifications. Future MCP exposure needs explicit consent and current recipient/account/source checks; the shared financial writer may eventually emit via notifyTx inside its existing SQL transaction without introducing a separate MCP mutation path. This foundation adds no tools, schemas, allowlist fields, capabilities, proposal previews or financial/audit contract changes.

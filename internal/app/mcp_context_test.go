@@ -148,6 +148,7 @@ func TestMCPContextUpgradePreservesExistingDataAndConsent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	removePostBaselineFixtureTables(t, e.a.DB)
 	if _, err := e.a.DB.Exec("DROP TABLE mcp_user_context; DELETE FROM migrations WHERE version>=22; INSERT OR IGNORE INTO migrations VALUES(21)"); err != nil {
 		t.Fatal(err)
 	}

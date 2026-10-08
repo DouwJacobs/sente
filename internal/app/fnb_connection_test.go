@@ -289,6 +289,7 @@ func TestFNBRestartPreferencesAndInterruptedRecovery(t *testing.T) {
 	a.DB.Exec("INSERT INTO fnb_connections(user_id,secret,interval_hours,state,next_due) VALUES(1,?,24,'refreshing',1)", secret)
 	a.DB.Exec("INSERT INTO fnb_discoveries(user_id,bank_id,name,hidden) VALUES(1,'123456','Synthetic hidden',1)")
 	// Simulate the preceding schema and preserve stored secret/preferences.
+	removePostBaselineFixtureTables(t, a.DB)
 	if _, err := a.DB.Exec("ALTER TABLE fnb_connections DROP COLUMN debug_browser;ALTER TABLE fnb_connections DROP COLUMN last_diagnostics;DELETE FROM migrations WHERE version>=6;INSERT OR IGNORE INTO migrations VALUES(5)"); err != nil {
 		t.Fatal(err)
 	}

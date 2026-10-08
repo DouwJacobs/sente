@@ -63,6 +63,7 @@ func TestDefaultMigrationPreservesConflictingKindsAndNewAccounts(t *testing.T) {
 	e := setup(t)
 	e.a.DB.Exec("INSERT INTO categories(name,group_name,kind) VALUES('Bank charges','','income')")
 	e.a.DB.Exec("INSERT INTO categories(name,group_name,kind) VALUES('Eating out','One','expense'),('Eating out','Two','expense')")
+	removePostBaselineFixtureTables(t, e.a.DB)
 	e.a.DB.Exec("DELETE FROM migrations WHERE version>=9; INSERT OR IGNORE INTO migrations VALUES(8)")
 	if err := migrate(e.a.DB); err != nil {
 		t.Fatal(err)
@@ -132,6 +133,7 @@ func TestFreshDefaultCatalog(t *testing.T) {
 	e := setup(t)
 	// Simulate an old installation upgrading exactly once with financial records preserved.
 	e.a.DB.Exec("INSERT INTO targets(period_id,category_id,amount_cents) VALUES(1,1,10000)")
+	removePostBaselineFixtureTables(t, e.a.DB)
 	e.a.DB.Exec("DELETE FROM migrations WHERE version>=9; INSERT OR IGNORE INTO migrations VALUES(8)")
 	if err := migrate(e.a.DB); err != nil {
 		t.Fatal(err)
