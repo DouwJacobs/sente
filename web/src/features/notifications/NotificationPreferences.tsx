@@ -21,7 +21,7 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
     let current = true;
     setFailed(false);
     setLoading(true);
-    api<{ items: Preference[] }>("/notifications/preferences")
+    api<{ items: Preference[] }>("/notifications/preferences?channels=all")
       .then(result => {
         if (current) {
           setSaved(result.items);
@@ -40,7 +40,7 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
     <section className="panel notification-preference-panel">
       <h2>Notification preferences</h2>
       <p className="muted">
-        Choose your in-app notifications. Changes apply to future messages.
+        Choose the channels for each notification type. Browser push needs device opt-in below. Changes apply to future messages.
       </p>
       {loading ? <Loading>Loading preferences</Loading> : failed ? (
         <div>
@@ -51,21 +51,28 @@ export function NotificationPreferences({ notify }: Pick<PageProps, "notify">) {
         <Form onSubmit={async () => {
           if (!changed.length) return;
           await run(async () => {
-            const result = await api<{ items: Preference[] }>("/notifications/preferences/batch", "PUT", { items: changed });
+            const result = await api<{ items: Preference[] }>("/notifications/preferences/batch?channels=all", "PUT", { items: changed });
             if (alive.current) { setSaved(result.items); setDraft(result.items); }
           }, "Notification preferences saved");
         }}>
           <div className="notification-preferences">
-            {draft.map(item => (
-              <Field key={item.type} label={notificationLabels[item.type] || item.type} >
-                <select value={String(item.enabled)} disabled={busy}
-                  onChange={e => setDraft(previous => previous.map(value =>
-                    value.type === item.type ? { ...value, enabled: e.target.value === "true" } : value))}>
-                  <option value="true">Enabled</option>
-                  <option value="false">Disabled</option>
-                </select>
-              </Field>
-            ))}
+            {[...new Set(draft.map(item => item.type))].map(type => {
+              const label = notificationLabels[type] || type;
+              return <div className="notification-preference-row" role="group" aria-label={label} key={type}>
+                <span className="notification-preference-type">{label}</span>
+                {draft.filter(item => item.type === type).map(item => {
+                  const channel = item.channel === "push" ? "Browser push" : "In-app";
+                  return <Field key={item.channel} label={channel}>
+                    <select aria-label={`${label} · ${channel}`} value={String(item.enabled)} disabled={busy}
+                      onChange={e => setDraft(previous => previous.map(value =>
+                        value.type === item.type && value.channel === item.channel ? { ...value, enabled: e.target.value === "true" } : value))}>
+                      <option value="true">Enabled</option>
+                      <option value="false">Disabled</option>
+                    </select>
+                  </Field>;
+                })}
+              </div>;
+            })}
           </div>
           <div className="notification-preference-actions">
             <Button type="submit" variant="primary" loading={busy} disabled={busy || !changed.length}>

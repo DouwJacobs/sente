@@ -75,7 +75,7 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [searchOpen]);
-  const [view, setView] = useState("Dashboard"),
+  const [view, setView] = useState(() => new URLSearchParams(window.location.search).get("notifications") === "1" ? "Notifications" : "Dashboard"),
     [period, setPeriod] = useState(""),
     [account, setAccount] = useState(""),
     [more, setMore] = useState(false),

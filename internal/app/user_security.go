@@ -183,7 +183,7 @@ func (a *App) deleteUser(w http.ResponseWriter, r *http.Request) error {
 		if err := revokeUserAgentsTx(tx, id); err != nil {
 			return err
 		}
-		for _, table := range []string{"notification_receipts", "notification_preferences", "mcp_user_context", "sessions", "grants", "transaction_seen", "fnb_connections", "fnb_discoveries"} {
+		for _, table := range []string{"notification_conditions", "notification_diagnostics", "notification_push_subscriptions", "notification_push_preferences", "notification_receipts", "notification_preferences", "mcp_user_context", "sessions", "grants", "transaction_seen", "fnb_connections", "fnb_discoveries"} {
 			if _, err := tx.Exec("DELETE FROM "+table+" WHERE user_id=?", id); err != nil {
 				return err
 			}

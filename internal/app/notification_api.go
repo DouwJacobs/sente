@@ -3,10 +3,14 @@ package app
 import (
 	"database/sql"
 	"net/http"
+	"strings"
 	"time"
 )
 
 func (a *App) notificationRoutes(m *http.ServeMux) {
+	m.HandleFunc("GET /api/notifications/diagnostics", wrap(a.notificationDiagnostics))
+	a.notificationPushRoutes(m)
+	m.HandleFunc("GET /api/notifications/push/messages/{id}", wrap(a.pushNotificationMessage))
 	m.HandleFunc("GET /api/notifications", wrap(a.listNotifications))
 	m.HandleFunc("GET /api/notifications/unread-count", wrap(a.notificationUnreadCount))
 	m.HandleFunc("POST /api/notifications/read-all", wrap(a.readAllNotifications))
@@ -22,7 +26,7 @@ func (a *App) notificationRoutes(m *http.ServeMux) {
 // becoming private/hidden, grants changing, or a source disappearing hides the
 // entire old payload. Administrators get no cross-user inbox exception.
 func notificationVisibilitySQL() string {
-	return `n.user_id=? AND n.dismissed_at IS NULL AND n.created_at>? AND
+	return `n.in_app_enabled=1 AND n.user_id=? AND n.dismissed_at IS NULL AND n.created_at>? AND
  EXISTS(SELECT 1 FROM users u WHERE u.id=n.user_id AND u.disabled=0 AND u.deleted_at IS NULL) AND
  NOT EXISTS(SELECT 1 FROM notification_accounts d LEFT JOIN accounts a ON a.id=d.account_id
  WHERE d.notification_id=n.id AND (a.id IS NULL OR a.sync_hidden=1 OR
@@ -34,6 +38,26 @@ func notificationVisibilitySQL() string {
  (n.source_kind='transaction' AND EXISTS(SELECT 1 FROM transactions t JOIN notification_accounts d ON d.account_id=t.account_id WHERE t.id=n.source_id AND d.notification_id=n.id)) OR
  (n.source_kind='budget' AND EXISTS(SELECT 1 FROM periods p WHERE p.id=n.source_id) AND EXISTS(SELECT 1 FROM users u WHERE u.id=n.user_id AND u.budget_member=1)))`
 }
+func notificationPushVisibilitySQL() string {
+	return strings.TrimPrefix(notificationVisibilitySQL(), "n.in_app_enabled=1 AND ")
+}
+
+func (a *App) pushNotificationMessage(w http.ResponseWriter, r *http.Request) error {
+	id := parseID(r)
+	if id <= 0 {
+		return fail(400, "Choose a notification")
+	}
+	items, err := data(a.DB, `SELECT n.id,n.type,n.severity,n.title,n.message,n.source_kind,n.source_id,n.occurred_at,n.created_at,n.read_at,n.dismissible FROM notifications n WHERE n.id=? AND `+notificationPushVisibilitySQL(), append([]any{id}, notificationReadArgs(Current(r).ID)...)...)
+	if err != nil {
+		return err
+	}
+	if len(items) != 1 {
+		return fail(404, "Notification unavailable")
+	}
+	send(w, items[0])
+	return nil
+}
+
 func notificationReadArgs(uid int64) []any {
 	return []any{uid, time.Now().Add(-notificationRetention).Unix()}
 }
@@ -103,6 +127,9 @@ func (a *App) changeNotificationState(w http.ResponseWriter, r *http.Request, op
 			return err
 		}
 		where := notificationVisibilitySQL()
+		if operation != "read_all" {
+			where = notificationPushVisibilitySQL()
+		}
 		args := notificationReadArgs(uid)
 		if operation != "read_all" {
 			where += " AND n.id=?"

@@ -1,4 +1,4 @@
-import { NotificationPreferences } from "../notifications/NotificationPreferences";
+import { NotificationSettings } from "../notifications/NotificationSettings";
 import { ConfigurationSettings } from "./ConfigurationSettings";
 import { AboutSettings } from "./AboutSettings";
 import { GeneralSettings } from "./GeneralSettings";
@@ -132,7 +132,7 @@ export function SettingsPage({
         )}
       </div>
       <div {...panel("notifications")}>
-        {(notificationsVisited || active === "notifications") && <NotificationPreferences notify={notify} />}
+        {(notificationsVisited || active === "notifications") && <NotificationSettings admin={!!data.user.admin} notify={notify} />}
       </div>
       <div {...panel("security")}>
         <SecuritySettings busy={busy} run={run} />
