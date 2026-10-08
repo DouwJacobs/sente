@@ -1,0 +1,160 @@
+import { test, expect } from "@playwright/test";
+import { start, contained, moneyFits, noOverflow, reachable } from "./responsive-helpers";
+
+test("Budgets adds and edits independent group categories with one atomic save", async ({ page }) => {
+  await start(page, { width: 1440, height: 900 }, "light", "saved group budgets and personal alerts");
+  const errors: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Budgets", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const groups = page.locator(".budget-groups-view");
+  const group = (name: string) => groups.getByRole("region", { name: name + " budget", exact: true });
+  const open = async (name: string) => {
+    const target = group(name);
+    if (await target.locator(".budget-group-summary").getAttribute("aria-expanded") === "false") await target.locator(".budget-group-summary").click();
+    return target;
+  };
+  let current = await open("No spending group");
+  const pencil = current.getByRole("button", { name: "Edit budget for Groceries in No spending group", exact: true });
+  await pencil.focus(); await page.keyboard.press("Enter");
+  let editor = page.getByRole("dialog", { name: "Edit budget · Groceries", exact: true });
+  await expect(editor.getByLabel("Budget amount", { exact: true })).toHaveValue("4500.00");
+  await expect(editor).toContainText("October 2026");
+  await expect(editor.getByRole("button", { name: /^Save/ })).toHaveCount(1);
+  await editor.getByLabel("Budget amount", { exact: true }).fill("6200.00");
+  await editor.getByLabel("Alert threshold (%)", { exact: true }).fill("70");
+  await editor.getByRole("button", { name: "Mute budget alerts", exact: true }).click();
+  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(pencil).toBeFocused();
+  await pencil.click();
+  await expect(editor.getByLabel("Budget amount", { exact: true })).toHaveValue("4500.00");
+  await expect(editor.getByLabel("Alert threshold (%)", { exact: true })).toHaveValue("");
+  await editor.getByLabel("Budget amount", { exact: true }).fill("6200.00");
+  await editor.getByLabel("Alert threshold (%)", { exact: true }).fill("70");
+  await editor.getByRole("button", { name: "Mute budget alerts", exact: true }).click();
+  const session = await (await page.request.get("/api/me")).json();
+  const headers = { "X-CSRF-Token": session.csrf, Origin: new URL(page.url()).origin };
+  const mutate = async (data: unknown) => {
+    const period = (await (await page.request.get("/api/periods?id=1")).json()).items[0];
+    expect((await page.request.put("/api/periods/1/budget", { headers, data: { version: period.version, groups: data } })).ok()).toBe(true);
+  };
+  // A concurrent edit must reject the displayed snapshot rather than overwrite it.
+  await mutate([{ group_id: 0, targets: [{ category_id: 2, amount_cents: 12300 }] }]);
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(editor.getByRole("button", { name: "Reload budget", exact: true })).toBeVisible();
+  await expect(editor.getByLabel("Budget amount", { exact: true })).toHaveValue("6200.00");
+  await expect(editor.getByLabel("Alert threshold (%)", { exact: true })).toHaveValue("70");
+  const targets = async (id: number, category: number) => (await (await page.request.get(`/api/periods/1/targets?group=${id}&budget_only=1&id=${category}`)).json()).items;
+  expect((await targets(0, 1))[0].amount_cents).toBe(450000);
+  await editor.getByRole("button", { name: "Reload budget", exact: true }).click();
+  await expect(editor.getByLabel("Budget amount", { exact: true })).toHaveValue("4500.00");
+  await editor.getByLabel("Budget amount", { exact: true }).fill("6200.00");
+  await editor.getByLabel("Use this category in", { exact: true }).selectOption("future");
+  const saved = page.waitForResponse(response => response.url().endsWith("/api/periods/1/budget") && response.request().method() === "PUT");
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
+  expect((await saved).ok()).toBe(true); await expect(editor).toHaveCount(0);
+  expect((await targets(0, 1))[0]).toMatchObject({ amount_cents: 620000, carry_forward: 1 });
+  const preferences = (await (await page.request.get("/api/notifications/preferences?channels=all")).json()).budget_items;
+  expect(preferences.find((item: any) => item.category_id === 1 && item.group_id === 0)).toMatchObject({ enabled: false, threshold: 70 });
+  // Add a group and the same category with an independent explicit zero budget.
+  await groups.getByRole("button", { name: "Add group", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Add budget group", exact: true });
+  await picker.getByLabel("Spending group", { exact: true }).selectOption("4");
+  await picker.getByRole("button", { name: "Add group to budget", exact: true }).click(); await expect(picker).toHaveCount(0);
+  current = group("Exceptions");
+  await current.getByRole("button", { name: "Add category to Exceptions", exact: true }).click();
+  editor = page.getByRole("dialog", { name: "Add category · Exceptions", exact: true });
+  await expect(editor.getByLabel("Alert threshold (%)", { exact: true })).toBeVisible();
+  await expect(editor.getByLabel("Alert threshold (%)", { exact: true })).toBeDisabled();
+  const createBounds = (await editor.getByRole("button", { name: "Create expense category", exact: true }).boundingBox())!;
+  const amountBounds = (await editor.locator(".field").filter({ has: page.getByLabel("Budget amount", { exact: true }) }).boundingBox())!;
+  expect(amountBounds.y - createBounds.y - createBounds.height).toBeGreaterThanOrEqual(16);
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(editor.getByLabel("Category", { exact: true })).toHaveAttribute("aria-invalid", "true");
+  await editor.getByLabel("Category", { exact: true }).selectOption("1");
+  await expect(editor.getByLabel("Budget amount", { exact: true })).toBeEnabled();
+  await expect(editor.getByLabel("Budget amount", { exact: true })).toHaveValue("0.00");
+  await expect(editor.getByLabel("Use this category in", { exact: true })).toHaveValue("once");
+  await editor.getByLabel("Alert threshold (%)", { exact: true }).fill("90");
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click(); await expect(editor).toHaveCount(0);
+  await expect(current.getByRole("button", { name: "Edit budget for Groceries in Exceptions", exact: true })).toBeVisible();
+  expect((await targets(4, 1))[0].amount_cents).toBe(0);
+  await current.getByRole("button", { name: "Edit budget for Groceries in Exceptions", exact: true }).click();
+  editor = page.getByRole("dialog", { name: "Edit budget · Groceries", exact: true });
+  await expect(editor.getByLabel("Alert threshold (%)", { exact: true })).toHaveValue("90");
+  await expect(editor.getByRole("button", { name: "Remove limit", exact: true })).toBeVisible();
+  for (const [width, height, theme] of [[1440, 900, "light"], [360, 800, "dark"], [640, 360, "dark"]] as const) {
+    await page.setViewportSize({ width, height }); await page.evaluate(value => document.documentElement.dataset.theme = value, theme);
+    await reachable(page, editor.getByRole("button", { name: "Save changes", exact: true }), "category save");
+    expect(await editor.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  }
+  await editor.getByRole("button", { name: "Remove limit", exact: true }).click(); await expect(editor).toHaveCount(0);
+  expect(await targets(4, 1)).toHaveLength(0); expect((await targets(0, 1))[0].amount_cents).toBe(620000);
+  await expect(current).toContainText("Add the categories you want to budget for in this group.");
+  for (const width of [360, 390, 430, 760, 761, 1440]) {
+    await page.setViewportSize({ width, height: 850 });
+    await contained(page, current.getByRole("button", { name: "Add category to Exceptions", exact: true }), "group plus", true);
+    await moneyFits(page, current.locator(".budget-group-amount"), "group budget");
+    await noOverflow(page);
+  }
+  await current.getByLabel("Budget actions for Exceptions", { exact: true }).click();
+  await current.getByRole("button", { name: "Remove group", exact: true }).click();
+  const removal = page.getByRole("dialog", { name: "Remove budget group · Exceptions", exact: true });
+  await removal.getByRole("button", { name: "Cancel", exact: true }).click(); await expect(current).toBeVisible();
+  await current.getByLabel("Budget actions for Exceptions", { exact: true }).click();
+  await current.getByRole("button", { name: "Remove group", exact: true }).click();
+  await removal.getByRole("button", { name: "Remove group", exact: true }).click();
+  await expect(removal).toHaveCount(0); await expect(current).toHaveCount(0);
+  expect((await targets(0, 1))[0].amount_cents).toBe(620000);
+  expect(errors).toEqual([]);
+});
+
+test("Budgets loads and edits categories beyond the first page and blocks failed loads", async ({ page }) => {
+  await start(page, { width: 360, height: 800 }, "dark", "paged category budgets");
+  const session = await (await page.request.get("/api/me")).json();
+  const headers = { "X-CSRF-Token": session.csrf, Origin: new URL(page.url()).origin };
+  const created = await page.request.post("/api/spending-groups", { headers, data: { name: "Paged budget group", color: "teal" } });
+  expect(created.ok()).toBe(true); const groupID = (await created.json()).id;
+  const rows = [];
+  for (let index = 0; index < 21; index++) {
+    const result = await page.request.post("/api/categories", { headers, data: { name: `Paged expense ${String(index).padStart(2, "0")}`, kind: "expense" } });
+    expect(result.ok()).toBe(true); rows.push({ category_id: (await result.json()).id, amount_cents: index * 100, carry_forward: false });
+  }
+  const period = (await (await page.request.get("/api/periods?id=1")).json()).items[0];
+  expect((await page.request.put("/api/periods/1/budget", { headers, data: { version: period.version, groups: [{ group_id: groupID, targets: rows }] } })).ok()).toBe(true);
+  await page.reload(); await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  const current = page.getByRole("region", { name: "Paged budget group budget", exact: true });
+  await current.locator(".budget-group-summary").click();
+  await expect(current.locator(".budget-category-row")).toHaveCount(20);
+  await current.getByRole("button", { name: "Next", exact: true }).click();
+  const pencil = current.getByRole("button", { name: "Edit budget for Paged expense 20 in Paged budget group", exact: true });
+  await expect(pencil).toBeVisible();
+  await page.route("**/api/periods/1/targets?**", route => new URL(route.request().url()).searchParams.has("id")
+    ? route.fulfill({ status: 503, json: { error: "Synthetic budget load failed" } }) : route.continue());
+  await pencil.click();
+  const editor = page.getByRole("dialog", { name: "Edit budget · Paged expense 20", exact: true });
+  await expect(editor.getByRole("button", { name: "Reload budget", exact: true })).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
+  await page.unroute("**/api/periods/1/targets?**");
+  await editor.getByRole("button", { name: "Reload budget", exact: true }).click();
+  await expect(editor.getByLabel("Budget amount", { exact: true })).toHaveValue("20.00");
+  await editor.getByLabel("Budget amount", { exact: true }).fill("42.00");
+  await editor.getByRole("button", { name: "Save changes", exact: true }).click(); await expect(editor).toHaveCount(0);
+  await expect(current.locator(".budget-category-row")).toHaveCount(1);
+  await expect(current).toContainText("42,00");
+  await expect(pencil).toBeFocused();
+  await current.getByRole("button", { name: "Add category to Paged budget group", exact: true }).click();
+  const add = page.getByRole("dialog", { name: "Add category · Paged budget group", exact: true });
+  await add.getByRole("button", { name: "Create expense category", exact: true }).click();
+  const create = page.getByRole("dialog", { name: "Create expense category", exact: true });
+  await create.getByLabel("Category name", { exact: true }).fill("Z created budget category");
+  await create.getByRole("button", { name: "Create category", exact: true }).click();
+  await expect(create).toHaveCount(0);
+  await expect(add.getByLabel("Budget amount", { exact: true })).toBeEnabled();
+  await expect(add.getByLabel("Alert threshold (%)", { exact: true })).toBeEnabled();
+  await add.getByLabel("Budget amount", { exact: true }).fill("14.00");
+  await add.getByRole("button", { name: "Save changes", exact: true }).click(); await expect(add).toHaveCount(0);
+  await expect(current.getByRole("button", { name: "Edit budget for Z created budget category in Paged budget group", exact: true })).toBeVisible();
+  await noOverflow(page);
+});

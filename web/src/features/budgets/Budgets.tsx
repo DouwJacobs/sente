@@ -1,8 +1,8 @@
 import { BudgetTrends, Rebalance } from "../../CoreWorkflows";
 import { useTransactionAccess } from "../../TransactionAccess";
-import { LimitEditor } from "../../LimitEditor";
+import { BudgetGroups } from "./BudgetGroups";
 import { usePagedList, ListStatus, ListNavigation } from "../../PagedList";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { api, money } from "../../api";
 import {
@@ -36,7 +36,8 @@ export function Budgets({
   const [rebalance, setRebalance] = useState<Row | null>(null);
   const [editing, setEditing] = useState<Row | null>(null),
     [preview, setPreview] = useState<Row | null>(null),
-    [limits, setLimits] = useState<Row | null>(null);
+    [expandedPeriod, setExpandedPeriod] = useState<string>(period);
+  useEffect(() => setExpandedPeriod(period), [period]);
   const { busy, run } = useTask(notify);
   const periods = usePagedList("/periods", revision);
   const selectedPeriod = data.periods.find((p) => String(p.id) === period);
@@ -121,7 +122,7 @@ export function Budgets({
                   </p>
                 </div>
                 <div className="toolbar-actions">
-                  <Button variant="primary" onClick={() => setLimits(p)}>
+                  <Button variant="primary" aria-expanded={expandedPeriod === String(p.id)} aria-controls={"category-budgets-" + p.id} onClick={() => setExpandedPeriod(String(p.id))}>
                     Edit budgets
                   </Button>
                   <Button variant="quiet" onClick={() => onDashboard(p.id)}>
@@ -141,22 +142,9 @@ export function Budgets({
                 <span>Total budget</span>
                 <strong>{money(p.target_total)}</strong>
               </div>
-              {p.group_budgets
-                ?.filter((g: Row) => g.target_cents > 0)
-                .map((g: Row) => (
-                  <div className="line" key={g.id}>
-                    <span>{g.name}</span>
-                    <strong>{money(g.target_cents)}</strong>
-                  </div>
-                ))}
-              {!p.target_total && (
-                <p className="footnote">No spending limits set yet.</p>
-              )}
-              {p.group_budgets?.length === 20 && (
-                <p className="footnote">
-                  Use Edit budgets to browse all groups and categories.
-                </p>
-              )}
+              <div id={"category-budgets-" + p.id} hidden={expandedPeriod !== String(p.id)}>
+                {expandedPeriod === String(p.id) && <BudgetGroups period={p} revision={revision} notify={notify} refresh={refresh} />}
+              </div>
             </section>
           ))
         )}
@@ -341,20 +329,7 @@ export function Budgets({
           />
         )}
       </div>
-      {limits && (
-        <Modal
-          title={"Group budgets · " + limits.name}
-          onClose={() => setLimits(null)}
-        >
-          <LimitEditor
-            period={limits}
-            notify={notify}
-            refresh={refresh}
-            revision={revision}
-            onDone={() => setLimits(null)}
-          />
-        </Modal>
-      )}
+
     </>
   );
 }

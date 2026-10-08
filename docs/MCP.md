@@ -256,3 +256,6 @@ Branding/PWA identity editing, public manifest/icons, installation, static cachi
 
 
 Issue #69: personal category/spending-group budget alert switches and thresholds remain browser-only. Internal notification scope metadata is not part of inbox/MCP output. No MCP tool, input/output schema, allowlist, consent/capability, proposal preview/audit or financial write-service change is introduced.
+
+
+Issue #71 changes browser budget presentation only. Budgets plus/pencil actions and dashboard drill-down share the existing authorized category-budget save, including optional personal alerts. Existing financial tools, schemas, output allowlists, consent, proposals and audits remain unchanged; personal alert editing remains browser-only.
