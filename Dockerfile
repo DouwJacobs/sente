@@ -21,7 +21,7 @@ ARG SENTE_BUILD_TIME=""
 COPY scripts/build-metadata.sh ./scripts/build-metadata.sh
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(sh scripts/build-metadata.sh)" -o /finance ./cmd/finance
 
-FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
 ARG SENTE_VERSION=dev
 ARG SENTE_COMMIT=""
 ARG SENTE_BUILD_TIME=""
