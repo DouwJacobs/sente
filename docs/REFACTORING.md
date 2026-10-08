@@ -37,7 +37,7 @@ Authorization, versions, source identities, exact proposal effects and audit rem
 | `features/dashboard` | Dashboard rendering and summary figures. |
 | `features/accounts` | Account screen using shared account management. |
 | `features/categories` | Category/group/rule screen. |
-| `features/budgets` | Budget-period screen and existing builder/report integration. |
+| `features/budgets` | Budget-period screen, paged BudgetGroups hierarchy, shared CategoryBudgetModal and report integration. |
 | `features/settings` | Settings orchestration, general/security forms, portable configuration source forms/preview/history, access list/dialogs and persistent drafts. |
 | `features/imports` | Import orchestration, activity expansion, exception previews, retained source rows and rule suggestions. |
 | `features/transactions` | Ledger selection/paging, editor orchestration, split controls, transfer/provenance extras and audit history. |
@@ -72,4 +72,4 @@ Notification producers: `notification_budget_producers.go` uses `budget_notifica
 `features/pwa/PWAInstallInvitation.tsx` owns signed-in installation discovery. `installInvitationPreference.ts` shares the browser-local suppression flag with native install actions in PWAProvider; this preference contains no financial/user data and grants no permissions.
 
 
-Issue #69: `notification_budget_preferences.go` owns personal category/group setting contracts, shared atomic save helpers and silent baselines; `notification_budget_preference_schema.go` owns immutable migrations 29/30. `CategoryBudgetAlert.tsx` owns the scoped editor in the dashboard pencil's nested CategoryBudgetModal; NotificationPreferences owns global type/channel choices. Producers continue using shared allocation arithmetic; internal delivery scope metadata permits push preference rechecks without adding inbox/MCP output fields.
+Issue #69: `notification_budget_preferences.go` owns personal category/group setting contracts, shared atomic save helpers and silent baselines; `notification_budget_preference_schema.go` owns immutable migrations 29/30. `CategoryBudgetAlert.tsx` owns the personal fields used by `features/budgets/CategoryBudgetModal.tsx` for dashboard and Budgets add/edit workflows; NotificationPreferences owns global type/channel choices. Producers continue using shared allocation arithmetic; internal delivery scope metadata permits push preference rechecks without adding inbox/MCP output fields.

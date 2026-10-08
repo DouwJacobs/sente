@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { viewports, start, navigate, moneyFits, noOverflow, reachable, contained } from './responsive-helpers';
-import { categoryName, mockResponsiveBudget, mockResponsiveSettings } from './responsive-fixtures';
+import { categoryName, groupName, mockResponsiveBudget, mockResponsiveSettings } from './responsive-fixtures';
 
 // Resize one read-only session instead of repeating every mutation/draft workflow.
 for (const theme of ['light', 'dark']) {
@@ -27,9 +27,14 @@ for (const theme of ['light', 'dark']) {
    }
    await navigate(page,'Budgets');
    await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
+   const group=page.getByRole('region',{name:groupName+' budget',exact:true});
+   await group.locator('.budget-group-summary').click();
+   await contained(page,group.getByRole('button',{name:'Edit budget for '+categoryName+' in '+groupName,exact:true}),'long category edit',true);
+   await group.getByRole('button',{name:'Edit budget for '+categoryName+' in '+groupName,exact:true}).click();
    const builder=page.getByRole('dialog');
-   await contained(page,builder.getByLabel(categoryName,{exact:true}),'long category field');
-   await reachable(page,builder.getByRole('button',{name:'Save budget',exact:true}),'save budget');
+   await expect(builder.getByLabel('Budget amount',{exact:true})).toBeEnabled();
+   await contained(page,builder.getByLabel('Budget amount',{exact:true}),'budget amount field');
+   await reachable(page,builder.getByRole('button',{name:'Save changes',exact:true}),'save budget');
    await noOverflow(page);
    await builder.getByRole('button',{name:'Close',exact:true}).click();
    const nav=page.getByRole('navigation',{name:viewport.width<=760?'Mobile navigation':'Main navigation',exact:true});

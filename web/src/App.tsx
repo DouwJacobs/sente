@@ -449,6 +449,7 @@ export default function App() {
             onImport={() => openTransactions("imports")}
             stagedCount={workCounts.imports}
             onAccounts={() => go("Accounts")}
+            onBudgets={(id) => { setPeriod(String(id)); setAccount(""); go("Budgets"); }}
           />
         )}
         {current === "Transactions" && (

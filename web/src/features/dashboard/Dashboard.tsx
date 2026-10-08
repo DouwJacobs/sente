@@ -4,7 +4,6 @@ import { DailyGuide } from "../../CoreWorkflows";
 import { SpendingTransactions } from "../../DashboardTransactions";
 import { useTransactionAccess } from "../../TransactionAccess";
 import { SpendingBucket } from "../../SpendingBucket";
-import { LimitEditor } from "../../LimitEditor";
 import { useEffect, useState } from "react";
 import {
   ArrowLeftRight,
@@ -17,7 +16,7 @@ import {
   Target,
 } from "lucide-react";
 import { api, money } from "../../api";
-import { Button, Field, Empty, Loading, Pagination, Modal } from "../../ui";
+import { Button, Field, Empty, Loading, Pagination } from "../../ui";
 export function Dashboard({
   data,
   period,
@@ -29,6 +28,7 @@ export function Dashboard({
   onImport,
   stagedCount,
   onAccounts,
+  onBudgets,
   refresh,
 }: PageProps & {
   period: string;
@@ -38,13 +38,13 @@ export function Dashboard({
   onImport: () => void;
   stagedCount: number;
   onAccounts: () => void;
+  onBudgets: (id: number) => void;
 }) {
   const { viewTransactions } = useTransactionAccess();
   const [budgetSort, setBudgetSort] = useState("alphabetical");
   const [categoryPage, setCategoryPage] = useState(0),
     [balancePage, setBalancePage] = useState(0),
-    [groupPage, setGroupPage] = useState(0),
-    [editingLimits, setEditingLimits] = useState(false);
+    [groupPage, setGroupPage] = useState(0);
   useEffect(() => {
     setCategoryPage(0);
     setBalancePage(0);
@@ -102,20 +102,6 @@ export function Dashboard({
   return (
     <>
       {loading && <Loading>Loading this period</Loading>}
-      {editingLimits && (
-        <Modal
-          title={"Group budgets · " + d.period.name}
-          onClose={() => setEditingLimits(false)}
-        >
-          <LimitEditor
-            period={d.period}
-            notify={notify}
-            refresh={refresh}
-            revision={revision}
-            onDone={() => setEditingLimits(false)}
-          />
-        </Modal>
-      )}
       <section className={"stats dashboard-overview" + (longTotals ? " long-values" : "")} aria-label="Period totals">
         <Stat
           tone="budget"
@@ -181,7 +167,7 @@ export function Dashboard({
                 </select>
               </Field>
               {d.has_targets && (
-                <Button onClick={() => setEditingLimits(true)}>
+                <Button onClick={() => onBudgets(d.period.id)}>
                   Edit budgets
                 </Button>
               )}

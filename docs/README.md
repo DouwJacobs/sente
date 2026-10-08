@@ -1,6 +1,6 @@
 # Documentation
 
-Start with the [project README](../README.md) for installation and everyday use. Contributors should read [AGENTS.md](../AGENTS.md), then the current guides below.
+Start with the [project README](../README.md) for the product tour and quick start, or [Setup and everyday use](SETUP.md) for installation, configuration, imports and recovery. Contributors should read [AGENTS.md](../AGENTS.md), then the current guides below.
 
 | Guide | Use it for |
 | --- | --- |
