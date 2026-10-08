@@ -348,3 +348,6 @@ MCP impact: browser presentation and shared draft ownership only; existing finan
 
 
 Issue #71 publication authorization (8 October 2026): owner authorized commit, push, PR creation, merge and closure of #71 after completion. Local verification is recorded above. No production deployment is included.
+
+
+Issue #71 publication follow-up: the final obsolete bulk-editor selectors in handover, onboarding, responsive-geometry and workflows were updated without removing their financial/access/validation/geometry assertions. Category creation restores focus to the loaded amount field. Final build, all 15 units and all 12 additional browser workflows passed (run-i7owk12w: shared category editor 2, handover 2, onboarding 3, geometry 2, workflows 3); combined local scope is 44 distinct browser workflows. The initial PR CI run was cancelled as superseded before this follow-up; no CI pass is claimed for it. MCP/backend contracts remain unchanged.

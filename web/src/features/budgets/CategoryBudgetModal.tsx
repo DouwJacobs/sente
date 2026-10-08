@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { api, cents, decimal } from "../../api";
 import { CreateCategory } from "../../Choices";
@@ -13,6 +13,8 @@ export function CategoryBudgetModal({ category, group, period, periodName, onClo
   category?: Row; group: Row; period: string; periodName?: string; onClose: () => void;
   onSaved: (amount: number) => void; notify: PageProps["notify"]; alertAvailable?: boolean;
 }) {
+  const amountInput = useRef<HTMLInputElement>(null);
+  const focusCreatedAmount = useRef(false);
   const [selected, setSelected] = useState<Row | undefined>(category);
   const [categoryID, setCategoryID] = useState(category ? String(category.id) : "");
   const [creating, setCreating] = useState(false);
@@ -49,6 +51,12 @@ export function CategoryBudgetModal({ category, group, period, periodName, onClo
     }).finally(() => { if (current) setLoading(false); });
     return () => { current = false; };
   }, [period, group.id, categoryID, reload]);
+  useEffect(() => {
+    if (!loading && !loadFailed && focusCreatedAmount.current) {
+      focusCreatedAmount.current = false;
+      amountInput.current?.focus();
+    }
+  }, [loading, loadFailed]);
   const ready = !!categoryID && version !== null && !loading && !loadFailed && (!alertAvailable || (!alert.loading && !alert.failed && alert.draft?.category_id === Number(categoryID)));
   const save = async (remove = false) => {
     if (!ready) return;
@@ -83,7 +91,7 @@ export function CategoryBudgetModal({ category, group, period, periodName, onClo
       {loading && <Loading>Loading category budget</Loading>}
       {loadFailed && <Button onClick={() => setReload(value => value + 1)} disabled={busy}>Reload budget</Button>}
       <Field label="Budget amount" validate={value => moneyError(value, true)}>
-        <input autoFocus={!!category} inputMode="decimal" required value={amount} disabled={busy || loading || loadFailed || !categoryID} onChange={event => setAmount(event.target.value)} />
+        <input ref={amountInput} autoFocus={!!category} inputMode="decimal" required value={amount} disabled={busy || loading || loadFailed || !categoryID} onChange={event => setAmount(event.target.value)} />
       </Field>
       <Field label="Use this category in">
         <select value={future ? "future" : "once"} disabled={busy || loading || loadFailed || !categoryID} onChange={event => setFuture(event.target.value === "future")}>
@@ -103,6 +111,7 @@ export function CategoryBudgetModal({ category, group, period, periodName, onClo
     </Form>
     {creating && <Modal size="compact" title="Create expense category" onClose={() => setCreating(false)}>
       <CreateCategory name="" expenseOnly notify={notify} done={(id, name) => {
+        focusCreatedAmount.current = true;
         chooseCategory(String(id)); setSelected({ id, name: name || "New category" }); setCreating(false);
       }} />
     </Modal>}
