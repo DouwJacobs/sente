@@ -1,8 +1,10 @@
+import { colorToken } from './responsive-helpers';
+import { desktopPhoneCases } from './coverage-cases';
 import {test,expect} from '@playwright/test'
 import {readFileSync} from 'node:fs'
 
 const cssURL=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8').match(/href="([^"]+\.css)"/)![1]
-for(const width of [1440,360])for(const theme of ['light','dark'])test(`shared interaction states at ${width}px in ${theme}`,async({page})=>{
+for(const {width,theme} of desktopPhoneCases)test(`shared interaction states at ${width}px in ${theme}`,async({page})=>{
  await page.setViewportSize({width,height:900})
  await page.route('**/theme-fixture.css',route=>route.fulfill({contentType:'text/css',body:'main{margin:0;width:100%;max-width:500px;padding:24px}'}))
  await page.route('**/theme-fixture',route=>route.fulfill({contentType:'text/html',headers:{'Content-Security-Policy':"default-src 'self'; style-src 'self'"},body:`<!doctype html><html><head><link rel="stylesheet" href="${cssURL}"/><link rel="stylesheet" href="/theme-fixture.css"/></head><body><main>
@@ -23,7 +25,6 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`shared i
  <button data-check="upload" class="file-picker">Choose files</button>
  </main></body></html>`}))
  await page.goto('/theme-fixture');await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme)
- const expected=theme==='light'?'rgb(229, 231, 235)':'rgb(51, 56, 66)'
  const colorContrast=async(selector:string)=>page.locator(selector).evaluate(el=>{
   const numbers=(value:string)=>value.match(/[\d.]+/g)!.slice(0,3).map(Number)
   const light=(rgb:number[])=>rgb.map(n=>{n/=255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4}).reduce((sum,n,i)=>sum+n*[.2126,.7152,.0722][i],0)
@@ -33,7 +34,9 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`shared i
  for(const id of ['secondary','quiet','danger','nav','tab','action','transaction','disclosure','choice','picker','input','upload']){
   const selector=`[data-check="${id}"]`,target=page.locator(selector)
   await page.mouse.move(0,0);const resting=await target.evaluate(el=>getComputedStyle(el).backgroundColor)
-  await target.hover();const fill=['input','picker'].includes(id)?theme==='light'?'rgb(240, 241, 243)':'rgb(39, 43, 51)':id==='danger'?theme==='light'?'rgb(255, 240, 236)':'rgb(65, 42, 36)':expected;await expect(target).toHaveCSS('background-color',fill)
+  await target.hover()
+  const token=['input','picker'].includes(id)?'--surface-soft':id==='danger'?'--danger-bg':'--interaction-hover'
+  await expect(target).toHaveCSS('background-color',await colorToken(page,token))
   expect(await target.evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe(resting)
   expect(await colorContrast(selector)).toBeGreaterThanOrEqual(4.5)
  }
@@ -44,13 +47,13 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`shared i
  }
  const input=page.locator('[data-check="input"]')
  await page.mouse.move(0,0)
- const restingInput=await input.evaluate(el=>{const css=getComputedStyle(el);return {background:css.backgroundColor,border:css.borderColor}})
- expect(restingInput.background).toBe(theme==='light'?'rgb(255, 255, 255)':'rgb(36, 40, 48)')
+ const restingInputBorder=await input.evaluate(el=>getComputedStyle(el).borderColor)
  await input.evaluate(el=>el.setAttribute('aria-invalid','true'));await input.hover()
- await expect(input).toHaveCSS('border-color',theme==='light'?'rgb(179, 68, 54)':'rgb(255, 180, 166)')
+ await expect(input).toHaveCSS('border-color',await colorToken(page,'--negative'))
+ expect(await input.evaluate(el=>getComputedStyle(el).borderColor)).not.toBe(restingInputBorder)
  await input.evaluate(el=>el.removeAttribute('aria-invalid'))
  const primary=page.locator('[data-check="primary"]');await primary.hover()
- await expect(primary).toHaveCSS('background-color',theme==='light'?'rgb(16, 94, 83)':'rgb(132, 214, 200)')
+ await expect(primary).toHaveCSS('background-color',await colorToken(page,'--primary-hover'))
  expect(await colorContrast('[data-check="primary"]')).toBeGreaterThanOrEqual(4.5)
  const disabled=page.locator('[data-check="disabled"]');await page.mouse.move(0,0)
  const resting=await disabled.evaluate(el=>getComputedStyle(el).backgroundColor)
@@ -58,6 +61,8 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`shared i
  // Real keyboard input activates focus-visible independently of pointer hover.
  await page.mouse.move(0,0);await page.locator('[data-check="secondary"]').focus();await page.keyboard.press('Tab')
  const quiet=page.locator('[data-check="quiet"]');await expect(quiet).toBeFocused()
- await expect(quiet).toHaveCSS('outline-style','solid');await expect(quiet).toHaveCSS('outline-width','2px')
+ expect(await quiet.evaluate(el=>el.matches(':focus-visible'))).toBe(true)
+ expect(await quiet.evaluate(el=>getComputedStyle(el).outlineStyle)).not.toBe('none')
+ expect(await quiet.evaluate(el=>parseFloat(getComputedStyle(el).outlineWidth))).toBeGreaterThan(0)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
 })

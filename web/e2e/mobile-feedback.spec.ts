@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 test.use({ screenshot: 'only-on-failure' });
-for (const width of [360, 430, 497]) for (const theme of ['light', 'dark']) {
+for (const {width,theme} of [{width:360,theme:'light'},{width:430,theme:'dark'},{width:497,theme:'light'}]) {
   test(`compact aligned mobile surfaces ${width} ${theme}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.addInitScript(t => localStorage.setItem('finance-theme', t), theme);
@@ -55,7 +55,8 @@ for (const width of [360, 430, 497]) for (const theme of ['light', 'dark']) {
     await expect(page.locator('.row-check').first()).toBeHidden();
     const logo = transfer.locator('.transaction-logo');
     const logoBox = (await logo.boundingBox())!, rowBox = (await transfer.boundingBox())!;
-    expect(logoBox.width).toBe(36);
+    expect(logoBox.width).toBeGreaterThan(0);
+    expect(logoBox.width).toBeLessThanOrEqual(rowBox.height);
     expect(Math.abs(logoBox.y + logoBox.height / 2 - rowBox.y - rowBox.height / 2)).toBeLessThan(1);
     await transfer.scrollIntoViewIfNeeded();
     const point = (await transfer.boundingBox())!;

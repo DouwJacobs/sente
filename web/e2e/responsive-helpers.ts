@@ -58,3 +58,14 @@ export async function reachable(page:Page, target:Locator, name:string) {
   });
   expect(hit,`${name}: unobstructed action`).toBe(true);
 }
+
+export async function colorToken(page:Page, token:string) {
+ return page.evaluate(token=>{
+  const probe=document.createElement('span');
+  probe.style.color='var('+token+')';
+  document.body.append(probe);
+  const value=getComputedStyle(probe).color;
+  probe.remove();
+  return value;
+ },token);
+}

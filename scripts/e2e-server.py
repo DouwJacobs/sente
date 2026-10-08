@@ -59,14 +59,24 @@ if os.environ.get("E2E_EMPTY") != "1":
         runpy.run_path(str(root / "scripts/e2e-notifications.py"))["seed"](db)
     db.commit(); db.close()
 proc=subprocess.Popen([str(binary),"serve"],env=env)
-def stop(*_):
-    proc.terminate()
-    try: proc.wait(timeout=15)
-    except subprocess.TimeoutExpired: proc.kill(); proc.wait()
+def request_stop(*_):
+    # Forward only. Waiting inside a signal handler can re-enter Popen.wait's
+    # non-reentrant waitpid lock while the main thread is already waiting.
+    if proc.poll() is None:
+        proc.terminate()
+
+signal.signal(signal.SIGTERM, request_stop)
+signal.signal(signal.SIGINT, request_stop)
+try:
+    exit_code = proc.wait()
+finally:
+    if proc.poll() is None:
+        proc.terminate()
+        try:
+            proc.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait()
     import shutil
     shutil.rmtree(work)
-    sys.exit(0)
-signal.signal(signal.SIGTERM,stop); signal.signal(signal.SIGINT,stop)
-try: sys.exit(proc.wait())
-finally:
-    if proc.poll() is None: stop()
+sys.exit(exit_code)

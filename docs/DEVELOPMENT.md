@@ -38,10 +38,15 @@ Docker builds exclude `.git`, so pass `SENTE_VERSION`, `SENTE_COMMIT` and `SENTE
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` verifies pull requests and pushes to main with Go race tests/vet, lockfile-based frontend installation, Vitest, production build and synthetic Chromium workflows. Dependencies are cached by Go modules/npm lockfile; failed browser traces, screenshots and fixture details are retained for seven days. A bounded responsive smoke set runs first with a five-minute CI limit; the remaining browser suite excludes its tagged cases to avoid duplicate execution. The verification job has read-only repository access and never publishes images or uses production data.
+The verify job runs all backend race tests (explicit ten-minute per-package timeout), vet, active FNB worker tests, synthetic demo invariants and CI/runner guard tests. No critical backend test is excluded. Backend-only/documentation/demo PRs skip frontend verification; frontend, connector, test, build, CI and unknown inputs run all frontend unit tests and the production build.
 
+Qualifying PRs run the bank-shaped DOM check and npm run test:pr: 23 core browser spec files plus any added/edited browser spec. There is an ten-minute browser-step bound, not a promised total CI duration. Main pushes and manual workflow runs execute the complete browser suite once, with a twenty-minute step bound. The job retains its existing verify name, read-only access and thirty-minute overall bound. See [test review](TEST-REVIEW.md) for coverage-frequency tradeoffs and measured evidence.
 
-The browser runner builds the backend once, then starts three fresh disposable synthetic databases for each spec file, including dedicated empty-installation services. It reserves local ports, waits for health with proxy bypass and tears down every fixture. Files cannot inherit transactions, credentials, rules or settings changed by earlier specs. Pass filenames/options through `npm run test:e2e -- mcp.spec.ts`. The ordinary Playwright configuration remains available for direct single-session runs.
+Browser tests build once and give every spec fresh financial/settings fixtures. Reviewed primary-only specs start one service; onboarding also starts port+1 and classification defaults also starts port+2. Unlisted specs conservatively start all three until their fixture requirements are reviewed in scripts/browser-suites.json. Direct Playwright keeps its original three-server configuration. The PWA spec still gets its own static copy for real update testing.
+
+Run npm run test:e2e for full local coverage, npm run test:pr for the core PR set, or npm run test:e2e -- mcp.spec.ts for a focused group. E2E_CHANGED_SPECS is a JSON array of root spec filenames added to the PR set; CI fills it from the merge-base diff. Deleted specs are ignored, duplicates run once, invalid paths reject, and uncertain scope detection includes all specs.
+
+Run-specific directories under web/test-results retain per-spec Playwright JSON, failure screenshots/traces, synthetic server logs and build/setup/test/shutdown timings. Backend JSON duration output and browser results are uploaded for seven days on success or failure. No database or owner data is uploaded. Direct Playwright commands still share an output directory and should run sequentially.
 
 ## Database migrations
 
@@ -53,9 +58,11 @@ Add synthetic upgrade, preservation, failure/retry and restart coverage for the 
 
 ## Mobile responsive verification
 
-Run `cd web && npm run test:mobile` for the bounded `@mobile-smoke` set through the same disposable-fixture runner. It covers a core phone editor/navigation workflow, long transaction values, dashboard/budget and Settings workflows on a phone, short landscape and desktop, ordinary-user Settings visibility and a loading/error case. CI runs it before `npm run test:e2e -- --grep-invert @mobile-smoke`.
+Run cd web && npm run test:mobile for the standalone @mobile-smoke set, including ordinary-user Settings presentation and absence of management requests. CI uses the broader test:pr command once instead of running the same specs again in separate smoke/full phases.
 
-For the complete affected matrix, run `npm run test:e2e -- mobile-budget-settings.spec.ts mobile-core.spec.ts mobile-edge-layout.spec.ts`. Budget/Settings checks cover 360x800, 390x844, 430x932, 640x360, 900x720 and 1440x900 in both themes, plus 599/600/601, 759/760/761, 899/900/901 and 1024px breakpoints. The existing core checks cover the editor's 699/700/701px boundary. New fixture attachments record viewport/theme/scenario; geometry failures identify the offending control or figure. Failure screenshots/traces are diagnostics, without reference screenshot baselines or a claim of visual sign-off. Run browser suites sequentially because they share an output directory. Keyboard/safe-area/device-specific behavior needs separate evidence.
+Long Settings/budget interactions run at 360x800 light, 640x360 dark and 1440x900 light. responsive-geometry.spec.ts resizes read-only sessions through 360x800, 390x844, 430x932, 640x360, 900x720 and 1440x900 in both themes. It retains long labels, huge signed money, Settings panel overflow, keyboard terminal-tab visibility and reachable budget saves. Ten budget/Settings boundary cases and the navigation/editor 699/700/701px checks remain. Mobile core/gesture tests retain split validation, focus restoration, touch targets, selection cancellation and bottom-navigation clearance.
+
+For affected coverage run npm run test:e2e -- mobile-budget-settings.spec.ts responsive-geometry.spec.ts mobile-core.spec.ts mobile-edge-layout.spec.ts settings.spec.ts. Failure screenshots/traces and synthetic fixture attachments diagnose failures without reference screenshot baselines or manual visual sign-off. Physical-device/safe-area behavior still needs separate evidence.
 
 ## Notification delivery checks
 

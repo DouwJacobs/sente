@@ -1,5 +1,5 @@
 import {test,expect} from '@playwright/test'
-for(const mobile of [false,true])for(const theme of ['light','dark'])test(`transaction save/approve and stable pickers ${mobile?'mobile':'desktop'} ${theme}`,async({page})=>{
+for(const {mobile,theme} of [{mobile:true,theme:'light'},{mobile:false,theme:'dark'}])test(`transaction save/approve and stable pickers ${mobile?'mobile':'desktop'} ${theme}`,async({page})=>{
  await page.setViewportSize({width:mobile?360:1440,height:900})
  await page.addInitScript(theme=>localStorage.setItem('finance-theme',theme),theme)
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))

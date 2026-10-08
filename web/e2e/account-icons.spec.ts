@@ -1,5 +1,6 @@
+import { desktopPhoneCases } from './coverage-cases';
 import {test,expect} from '@playwright/test'
-for(const width of [1440,360])for(const theme of ['light','dark'])test(`account type icons ${width} ${theme}`,async({page})=>{
+for(const {width,theme} of desktopPhoneCases)test(`account type icons ${width} ${theme}`,async({page})=>{
  await page.setViewportSize({width,height:900});await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme)
  const types=['Credit','Savings','Home Loan','Cheque','']
  const items=types.map((account_type,i)=>({id:i+1,name:'Synthetic account '+(i+1)+(i===1?' with a long custom nickname':''),bank_id:String(12345678000+i),account_type,role:'editor',household:1,balance_cents:-12345,balance_date:'2026-10-04',version:1}))

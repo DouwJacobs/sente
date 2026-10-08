@@ -1,5 +1,6 @@
+import { desktopPhoneCases } from './coverage-cases';
 import {test,expect} from '@playwright/test'
-for(const width of [1440,360])for(const theme of ['light','dark'])test(`transaction rule fills pending uncategorized only ${width} ${theme}`,async({page})=>{
+for(const {width,theme} of desktopPhoneCases)test(`transaction rule fills pending uncategorized only ${width} ${theme}`,async({page})=>{
  await page.setViewportSize({width,height:900})
  await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme)
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))

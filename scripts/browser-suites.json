@@ -1,0 +1,181 @@
+{
+  "pr": [
+    "onboarding.spec.ts",
+    "classification-defaults.spec.ts",
+    "configuration.spec.ts",
+    "core-improvements.spec.ts",
+    "global-search.spec.ts",
+    "mcp.spec.ts",
+    "mobile-core.spec.ts",
+    "mobile-edge-layout.spec.ts",
+    "mobile-budget-settings.spec.ts",
+    "settings.spec.ts",
+    "notifications.spec.ts",
+    "notification-delivery.spec.ts",
+    "pwa.spec.ts",
+    "seen.spec.ts",
+    "pending-rules.spec.ts",
+    "rules.spec.ts",
+    "transaction-editor.spec.ts",
+    "transaction-entrypoints.spec.ts",
+    "transaction-filters.spec.ts",
+    "user-security.spec.ts",
+    "toasts.spec.ts",
+    "theme-toggle.spec.ts",
+    "responsive-geometry.spec.ts"
+  ],
+  "fixture_offsets": {
+    "about.spec.ts": [
+      0
+    ],
+    "account-discovery.spec.ts": [
+      0
+    ],
+    "account-icons.spec.ts": [
+      0
+    ],
+    "audit-followup.spec.ts": [
+      0
+    ],
+    "budget-presentation.spec.ts": [
+      0
+    ],
+    "classification-defaults.spec.ts": [
+      0,
+      2
+    ],
+    "cohesive-flow.spec.ts": [
+      0
+    ],
+    "configuration.spec.ts": [
+      0
+    ],
+    "core-improvements.spec.ts": [
+      0
+    ],
+    "dashboard-buckets.spec.ts": [
+      0
+    ],
+    "dashboard-connections.spec.ts": [
+      0
+    ],
+    "editor-layout.spec.ts": [
+      0
+    ],
+    "fnb-connection.spec.ts": [
+      0
+    ],
+    "fnb-transactions.spec.ts": [
+      0
+    ],
+    "global-search.spec.ts": [
+      0
+    ],
+    "handover.spec.ts": [
+      0
+    ],
+    "income-permissions.spec.ts": [
+      0
+    ],
+    "login-toast.spec.ts": [
+      0
+    ],
+    "mcp.spec.ts": [
+      0
+    ],
+    "merchant-global.spec.ts": [
+      0
+    ],
+    "mobile-budget-settings.spec.ts": [
+      0
+    ],
+    "mobile-core.spec.ts": [
+      0
+    ],
+    "mobile-edge-layout.spec.ts": [
+      0
+    ],
+    "mobile-feedback.spec.ts": [
+      0
+    ],
+    "mobile-selection.spec.ts": [
+      0
+    ],
+    "network.spec.ts": [
+      0
+    ],
+    "notification-delivery.spec.ts": [
+      0
+    ],
+    "notifications.spec.ts": [
+      0
+    ],
+    "onboarding.spec.ts": [
+      0,
+      1
+    ],
+    "password-visibility.spec.ts": [
+      0
+    ],
+    "pending-rules.spec.ts": [
+      0
+    ],
+    "polish.spec.ts": [
+      0
+    ],
+    "pwa.spec.ts": [
+      0
+    ],
+    "review-defaults.spec.ts": [
+      0
+    ],
+    "rule-layout.spec.ts": [
+      0
+    ],
+    "rules.spec.ts": [
+      0
+    ],
+    "seen.spec.ts": [
+      0
+    ],
+    "settings.spec.ts": [
+      0
+    ],
+    "theme-states.spec.ts": [
+      0
+    ],
+    "theme-toggle.spec.ts": [
+      0
+    ],
+    "toasts.spec.ts": [
+      0
+    ],
+    "transaction-editor.spec.ts": [
+      0
+    ],
+    "transaction-entrypoints.spec.ts": [
+      0
+    ],
+    "transaction-filters.spec.ts": [
+      0
+    ],
+    "ui-backlog.spec.ts": [
+      0
+    ],
+    "ui-hierarchy.spec.ts": [
+      0
+    ],
+    "user-security.spec.ts": [
+      0
+    ],
+    "workflows.spec.ts": [
+      0
+    ],
+    "workspace-controls.spec.ts": [
+      0
+    ],
+    "responsive-geometry.spec.ts": [
+      0
+    ]
+  }
+}
