@@ -33,44 +33,77 @@ func (a *App) notificationPreferences(w http.ResponseWriter, r *http.Request) er
 	send(w, map[string]any{"items": items})
 	return nil
 }
+
+type notificationPreferenceInput struct {
+	Type    string `json:"type"`
+	Channel string `json:"channel"`
+	Enabled *bool  `json:"enabled"`
+	Version *int64 `json:"version"`
+}
+
 func (a *App) updateNotificationPreference(w http.ResponseWriter, r *http.Request) error {
-	var b struct {
-		Type    string `json:"type"`
-		Channel string `json:"channel"`
-		Enabled *bool  `json:"enabled"`
-		Version *int64 `json:"version"`
-	}
-	if err := decode(r, &b); err != nil {
+	var input notificationPreferenceInput
+	if err := decode(r, &input); err != nil {
 		return err
 	}
-	if !knownNotificationType(b.Type) || b.Channel != "in_app" || b.Enabled == nil || b.Version == nil || *b.Version < 0 {
-		return fail(400, "Choose a valid notification type, channel, preference and version")
+	return a.saveNotificationPreferences(w, r, []notificationPreferenceInput{input})
+}
+
+func (a *App) updateNotificationPreferencesBatch(w http.ResponseWriter, r *http.Request) error {
+	var input struct {
+		Items []notificationPreferenceInput `json:"items"`
+	}
+	if err := decode(r, &input); err != nil {
+		return err
+	}
+	return a.saveNotificationPreferences(w, r, input.Items)
+}
+
+func (a *App) saveNotificationPreferences(w http.ResponseWriter, r *http.Request, inputs []notificationPreferenceInput) error {
+	if len(inputs) == 0 || len(inputs) > len(notificationTypes) {
+		return fail(400, "Choose at least one notification preference")
+	}
+	seen := make(map[string]bool)
+	for _, input := range inputs {
+		if !knownNotificationType(input.Type) || input.Channel != "in_app" || input.Enabled == nil || input.Version == nil || *input.Version < 0 || seen[input.Type] {
+			return fail(400, "Choose valid, distinct notification preferences")
+		}
+		seen[input.Type] = true
 	}
 	uid := Current(r).ID
+	var items []notificationPreference
 	err := a.write(func(tx *sql.Tx) error {
 		if err := userSecurityActorTx(tx, r, false); err != nil {
 			return err
 		}
-		var version int64
-		err := tx.QueryRow("SELECT version FROM notification_preferences WHERE user_id=? AND type=? AND channel=?", uid, b.Type, b.Channel).Scan(&version)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return err
+		for _, input := range inputs {
+			var version int64
+			err := tx.QueryRow("SELECT version FROM notification_preferences WHERE user_id=? AND type=? AND channel=?", uid, input.Type, input.Channel).Scan(&version)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+			if version != *input.Version {
+				return fail(409, "Notification preference changed; reload before saving")
+			}
+			if version == 0 {
+				_, err = tx.Exec("INSERT INTO notification_preferences(user_id,type,channel,enabled) VALUES(?,?,?,?)", uid, input.Type, input.Channel, *input.Enabled)
+			} else {
+				_, err = tx.Exec("UPDATE notification_preferences SET enabled=?,version=version+1 WHERE user_id=? AND type=? AND channel=?", *input.Enabled, uid, input.Type, input.Channel)
+			}
+			if err != nil {
+				return err
+			}
+			if err := audit(tx, Current(r), nil, "notification_preferences", uid, "updated", map[string]any{"type": input.Type, "channel": input.Channel, "enabled": *input.Enabled, "version": version + 1}); err != nil {
+				return err
+			}
 		}
-		if version != *b.Version {
-			return fail(409, "Notification preference changed; reload before saving")
-		}
-		if version == 0 {
-			_, err = tx.Exec("INSERT INTO notification_preferences(user_id,type,channel,enabled) VALUES(?,?,?,?)", uid, b.Type, b.Channel, *b.Enabled)
-		} else {
-			_, err = tx.Exec("UPDATE notification_preferences SET enabled=?,version=version+1 WHERE user_id=? AND type=? AND channel=?", *b.Enabled, uid, b.Type, b.Channel)
-		}
-		if err != nil {
-			return err
-		}
-		return audit(tx, Current(r), nil, "notification_preferences", uid, "updated", map[string]any{"type": b.Type, "channel": b.Channel, "enabled": *b.Enabled, "version": version + 1})
+		var err error
+		items, err = readNotificationPreferences(tx, uid)
+		return err
 	})
 	if err != nil {
 		return err
 	}
-	return a.notificationPreferences(w, r)
+	send(w, map[string]any{"items": items})
+	return nil
 }

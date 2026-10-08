@@ -235,3 +235,9 @@ Automated geometry covers 360/390/430/760/761/1440px, both themes and a short 43
 MCP impact: notification messages and preferences remain browser-only personal workflows; existing connections have no notification consent. Tools, schemas, allowlists, permissions, proposal previews/audits and financial write services are unchanged. No production data, deployment or computer-use inspection. #33–#38 producers/suppression, #39 push/PWA and #40 diagnostics remain.
 
 Publication: automatic approval review rejected push/PR creation pending owner authorization to export source to GitHub. Local work is preserved; no push, PR or issue closure occurred in this batch.
+
+## Combined notification preference save (8 October 2026)
+
+Owner-requested single Save changes button replaces per-type saves. The browser submits only changed preferences to the new batch endpoint; all writes/version checks/audits and the response snapshot share one transaction. Existing single-item requests use the same service. Tests verify a stale second item and failed second audit roll back preceding changes, successful changes affect only the requester, and duplicates/empty batches reject.
+
+Final production build passed. All 3 synthetic notification browser workflows passed with isolated output `/tmp/sente-single-save-browser-85e59b6`; coverage now saves two changed types together and confirms one button, persistence, preserved drafts and stale-save reload. The first browser attempt reported a missing trace file in the shared artifact directory; isolated output resolved that collision. `go test -race ./internal/app -run TestNotificationPreference -count=1 -timeout=5m` passed both preference groups (15.427s), and Go vet for internal/app passed. No full suite or manual visual check repeated. MCP remains browser-only with unchanged tools/consent/allowlists. No financial detection, thresholds, schema or production data change; publication remains pending owner authorization.

@@ -3173,5 +3173,4 @@ body:has(dialog[open]) { overflow:hidden; }
 .notification-centre .section-head { flex-wrap:wrap; gap:12px; }
 .notification-centre .actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 .notification-preferences { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
-.notification-preference { min-width:0; }
 @media(max-width:760px) { .notification-preferences { grid-template-columns:minmax(0,1fr); } }

@@ -53,16 +53,19 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   const field = page.getByLabel("Budget thresholds", { exact:true });
   await field.selectOption("false");
+  await page.getByLabel("Projected overspend", { exact:true }).selectOption("false");
+  await expect(page.getByRole("button", { name:"Save changes", exact:true })).toHaveCount(1);
   // Mounted preference drafts survive tab changes.
   await page.getByRole("tab", { name:"General", exact:true }).click();
   await page.getByRole("tab", { name:"Notifications", exact:true }).click();
   await expect(field).toHaveValue("false");
-  await field.locator("xpath=ancestor::form").getByRole("button", { name:"Save preference" }).click();
-  await expect(page.getByText("Notification preference saved", { exact:true })).toBeVisible();
+  await field.locator("xpath=ancestor::form").getByRole("button", { name:"Save changes" }).click();
+  await expect(page.getByText("Notification preferences saved", { exact:true })).toBeVisible();
   await page.reload();
   await openInbox(page);
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   await expect(field).toHaveValue("false");
+  await expect(page.getByLabel("Projected overspend", { exact:true })).toHaveValue("false");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   await openInbox(page);
   await page.getByRole("button", { name:"Mark all as read", exact:true }).click();
@@ -90,11 +93,11 @@ test("Preference stale-write keeps draft and explicit reload recovers", async ({
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   const field = page.getByLabel("System updates", { exact:true });
   await field.selectOption("false");
-  await page.route("**/api/notifications/preferences", async route => {
+  await page.route("**/api/notifications/preferences/batch", async route => {
     if (route.request().method() === "PUT") await route.fulfill({ status:409, json:{ error:"Notification preference changed; reload before saving" } });
     else await route.continue();
   });
-  await field.locator("xpath=ancestor::form").getByRole("button", { name:"Save preference" }).click();
+  await field.locator("xpath=ancestor::form").getByRole("button", { name:"Save changes" }).click();
   await expect(page.getByText("Notification preference changed; reload before saving", { exact:true })).toBeVisible();
   await expect(field).toHaveValue("false");
   await page.getByRole("button", { name:"Reload saved preferences" }).click();
