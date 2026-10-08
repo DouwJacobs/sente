@@ -30,7 +30,7 @@ for(const width of [1440,900,360])for(const theme of ['light','dark'])test(`whol
  await expect(page.locator('.stats')).toBeVisible()
  // The colored finance design remains shared and responsive.
  expect(await page.locator('html').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(theme==='light'?'rgb(245, 245, 246)':'rgb(21, 23, 28)')
- expect(await page.locator('#page-title').evaluate(el=>getComputedStyle(el).fontSize)).toBe(width===360?'30px':'36px')
+ expect(await page.locator('#page-title').evaluate(el=>getComputedStyle(el).fontSize)).toBe(width===360?'24px':'28px')
  expect(await page.locator('.panel').first().evaluate(el=>getComputedStyle(el).borderRadius)).toBe('14px')
  const cards=await page.locator('.stats .stat').evaluateAll(elements=>elements.map(el=>{const box=el.getBoundingClientRect();return {width:box.width,top:box.top,bottom:box.bottom}}))
  expect(cards).toHaveLength(4)
