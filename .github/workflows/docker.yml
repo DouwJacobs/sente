@@ -75,7 +75,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ needs.metadata.outputs.commit }}
-      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069
       - name: Install OCI copy tool
         run: sudo apt-get update && sudo apt-get install -y skopeo
       - name: Build candidate with provenance and SBOM
