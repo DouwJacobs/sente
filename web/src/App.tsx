@@ -1,3 +1,4 @@
+import { PWAInstallInvitation } from "./features/pwa/PWAInstallInvitation";
 import { NotificationCentre } from "./features/notifications/NotificationCentre";
 import { NotificationNavigation } from "./features/notifications/NotificationNavigation";
 import { useSession } from "./features/auth/useSession";
@@ -132,7 +133,15 @@ export default function App() {
       user && data
         ? data.branding.display_name + " · Sente"
         : "Sente";
-  }, [user, data?.branding.display_name]);
+    const currentIcon = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    const favicon = document.createElement("link");
+    favicon.rel = "icon";
+    favicon.type = "image/png";
+    favicon.href = data?.branding.logo || "/branding/icon.png?v=" + (data?.branding.version || 0);
+    // Replace the link so browsers refresh the tab icon immediately after a save.
+    if (currentIcon) currentIcon.replaceWith(favicon);
+    else document.head.appendChild(favicon);
+  }, [user, data?.branding.display_name, data?.branding.version, data?.branding.logo]);
   if (!ready || startupError || setup || !user)
     return (
       <SessionScreen
@@ -263,6 +272,7 @@ export default function App() {
     !user.budget_member && view === "Dashboard" ? "Accounts" : view;
   return (
     <TransactionAccess {...props} viewTransactions={viewTransactions}>
+      <PWAInstallInvitation />
       <GlobalSearchWrapper
         open={searchOpen}
         onClose={() => setSearchOpen(false)}

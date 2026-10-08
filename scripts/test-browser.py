@@ -104,6 +104,11 @@ def main():
             for index, spec in enumerate(specs, 1):
                 print(f"\n[browser {index}/{len(specs)}] {spec}: fresh synthetic databases", flush=True)
                 port, reservations = reserve_ports()
+                spec_env = {}
+                if Path(spec).name == "pwa.spec.ts":
+                    static_copy = work / "pwa-static"
+                    shutil.copytree(WEB / "dist", static_copy)
+                    spec_env = {"E2E_STATIC_DIR": str(static_copy), "E2E_PWA_STATIC_DIR": str(static_copy)}
                 servers, logs = [], []
                 try:
                     # Release the reserved local ports immediately before startup.
@@ -112,7 +117,7 @@ def main():
                     for offset in range(3):
                         log = open(work / f"server-{offset}.log", "w+")
                         logs.append(log)
-                        server_env = {**env, "E2E_BINARY": str(binary),
+                        server_env = {**env, **spec_env, "E2E_BINARY": str(binary),
                                       "E2E_WORK": str(work / f"fixture-{index}-{offset}"),
                                       "E2E_PORT": str(port + offset),
                                       "E2E_EMPTY": "1" if offset else "0",
@@ -125,7 +130,7 @@ def main():
                     result = subprocess.run(
                         [node, str(cli), "test", "--config", str(config),
                          r"(?:^|/)" + re.escape(Path(spec).name) + "$", *options],
-                        cwd=WEB, env={**env, "E2E_TEST_PORT": str(port)})
+                        cwd=WEB, env={**env, **spec_env, "E2E_TEST_PORT": str(port)})
                     if result.returncode:
                         return result.returncode
                 except Exception:

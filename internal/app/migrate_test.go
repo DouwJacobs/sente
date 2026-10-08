@@ -347,6 +347,7 @@ CREATE TRIGGER reject_category_conversion BEFORE UPDATE ON categories BEGIN SELE
 // Production migrations must never reconcile already-applied table creation.
 func removePostBaselineFixtureTables(t *testing.T, db *sql.DB) {
 	t.Helper()
+	migrationExec(t, db, "DROP TABLE app_identity")
 	for _, table := range notificationSourceTables {
 		for _, operation := range []string{"INSERT", "UPDATE", "DELETE"} {
 			migrationExec(t, db, "DROP TRIGGER notification_source_"+table+"_"+operation)

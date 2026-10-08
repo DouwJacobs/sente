@@ -10,7 +10,7 @@ Use `web/src/ui.tsx` for shared Button/Field/Form/Modal/Loading controls, `style
 
 Cards in a row share grid tracks, stretched edges and gaps. Stacked cards align left/right edges. Mobile content keeps its natural height; avoid arbitrary fixed heights. Use spacing and typography between sections. Do not add separators beneath cards or dropdown/disclosure cards, especially spending groups; internal transaction-row separators remain appropriate.
 
-Product branding is Sente on onboarding, sign-in, sidebar, OAuth consent and browser metadata. Household names are separately configurable and private to authenticated views; signed-in titles use `<household> · Sente`. Long names wrap or truncate with their full text available.
+Product branding is Sente on onboarding, sign-in, sidebar, OAuth consent and browser metadata. Household names are separately configurable and private to authenticated views unless an administrator explicitly selects public PWA-name inheritance; signed-in titles use `<household> · Sente`. Long names wrap or truncate with their full text available.
 
 ## Copy and financial status
 
@@ -134,3 +134,15 @@ Notification delivery extension (8 October 2026): one shared preference form sav
 Push device controls use the shared wrapping toolbar actions with a separate 16px gap before the device list or empty state. Provider registration errors use an overlay toast with browser/network recovery guidance.
 
 Diagnostics counts alert changes and delivery attempts; routine historical evaluation statuses are hidden by default but remain available through explicit status filters.
+
+## Branding and PWA settings
+
+Branding is a dedicated administrator section, separate from General preferences. Workspace-name and logo edits share one save; PWA is a separate section available to every user with install/update guidance. Its administrator identity form independently chooses Branding/custom sources for name and icon, preserves custom drafts when switching sources and uses one atomic save. Explain public logo/manifest visibility in the form, and retain shared Field/Form inline validation, optimistic stale-save recovery, overlay toasts and mounted drafts. Logo previews stay square and bounded; phone navigation keeps its name ellipsis and 44px actions. The default shared mark and custom public logo are used across sign-in, sidebar/mobile chrome and browser icons.
+
+Update notices use the shared dismissible overlay toast with an action and no timed expiry. Clearly state that the consenting tab reload clears unsaved changes; other tabs retain drafts and can reload separately. Never prompt for browser push permission during installation or ordinary navigation. Offline navigation uses a generic reconnect page containing no user/account data. See PWA.md for installed identity refresh and browser/OS verification limits.
+
+Branding preview follow-up: previews use an 80px square containment wrapper and intrinsic image dimensions, with no separator below them. Sidebar/mobile images use saved branding directly with a built-in fallback and fixed dimensions. Branding/PWA save rows use spacing without the inherited editor divider.
+
+First-install discovery uses a dismissible shared overlay invitation after sign-in, once per browser/origin. Wait until the page is visible and dialogs are closed; exclude installed apps and defer to update notices. Remember the invitation when shown and when native installation is attempted, including a declined attempt. Retain the Settings → PWA install action after dismissal; never open the native installation dialog automatically. Safari home-screen guidance is available on iPhone/iPad.
+
+The browser favicon follows the saved Branding logo, matching sidebar/mobile chrome; refresh its link immediately on a branding change and retain the public built-in/branding PNG fallback before sign-in.

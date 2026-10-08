@@ -119,7 +119,7 @@ export function Modal({title,children,onClose,size='medium',stable=false}: {titl
  },[])
  return createPortal(<dialog ref={ref} className={'modal modal-'+size+(stable?' modal-stable':'')} aria-label={title} onCancel={event=>{event.preventDefault();event.stopPropagation();onClose()}}><div className="modal-head"><h2>{title}</h2><Button variant="quiet" aria-label="Close" onClick={onClose}><X size={20}/></Button></div><div className="modal-body">{children}</div></dialog>,document.body)
 }
-export function Toast({message,error,onDismiss,autoDismiss=true}:{message:string;error:boolean;onDismiss:()=>void;autoDismiss?:boolean}){
+export function Toast({message,error,onDismiss,autoDismiss=true,action}:{message:string;error:boolean;onDismiss:()=>void;autoDismiss?:boolean;action?:ReactNode}){
  const ref=useRef<HTMLDivElement>(null),[paused,setPaused]=useState(false)
  const [host,setHost]=useState<Element>(document.body)
  useEffect(()=>{
@@ -130,7 +130,7 @@ export function Toast({message,error,onDismiss,autoDismiss=true}:{message:string
  },[])
  useEffect(()=>{ref.current?.showPopover()},[host])
  useEffect(()=>{if(paused||!autoDismiss)return;const timer=window.setTimeout(onDismiss,error?12000:7000);return()=>clearTimeout(timer)},[paused,message,error,onDismiss,autoDismiss])
- return createPortal(<div ref={ref} popover="manual" className={'toast '+(error?'error':'')} role={error?'alert':'status'} aria-atomic="true" onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)} onFocusCapture={()=>setPaused(true)} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setPaused(false)}}><span>{message}</span><Button variant="quiet" aria-label="Dismiss message" onClick={onDismiss}><X size={18}/></Button></div>,host)
+ return createPortal(<div ref={ref} popover="manual" className={'toast '+(error?'error':'')} role={error?'alert':'status'} aria-atomic="true" onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)} onFocusCapture={()=>setPaused(true)} onBlurCapture={event=>{if(!event.currentTarget.contains(event.relatedTarget as Node))setPaused(false)}}><span>{message}</span>{action}<Button variant="quiet" aria-label="Dismiss message" onClick={onDismiss}><X size={18}/></Button></div>,host)
 }
 
 export function Tabs({id,label,items,value,onChange,overflowNavigation=false}:{

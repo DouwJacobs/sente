@@ -1,3 +1,5 @@
+import { BrandingSettings } from "./BrandingSettings";
+import { PWASettings } from "./PWASettings";
 import { NotificationSettings } from "../notifications/NotificationSettings";
 import { ConfigurationSettings } from "./ConfigurationSettings";
 import { AboutSettings } from "./AboutSettings";
@@ -80,6 +82,7 @@ export function SettingsPage({
     { id: "general", label: "General" },
     ...(data.user.admin
       ? [
+          { id: "branding", label: "Branding" },
           ...(data.user.budget_member
             ? [{ id: "configuration", label: "Configuration" }]
             : []),
@@ -90,6 +93,7 @@ export function SettingsPage({
           { id: "network", label: "Network" },
         ]
       : []),
+    { id: "pwa", label: "PWA" },
     { id: "mcp", label: "MCP" },
     { id: "notifications", label: "Notifications" },
     { id: "security", label: "Security" },
@@ -126,6 +130,8 @@ export function SettingsPage({
           run={run}
         />
       </div>
+      {data.user.admin && <div {...panel("branding")}><BrandingSettings data={data} revision={revision} refresh={refresh} notify={notify} /></div>}
+      <div {...panel("pwa")}><PWASettings data={data} revision={revision} refresh={refresh} notify={notify} /></div>
       <div {...panel("mcp")}>
         {(mcpVisited || active === "mcp") && (
           <MCPSettings notify={notify} refresh={refresh} />

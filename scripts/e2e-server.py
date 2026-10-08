@@ -15,7 +15,7 @@ elif not binary.is_file():
     raise RuntimeError("The prebuilt synthetic test binary is unavailable")
 port = os.environ.get("E2E_PORT", "18080")
 env = {**os.environ, "DATABASE_PATH": str(work/"finance.sqlite"), "BACKUP_DIR": str(work/"backups"),
-       "PUBLIC_URL": os.environ.get("E2E_PUBLIC_URL", f"http://127.0.0.1:{port}"), "PORT": port, "LISTEN_ADDRESS": "127.0.0.1", "STATIC_DIR": str(root/"web/dist"),
+       "PUBLIC_URL": os.environ.get("E2E_PUBLIC_URL", f"http://127.0.0.1:{port}"), "PORT": port, "LISTEN_ADDRESS": "127.0.0.1", "STATIC_DIR": os.environ.get("E2E_STATIC_DIR", str(root/"web/dist")),
        "FINANCE_PASSWORD": "synthetic-browser-password"}
 if os.environ.get("E2E_EMPTY") != "1":
     subprocess.run([str(binary), "create-admin", "demo"], env=env, check=True)

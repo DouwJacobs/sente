@@ -1,5 +1,4 @@
 import type { Row } from "../../shared/types";
-import { PixelMark } from "../../PixelScene";
 import { useState, useRef } from "react";
 import { api, setCSRF } from "../../api";
 import { Button, Field, Form, Toast } from "../../ui";
@@ -21,7 +20,7 @@ export function Setup({
     <main className="login">
       <div className="login-brand">
         <span className="brand-mark">
-          <PixelMark />
+          <img width={32} height={32} className="brand-icon" src="/branding/icon.png" alt="" />
         </span>
         Sente
       </div>
@@ -126,7 +125,7 @@ export function Login({
     <main className="login">
       <div className="login-brand">
         <span className="brand-mark">
-          <PixelMark />
+          <img width={32} height={32} className="brand-icon" src="/branding/icon.png" alt="" />
         </span>
         Sente
       </div>

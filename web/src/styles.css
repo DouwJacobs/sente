@@ -3203,3 +3203,18 @@ body:has(dialog[open]) { overflow:hidden; }
 .notification-diagnostic-meta { display:flex; flex-wrap:wrap; gap:4px 12px; margin-top:4px; }
 .notification-diagnostic-row .notification-key { margin-top:4px; font-size:11px; line-height:1.4; }
 @media(max-width:760px) { .notification-diagnostic-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.brand-icon { width: 32px; height: 32px; object-fit: contain; border-radius: 6px; flex-shrink: 0; }
+.branding-preview { width: 80px; height: 80px; object-fit: contain; border-radius: 12px; }
+.branding-icon-field { display: grid; gap: 12px; min-width: 0; }
+.branding-icon-field input { max-width: 100%; }
+.mobile-brand-icon { display:none; width: 28px; height: 28px; }
+@media(max-width:760px) { .mobile-brand-icon { display:block; } }
+.toast { flex-wrap: wrap; }
+
+/* Keep identity previews bounded even while images/styles are loading. */
+.branding-preview-frame { width:80px; height:80px; min-width:80px; max-width:80px; flex:0 0 80px; overflow:hidden; border:0; border-radius:12px; align-self:flex-start; }
+.branding-preview-frame > .branding-preview { display:block; width:80px; height:80px; max-width:100%; object-fit:contain; border:0; }
+.brand-mark { overflow:hidden; }
+.brand-mark > .brand-icon { display:block; width:32px; height:32px; max-width:100%; object-fit:contain; }
+.settings-panel .settings-save-actions { border-top:0; padding-top:0; margin-top:16px; }
