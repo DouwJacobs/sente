@@ -17,3 +17,5 @@ The snapshot preserves the previous contents of the active guides and connector 
 - [Separate mock service proposal](2026-10-07/FNB-SERVICE.md)
 
 Preserve archived records when current guides change. Add history here only when it explains a decision or retains useful evidence; avoid another append-only handover.
+
+- [Handover before release-channel work, 8 October 2026](handover-2026-10-08-before-releases.md) — preserved batch evidence through PR #74 and the product tour.

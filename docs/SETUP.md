@@ -16,7 +16,13 @@ docker compose up -d --build
 
 Open [http://localhost:8080](http://localhost:8080) and create your first administrator. Complete setup before exposing a fresh installation to other people. Create additional users in Settings, add accounts, and choose household sharing or explicit private-account grants.
 
-The image destination is `douwjacobs/sente:latest`; `douwjacobs/sente:development` is the development channel. Until an image is published, use the source build above. Once published, use `docker compose pull && docker compose up -d` to install/update it. Set `SENTE_TAG=development` in `.env` to select that channel. Use a separate Compose project and volumes when trying development images.
+Published stable images use `main`/`latest`; beta images use `beta`/`development`.
+Use a pinned version or digest through `SENTE_IMAGE` for installation. Until published,
+use the source build above; generate explicit build metadata as described in
+[Releases, compatibility and recovery](RELEASES.md). Use a separate Compose project
+and volumes when trying beta images. Before every upgrade, follow that guide's
+pre-upgrade snapshot and off-host/key backup procedure. Image rollback does not undo
+schema migrations.
 
 ## Configuration
 
@@ -26,7 +32,8 @@ The image destination is `douwjacobs/sente:latest`; `douwjacobs/sente:developmen
 | `BIND_ADDRESS` | Host interface exposed by Docker | `127.0.0.1` |
 | `HOST_PORT` | Host port | `8080` |
 | `TRUSTED_PROXIES` | Explicit trusted proxy IPs/CIDRs | Empty |
-| `SENTE_TAG` | Docker image channel | `latest` |
+| `SENTE_IMAGE` | Full image version/digest reference | `douwjacobs/sente:latest` |
+| `SENTE_TAG` | Legacy channel selection when SENTE_IMAGE is absent | `latest` |
 
 Use an HTTPS reverse proxy for remote access. [Reverse proxy setup](REVERSE-PROXY.md) covers Nginx/Caddy, trusted addresses and refresh timeouts. Settings → Network can save URL/proxy overrides; they take effect after restart.
 
@@ -56,3 +63,5 @@ docker compose up -d
 
 Restore validates integrity/schema, preserves the previous database and invalidates sessions. For password recovery, stop the service and pipe a new password from standard input to `docker compose run --rm -T finance reset-password USERNAME`. Restart afterwards. Connector encryption keys require a separate private backup; database snapshots do not contain them.
 
+
+See [the release runbook](RELEASES.md) for compatibility policy, pinned upgrades and rehearsed rollback.

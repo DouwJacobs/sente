@@ -1,0 +1,86 @@
+name: Source verification
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      full:
+        default: false
+        type: boolean
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GO: go
+      CI: "true"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.ref }}
+      - name: Select frontend verification
+        id: scope
+        run: python3 scripts/ci-scope.py
+        env:
+          SENTE_FULL_VERIFICATION: ${{ inputs.full }}
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.21.1
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Backend tests and race detection
+        shell: bash
+        run: |
+          mkdir -p work/test-audit
+          go test -race -json -timeout=10m ./... | tee work/test-audit/backend.jsonl
+      - name: Go vet
+        run: go vet ./...
+      - name: CI and release regression checks
+        run: python3 scripts/ci-scope.test.py && python3 scripts/test-browser.test.py && python3 scripts/release-metadata.test.py && python3 scripts/publish-release.test.py
+      - name: Active FNB worker invariants
+        run: node --test connectors/fnb/owner/*.test.mjs
+      - name: Synthetic demo invariants
+        run: python3 scripts/test_demo.py
+      - name: Install frontend dependencies
+        if: steps.scope.outputs.frontend == 'true'
+        run: npm ci
+        working-directory: web
+      - name: Frontend tests and production build
+        if: steps.scope.outputs.frontend == 'true'
+        run: npm test && npm run build
+        working-directory: web
+      - name: Install Chromium
+        if: steps.scope.outputs.frontend == 'true'
+        run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Synthetic bank DOM invariants
+        if: steps.scope.outputs.frontend == 'true'
+        run: node scripts/test-fnb-dom.mjs
+      - name: Pull-request browser workflows
+        if: github.event_name == 'pull_request' && !inputs.full && steps.scope.outputs.frontend == 'true'
+        timeout-minutes: 10
+        env:
+          E2E_CHANGED_SPECS: ${{ steps.scope.outputs.browser_specs }}
+        run: npm run test:pr
+        working-directory: web
+      - name: Complete synthetic browser suite
+        if: (github.event_name != 'pull_request' || inputs.full) && steps.scope.outputs.frontend == 'true'
+        timeout-minutes: 20
+        run: npm run test:e2e
+        working-directory: web
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: verification-results-and-timings
+          path: |
+            web/test-results/
+            work/test-audit/backend.jsonl
+          retention-days: 7

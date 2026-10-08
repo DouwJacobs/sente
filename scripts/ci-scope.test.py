@@ -49,6 +49,16 @@ class ScopeTests(unittest.TestCase):
                          "web/e2e/about.spec.ts","web/src/App.tsx","docs/not.spec.ts"]),
                          ["about.spec.ts"])
 
+    def test_release_call_forces_full_source_verification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output=Path(directory)/'output'
+            with patch.dict(os.environ, {'GITHUB_EVENT_NAME':'pull_request',
+                        'SENTE_FULL_VERIFICATION':'true','GITHUB_OUTPUT':str(output)}):
+                with patch.object(subprocess,'check_output') as diff:
+                    scope.main()
+                    diff.assert_not_called()
+            self.assertIn('frontend=true',output.read_text())
+
     def test_main_and_manual_runs_always_run_frontend(self):
         for event in ["push", "workflow_dispatch"]:
             with self.subTest(event=event):

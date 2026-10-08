@@ -8,6 +8,7 @@ Start with the [project README](../README.md) for the product tour and quick sta
 | [Architecture](ARCHITECTURE.md) | Runtime, persistence, authorization and integration boundaries |
 | [UI guide](UI.md) | Shared controls, copy, accessibility and screen conventions |
 | [Module map](REFACTORING.md) | Where to extend backend and frontend code |
+| [Releases and recovery](RELEASES.md) | Channels, SemVer, compatibility, pinned upgrades and restore |
 | [Development](DEVELOPMENT.md) | Local commands, test setup and image publishing |
 | [Maintainer handover](HANDOVER.md) | Checkout/runtime context and remaining operational work |
 | [Verification](VERIFICATION.md) | Latest checks and limits of the available evidence |

@@ -25,6 +25,7 @@ for (const {width,theme} of desktopPhoneCases) {
       await expect(page.getByRole("tab", { name: "About", exact: true })).toHaveAttribute("aria-selected", "true");
       await expect(page.getByRole("heading", { name: "About Sente", exact: true })).toBeVisible();
       await expect(page.locator(".about-build")).toBeVisible();
+      await expect(page.getByRole("link", { name: "GNU GPL v3", exact: true })).toHaveAttribute("href", /\/LICENSE$/);
       const resources = await page.locator(".about-resources").boundingBox();
       const installation = await page.locator(".about-installation").boundingBox();
       if (width === 1440) {

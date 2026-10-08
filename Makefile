@@ -17,3 +17,10 @@ demo:
 	GO="$(GO)" python3 scripts/demo.py
 dev-demo:
 	GO="$(GO)" python3 scripts/demo.py --serve
+
+.PHONY: release-check
+release-check:
+	python3 scripts/release-metadata.test.py
+	python3 scripts/publish-release.test.py
+	python3 scripts/ci-scope.test.py
+	python3 scripts/test-browser.test.py

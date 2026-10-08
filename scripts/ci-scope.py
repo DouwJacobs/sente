@@ -20,7 +20,7 @@ def changed_browser_specs(paths):
 def main():
     required = True
     paths = []
-    if os.environ.get("GITHUB_EVENT_NAME") == "pull_request":
+    if os.environ.get("GITHUB_EVENT_NAME") == "pull_request" and os.environ.get("SENTE_FULL_VERIFICATION") != "true":
         try:
             event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
             pr = event["pull_request"]
