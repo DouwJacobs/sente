@@ -204,7 +204,11 @@ func (a *App) notifyTx(tx *sql.Tx, e notificationEvent, now time.Time) (notifica
 		return notificationDelivery{}, err
 	}
 	adapter := inAppNotificationAdapter{}
-	return routeNotificationTx(tx, e, now, adapter)
+	result, err := routeNotificationTx(tx, e, now, adapter)
+	if err == nil && result.Status == "delivered" {
+		err = enqueueNotificationPushTx(tx, e, result.ID, now)
+	}
+	return result, err
 }
 func routeNotificationTx(tx *sql.Tx, e notificationEvent, now time.Time, adapter notificationAdapter) (notificationDelivery, error) {
 	// Only the in-app adapter is enabled. Additional channels require independent
@@ -240,7 +244,8 @@ func routeNotificationTx(tx *sql.Tx, e notificationEvent, now time.Time, adapter
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return notificationDelivery{}, err
 	}
-	if err == nil && !enabled {
+	inAppEnabled := err != nil || enabled
+	if !inAppEnabled && queryInt(tx, "SELECT COUNT(*) FROM notification_push_preferences WHERE user_id=? AND type=? AND enabled=1", e.RecipientID, e.Type) == 0 {
 		return notificationDelivery{Status: "disabled"}, nil
 	}
 	var count int
@@ -261,6 +266,11 @@ func routeNotificationTx(tx *sql.Tx, e notificationEvent, now time.Time, adapter
 	id, err := adapter.deliver(tx, e, receipt, now.Unix())
 	if err != nil {
 		return notificationDelivery{}, err
+	}
+	if !inAppEnabled {
+		if _, err := tx.Exec("UPDATE notifications SET in_app_enabled=0 WHERE id=?", id); err != nil {
+			return notificationDelivery{}, err
+		}
 	}
 	// Evict old payloads while retaining receipts so retries cannot resurrect them.
 	_, err = tx.Exec("DELETE FROM notifications WHERE user_id=? AND id NOT IN (SELECT id FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT ?)", e.RecipientID, e.RecipientID, notificationInboxLimit)

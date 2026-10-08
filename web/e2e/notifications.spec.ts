@@ -51,9 +51,9 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   await expect(page.getByRole("tab", { name:"Read", exact:true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name:"No notifications", exact:true })).toBeVisible();
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
-  const field = page.getByLabel("Budget thresholds", { exact:true });
+  const field = page.getByLabel("Budget thresholds · In-app", { exact:true });
   await field.selectOption("false");
-  await page.getByLabel("Projected overspend", { exact:true }).selectOption("false");
+  await page.getByLabel("Projected overspend · In-app", { exact:true }).selectOption("false");
   await expect(page.getByRole("button", { name:"Save changes", exact:true })).toHaveCount(1);
   // Mounted preference drafts survive tab changes.
   await page.getByRole("tab", { name:"General", exact:true }).click();
@@ -65,7 +65,7 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   await openInbox(page);
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   await expect(field).toHaveValue("false");
-  await expect(page.getByLabel("Projected overspend", { exact:true })).toHaveValue("false");
+  await expect(page.getByLabel("Projected overspend · In-app", { exact:true })).toHaveValue("false");
   for (const width of [360, 1440]) {
     await page.setViewportSize({ width, height:780 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
@@ -100,9 +100,9 @@ test("Preference stale-write keeps draft and explicit reload recovers", async ({
   await signIn(page);
   await openInbox(page);
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
-  const field = page.getByLabel("System updates", { exact:true });
+  const field = page.getByLabel("System updates · In-app", { exact:true });
   await field.selectOption("false");
-  await page.route("**/api/notifications/preferences/batch", async route => {
+  await page.route("**/api/notifications/preferences/batch*", async route => {
     if (route.request().method() === "PUT") await route.fulfill({ status:409, json:{ error:"Notification preference changed; reload before saving" } });
     else await route.continue();
   });

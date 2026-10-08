@@ -70,6 +70,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 		c["pending_cents"] = int64(0)
 		categories[num(c["id"])] = c
 	}
+	expenseTotals := categoryExpenseTotals(rows)
 	for _, row := range rows {
 		if row["review_state"] == "pending_review" {
 			pendingCount[num(row["id"])] = true
@@ -91,7 +92,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 			uncategorized[num(row["id"])] = true
 		} else if expense {
 			c := categories[num(row["category_id"])]
-			c["spent_cents"] = num(c["spent_cents"]) - amount
+			c["spent_cents"] = expenseTotals[num(row["category_id"])]
 			if row["review_state"] == "pending_review" {
 				c["pending_cents"] = num(c["pending_cents"]) - amount
 			}

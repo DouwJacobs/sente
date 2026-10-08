@@ -207,7 +207,7 @@ func TestNotificationPreferencesConsentAndAuditRollback(t *testing.T) {
 	}
 	deliverSynthetic(t, e.a, syntheticNotification(2, "preference"))
 	status(t, e.req(t, 1, "/api/notifications/preferences", "PUT", pref), 409)
-	pref["channel"] = "push"
+	pref["channel"] = "email"
 	pref["version"] = 1
 	status(t, e.req(t, 1, "/api/notifications/preferences", "PUT", pref), 400)
 	pref["channel"] = "in_app"
@@ -373,7 +373,7 @@ func TestNotificationMigrationUpgradeRestartAndRollback(t *testing.T) {
 	if err := migrate(legacy); err != nil {
 		t.Fatal("legacy to notification schema", err)
 	}
-	if queryInt(legacy, "SELECT MAX(version) FROM migrations") != 24 || queryInt(legacy, "SELECT COUNT(*) FROM notifications") != 0 {
+	if queryInt(legacy, "SELECT MAX(version) FROM migrations") != schemaVersion || queryInt(legacy, "SELECT COUNT(*) FROM notifications") != 0 {
 		t.Fatal("legacy notification upgrade incorrect")
 	}
 }
