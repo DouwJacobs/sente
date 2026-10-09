@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Pencil, Plus } from "lucide-react";
 import { api, money } from "../../api";
 import { GroupDot } from "../../Choices";
 import { ListNavigation, ListStatus, PagedSelect, usePagedList } from "../../PagedList";
-import { ActionMenu, Button, Empty, Form, Modal } from "../../ui";
+import { ActionMenu, Button, Empty, Form, Modal, Reveal } from "../../ui";
 import { useTask } from "../../shared/useTask";
 import type { PageProps, Row } from "../../shared/types";
 import { CategoryBudgetModal } from "./CategoryBudgetModal";
@@ -69,9 +69,9 @@ function BudgetGroup({ group, period, revision, notify, refresh, onRemove }: Pro
         onClick={() => { setOpen(true); setEditing({}); }}><Plus size={18} aria-hidden="true" /></Button>
       <ActionMenu label={"Budget actions for " + group.name}><Button variant="quiet" onClick={onRemove}>Remove group</Button></ActionMenu>
     </div>
-    <div id={id} hidden={!open}>
-      {open && <BudgetCategories group={group} period={period} revision={revision} onEdit={category => setEditing({ category })} />}
-    </div>
+    <Reveal id={id} open={open}>
+      {<BudgetCategories group={group} period={period} revision={revision} onEdit={category => setEditing({ category })} />}
+    </Reveal>
     {editing && <CategoryBudgetModal category={editing.category} group={group} period={String(period.id)} periodName={period.name}
       notify={notify} onClose={() => setEditing(null)} onSaved={() => refresh()} />}
   </section>;

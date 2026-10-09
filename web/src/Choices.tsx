@@ -7,7 +7,7 @@ import {type PageProps} from './shared/types'
 
 export type Choice={id:number;name:string;detail?:string;color?:string;usage?:number;category_id?:number|null;spending_group_id?:number|null}
 export function GroupDot({color}: {color?:string}){return <span aria-hidden="true" className={'group-dot '+(color||'slate')}/>}
-export function ChoiceField({label,value,options,onChange,empty='Not set',disabled=false,mostUsed=false,create,quickCreate,onError,source,validationError,hint}: {label:string;value:number|null;options:Choice[];onChange:(value:number|null,choice?:Choice)=>void;empty?:string;disabled?:boolean;mostUsed?:boolean;create?:(name:string,done:(id:number)=>void)=>ReactNode;quickCreate?:(name:string,kind:'expense'|'income')=>Promise<number>;onError?:(message:string)=>void;source?:string;validationError?:string;hint?:string}){
+export function ChoiceField({label,value,options,onChange,empty='Not set',disabled=false,mostUsed=false,create,quickCreate,onError,source,validationError,hint,optionLabel}: {label:string;value:number|null;options:Choice[];onChange:(value:number|null,choice?:Choice)=>void;empty?:string;disabled?:boolean;mostUsed?:boolean;create?:(name:string,done:(id:number)=>void)=>ReactNode;quickCreate?:(name:string,kind:'expense'|'income')=>Promise<number>;onError?:(message:string)=>void;source?:string;validationError?:string;hint?:string;optionLabel?:(row:Record<string,any>)=>string}){
  const id=useId(),[open,setOpen]=useState(false),[query,setQuery]=useState(''),[creating,setCreating]=useState(false),[saving,setSaving]=useState(false),[error,setError]=useState(''),[kind,setKind]=useState<'expense'|'income'>('expense')
  const search=useRef<HTMLInputElement>(null),trigger=useRef<HTMLButtonElement>(null),wasOpen=useRef(false),parentScroll=useRef<{element:HTMLElement;top:number}|null>(null)
  useEffect(()=>{
@@ -21,7 +21,7 @@ export function ChoiceField({label,value,options,onChange,empty='Not set',disabl
   return()=>cancelAnimationFrame(frame)
  },[open,creating])
  const list=usePagedList(open&&source?source:''),[hydrated,setHydrated]=useState<Choice|null>(null),[popular,setPopular]=useState<Choice[]>([]),[hydrating,setHydrating]=useState(false),[popularLoading,setPopularLoading]=useState(false)
- const convert=(o:Record<string,any>):Choice=>({id:o.id,name:o.name,color:o.color,detail:o.kind==='income'?'Income':o.kind==='expense'?'Expense':undefined,usage:o.usage_count,category_id:o.category_id,spending_group_id:o.spending_group_id})
+ const convert=(o:Record<string,any>):Choice=>({id:o.id,name:optionLabel?optionLabel(o):o.name,color:o.color,detail:o.kind==='income'?'Income':o.kind==='expense'?'Expense':undefined,usage:o.usage_count,category_id:o.category_id,spending_group_id:o.spending_group_id})
  useEffect(()=>{list.setQuery(query)},[query])
  useEffect(()=>{if(!source||!value||options.some(o=>o.id===value)||hydrated?.id===value){setHydrating(false);return}let alive=true;setHydrating(true);api(source.replace('active=1','active=0')+(source.includes('?')?'&':'?')+'page=0&id='+value).then(v=>alive&&setHydrated(v.items[0]?convert(v.items[0]):null)).catch(e=>alive&&onError?.(e.message)).finally(()=>alive&&setHydrating(false));return()=>{alive=false}},[source,value,options,hydrated?.id])
  useEffect(()=>{if(!open||!mostUsed||!source)return;let alive=true;setPopularLoading(true);api(source+(source.includes('?')?'&':'?')+'page=0&page_size=5&sort=usage').then(v=>alive&&setPopular(v.items.filter((o:Record<string,any>)=>o.usage_count>0).map(convert))).catch(e=>alive&&onError?.(e.message)).finally(()=>alive&&setPopularLoading(false));return()=>{alive=false}},[open,source,mostUsed])
@@ -29,7 +29,7 @@ export function ChoiceField({label,value,options,onChange,empty='Not set',disabl
  const filtered=source?list.items.map(convert):options.filter(o=>(o.name+' '+(o.detail||'')).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
  const exact=[...options,...filtered].find(o=>o.name.trim().toLowerCase()===query.trim().toLowerCase())
  const used=mostUsed&&!query.trim()?(source?popular:options).filter(o=>(o.usage||0)>0).sort((a,b)=>(b.usage||0)-(a.usage||0)||a.name.localeCompare(b.name)).slice(0,5):[]
- const choose=(value:number|null)=>{onChange(value,value===null?undefined:[...options,...filtered,...popular].find(o=>o.id===value));setOpen(false)}
+ const choose=(value:number|null)=>{const choice=value===null?undefined:[...options,...filtered,...popular].find(o=>o.id===value);setHydrated(choice||null);onChange(value,choice);setOpen(false)}
  const submit=async()=>{
   if(exact){choose(exact.id);return}
   if(!query.trim()||saving)return

@@ -171,10 +171,8 @@ export function Transactions({
           <span className="sr-only" role="status">{selected.length > 0 ? `${selected.length} transactions selected. Seen status applies only to you.` : ""}</span>
         </span>
         <div className="toolbar-actions">
-          {onImport && items.length > 0 && (
-            <Button onClick={onImport}>Import transactions</Button>
-          )}
           <ActionMenu label="Transaction actions">
+            {onImport && <Button variant="quiet" onClick={onImport}>Import transactions</Button>}
             {mobile && selectionMode && (
               <Button variant="quiet" disabled={busy || loading} onClick={() => { setSelectionMode(false); setSelectedRows({}); }}>Cancel selection</Button>
             )}

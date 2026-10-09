@@ -11,6 +11,7 @@ import {
   Badge,
   Empty,
   Modal,
+  Reveal,
   validateFields,
   Tabs,
   Pagination,
@@ -143,9 +144,9 @@ export function Budgets({
                 <span>Total budget</span>
                 <strong>{money(p.target_total)}</strong>
               </div>
-              <div id={"category-budgets-" + p.id} hidden={expandedPeriod !== String(p.id)}>
-                {expandedPeriod === String(p.id) && <BudgetGroups period={p} revision={revision} notify={notify} refresh={refresh} />}
-              </div>
+              <Reveal id={"category-budgets-" + p.id} open={expandedPeriod === String(p.id)}>
+                {<BudgetGroups period={p} revision={revision} notify={notify} refresh={refresh} />}
+              </Reveal>
             </section>
           ))
         )}

@@ -1,4 +1,4 @@
-import {useEffect,useRef,useId,useState,Children,cloneElement,isValidElement,type ReactNode,type ButtonHTMLAttributes,type ReactElement,type FormHTMLAttributes,type ChangeEvent,type FocusEvent,type InvalidEvent,type Ref} from 'react'
+import {useLayoutEffect,useEffect,useRef,useId,useState,Children,cloneElement,isValidElement,type ReactNode,type ButtonHTMLAttributes,type ReactElement,type FormHTMLAttributes,type ChangeEvent,type FocusEvent,type InvalidEvent,type Ref} from 'react'
 import {X,Menu,Eye,EyeOff,ChevronLeft,ChevronRight,CircleCheck,CircleAlert,Info,Inbox,Search,CheckCheck,Wallet,Target,Tags,Plug,type LucideIcon} from 'lucide-react'
 import {createPortal} from 'react-dom'
 export function Spinner(){return <span className="spinner" aria-hidden="true"/>}
@@ -43,7 +43,7 @@ function controlError(control:Control,label:string,validate?:((value:string)=>st
 export function validateFields(container:HTMLElement){
  const controls=Array.from(container.querySelectorAll<Control>('input,select,textarea')).filter(c=>!c.matches(':disabled'))
  const invalid=controls.filter(c=>!c.checkValidity())
- if(invalid[0]){let parent=invalid[0].parentElement;while(parent&&parent!==container){if(parent instanceof HTMLDetailsElement)parent.open=true;if(parent.hidden)parent.hidden=false;parent=parent.parentElement}invalid[0].focus()}
+ if(invalid[0]){let parent=invalid[0].parentElement;while(parent&&parent!==container){if(parent instanceof HTMLDetailsElement){const disclosure=parent;disclosure.classList.add('validation-reveal');disclosure.open=true;void disclosure.offsetHeight;requestAnimationFrame(()=>disclosure.classList.remove('validation-reveal'))}if(parent.hidden)parent.hidden=false;parent=parent.parentElement}invalid[0].focus()}
  return !invalid.length
 }
 export function Form({onSubmit,children,...props}:FormHTMLAttributes<HTMLFormElement>&{ref?:Ref<HTMLFormElement>}){
@@ -110,8 +110,47 @@ export function Badge({children,tone='neutral'}: {children:ReactNode;tone?:'neut
  const Icon=tone==='good'?CircleCheck:tone==='bad'||tone==='pending'?CircleAlert:Info
  return <span className={'status-label '+tone}><Icon size={14} aria-hidden="true"/><span>{children}</span></span>
 }
+export function Reveal({open,id,children}:{open:boolean;id:string;children:ReactNode}){
+ const [visited,setVisited]=useState(open)
+ useLayoutEffect(()=>{if(open)setVisited(true)},[open])
+ return <div id={id} className={'motion-reveal'+(open?' is-open':'')} inert={!open} aria-hidden={!open}><div className="motion-reveal-inner">{(open||visited)&&children}</div></div>
+}
+export function useExitPresence(open:boolean){
+ const [retained,setRetained]=useState(open)
+ useEffect(()=>{
+  if(open){setRetained(true);return}
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){setRetained(false);return}
+  const timer=setTimeout(()=>setRetained(false),120)
+  return()=>clearTimeout(timer)
+ },[open])
+ return open||retained
+}
+// Exit is visual only: the real dialog closes and restores focus immediately.
+// Keep the snapshot inert and hidden from assistive technology, including nested guards.
+function modalExitSnapshot(dialog:HTMLDialogElement){
+ if(!dialog.open||matchMedia('(prefers-reduced-motion: reduce)').matches)return
+ const bounds=dialog.getBoundingClientRect(),snapshot=dialog.cloneNode(true) as HTMLDialogElement
+ const background=getComputedStyle(dialog,'::backdrop').backgroundColor
+ const scrollPositions=Array.from(dialog.querySelectorAll<HTMLElement>('*')).map(el=>({top:el.scrollTop,left:el.scrollLeft}))
+ queueMicrotask(()=>{
+  // Strict Mode's effect rehearsal leaves the original connected; it is not an exit.
+  if(dialog.isConnected)return
+  const overlay=document.createElement('div')
+  overlay.className='modal-exit-overlay';overlay.inert=true;overlay.setAttribute('aria-hidden','true')
+  Object.assign(overlay.style,{position:'fixed',inset:'0',pointerEvents:'none',zIndex:'10000',background})
+  snapshot.classList.add('modal-exit-snapshot')
+  snapshot.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'))
+  snapshot.removeAttribute('id');snapshot.removeAttribute('aria-label');snapshot.removeAttribute('open')
+  Object.assign(snapshot.style,{display:'flex',flexDirection:'column',overflow:'hidden',position:'fixed',margin:'0',left:bounds.left+'px',top:bounds.top+'px',right:'auto',bottom:'auto',width:bounds.width+'px',height:bounds.height+'px',maxWidth:'none',maxHeight:'none',animation:'none'})
+  overlay.append(snapshot);document.body.append(overlay)
+  snapshot.querySelectorAll<HTMLElement>('*').forEach((el,index)=>{el.scrollTop=scrollPositions[index].top;el.scrollLeft=scrollPositions[index].left})
+  const exit=overlay.animate([{opacity:1},{opacity:0}],{duration:120,easing:'ease-out',fill:'forwards'})
+  exit.finished.then(()=>overlay.remove(),()=>overlay.remove())
+ })
+}
 export function Modal({title,children,onClose,size='medium',stable=false}: {title:string;children:ReactNode;onClose:()=>void;size?:'compact'|'medium'|'wide';stable?:boolean}){
  const ref=useRef<HTMLDialogElement>(null)
+ useLayoutEffect(()=>{const dialog=ref.current;return()=>{if(dialog)modalExitSnapshot(dialog)}},[])
  useEffect(()=>{
   const dialog=ref.current,opener=document.activeElement instanceof HTMLElement?document.activeElement:null
   dialog?.showModal();dialog?.querySelector<HTMLElement>('[data-autofocus]')?.focus()

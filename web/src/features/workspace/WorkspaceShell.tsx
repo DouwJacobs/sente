@@ -14,7 +14,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { Button, PageHeader } from "../../ui";
+import { Button, PageHeader, useExitPresence } from "../../ui";
 import type { Data, Row } from "../../shared/types";
 const nav = [
   { name: "Dashboard", icon: LayoutDashboard },
@@ -72,6 +72,7 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   const { info } = useBuildInfo();
+  const moreVisible = useExitPresence(more);
   const shellRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -254,8 +255,8 @@ export function WorkspaceShell({
           <span>More</span>
         </button>
       </nav>
-      {more && (
-        <div className="mobile-more" id="mobile-more-pages" ref={moreRef}>
+      {moreVisible && (
+        <div className={"mobile-more"+(!more?" is-closing":"")} inert={!more} aria-hidden={!more} id="mobile-more-pages" ref={moreRef}>
           <nav aria-label="More pages">
             {visibleNav
               .filter(
