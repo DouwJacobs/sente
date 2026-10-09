@@ -194,3 +194,6 @@ The transaction Classification card places its heading and sole 44px Add split a
 
 
 General preferences alone uses general-preferences-grid for its single bounded 640px track. Keep the shared general-settings-grid at two equal minmax(0,1fr) desktop columns with a 24px gap and align-items:stretch: Configuration source forms and PWA installation/identity cards share equal top/bottom edges at natural row height. At 760px and below the shared grid uses one full-width track and 16px gaps with natural card heights. Never apply the General preferences width restriction to all settings grids; preserve mounted drafts and access-specific cards.
+
+
+The topbar search is an icon-only shared Button with a 44px target, transparent resting background and var(--text) icon color against var(--chrome). Preserve its visible button-content wrapper on every viewport; do not hide all descendant spans to remove an obsolete text label. Scope icon geometry through .button-content>svg. Verify the actual SVG is visible and its contrast against chrome is at least 3:1 in phone/desktop light/dark, plus search opening and focus restoration.

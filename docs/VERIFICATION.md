@@ -583,3 +583,9 @@ Compact summary/toolbar, clear read/unread surfaces and text, quieter type/sever
 - All 20 browser checks passed: settings (8), PWA (10), configuration (2). Evidence: web/test-results/run-w25zedzy. Geometry verifies two equal-width/equal-height cards with aligned tops and a 24px gap at 1440/900px; full-width stacked cards with a 16px gap at 390/360px, both themes. General preferences retains its 640px maximum. Existing permission visibility, mounted drafts, PWA save/install/update behavior and configuration import/export workflows pass.
 - Repository/installed Sente skill updated and validation passed; git diff --check passed. Automated structural/browser coverage only, no manual visual or physical-device verification claimed.
 - Browser-only CSS scope correction and General wrapper class. No financial service, schema, MCP tool/input/output, permissions, consent or proposal/audit changes. Owner development data is separate from the disposable synthetic test fixtures.
+
+## Mobile search visibility — 9 October 2026
+
+- Production TypeScript/Vite build passed with the existing chunk advisory. All 6 global-search browser checks passed (run-rl7w9g2b).
+- Actual SVG visibility, >=3:1 icon/chrome contrast and 44px targets verified at phone 360/light and 390/dark and desktop 1440/light/dark. Existing search open/focus, selection, nested editing, failure/retry and proposal-preview checks passed using synthetic data. No manual visual or physical-device verification claimed.
+- Obsolete mobile span-hiding rule removed; shared icon selector now includes button-content. Repository and installed Sente skills updated/validated; git diff --check passed. Browser-only CSS correction, with no MCP contract, financial service, schema, permission or consent changes.

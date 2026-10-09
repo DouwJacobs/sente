@@ -83,3 +83,7 @@ Add split now belongs to the Classification card header on desktop and phone, ke
 ## Configuration/PWA paired cards — 9 October 2026
 
 Scoped the single-column 640px General preferences rule to its own class. Configuration and PWA retain the shared two-column equal-height desktop grid and full-width natural-height phone stack. No financial service, database, MCP contract, permission or draft behavior changes. The reusable Sente skill records the scope and responsive layout.
+
+## Mobile search icon visibility — 9 October 2026
+
+Removed the obsolete mobile rule hiding search-button spans, which also hid the shared button-content icon wrapper. Search retains theme-aware text color, quiet chrome treatment, 44px target and existing callback. Reusable Sente guidance records wrapper visibility and contrast checks. Browser-only CSS correction; no financial services, schemas, MCP contracts, permissions or consent changes.

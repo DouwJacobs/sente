@@ -2644,7 +2644,7 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
   color:var(--text);
 }
 .topbar-search-btn:hover:not(:disabled) { background:var(--interaction-hover); }
-.topbar-search-btn>svg { width:18px; height:18px; flex-shrink:0; }
+.topbar-search-btn .button-content>svg { width:18px; height:18px; flex-shrink:0; }
 
 /* Global Search – modal */
 .global-search-container { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
@@ -2767,9 +2767,6 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
     min-width: 44px;
     padding: 0;
     justify-content: center;
-  }
-  .topbar-search-btn span {
-    display: none;
   }
 }
 

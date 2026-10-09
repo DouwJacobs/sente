@@ -1,7 +1,7 @@
 import { desktopPhoneCases } from './coverage-cases';
 import {test,expect} from '@playwright/test'
 
-for(const {width,theme} of desktopPhoneCases)test('shared search and group editor '+width+' '+theme,async({page})=>{
+for(const {width,theme} of [...desktopPhoneCases,{width:390,theme:'dark'},{width:1440,theme:'light'}])test('shared search and group editor '+width+' '+theme,async({page})=>{
  await page.setViewportSize({width,height:844})
  await page.addInitScript(theme=>localStorage.setItem('finance-theme',theme),theme)
  await page.goto('/')
@@ -10,6 +10,17 @@ for(const {width,theme} of desktopPhoneCases)test('shared search and group edito
  await page.getByRole('button',{name:'Sign in',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible()
  const trigger=page.getByRole('button',{name:'Search workspace',exact:true})
+ await expect(trigger.locator('svg')).toBeVisible();
+ const contrast=await trigger.evaluate(button=>{
+  const icon=button.querySelector('svg')!;
+  const foreground=getComputedStyle(icon).color,background=getComputedStyle(button.closest('.topbar')!).backgroundColor;
+  const luminance=(color:string)=>{
+   const values=color.match(/[\d.]+/g)!.slice(0,3).map(Number).map(value=>{const channel=value/255;return channel<=.04045?channel/12.92:((channel+.055)/1.055)**2.4});
+   return values[0]*.2126+values[1]*.7152+values[2]*.0722;
+  };
+  const a=luminance(foreground),b=luminance(background);return (Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+ });
+ expect(contrast,'search icon contrast against navigation chrome').toBeGreaterThanOrEqual(3);
  const box=await trigger.boundingBox();expect(box!.width).toBeGreaterThanOrEqual(44);expect(box!.height).toBeGreaterThanOrEqual(44)
  await trigger.click()
  const search=page.getByRole('dialog',{name:'Search workspace',exact:true})
