@@ -8,6 +8,23 @@ for (const touch of [false, true]) {
       test(`whole card hover clears while expanded in ${theme}`, async ({ page }) => {
         await start(page, { width: touch ? 390 : 1440, height: 900 }, theme, "synthetic group budgets");
         await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+        await expect(page.getByRole("button", { name: "Edit budgets", exact: true })).toHaveCount(0);
+        const card = page.locator(".budget-periods-panel>section.panel").first();
+        const menu = card.locator(".budget-period-head .toolbar-actions>details>summary");
+        await expect(card.locator(".budget-groups-view")).toBeVisible();
+        await expect(card.getByRole("button", { name: "View spending", exact: true })).toBeHidden();
+        const headBox = (await card.locator(".budget-period-head").boundingBox())!;
+        const menuBox = (await menu.boundingBox())!;
+        expect(menuBox.width).toBeGreaterThanOrEqual(44);
+        expect(menuBox.height).toBeGreaterThanOrEqual(44);
+        expect(Math.abs(menuBox.y-headBox.y)).toBeLessThan(2);
+        expect(Math.abs(menuBox.x+menuBox.width-headBox.x-headBox.width)).toBeLessThan(2);
+        if (touch) await expect(card.getByText("Selected period", { exact: true })).toBeHidden();
+        else await expect(card.getByText("Selected period", { exact: true })).toBeVisible();
+        await menu.click();
+        await expect(card.getByRole("button", { name: "View spending", exact: true })).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(menu).toBeFocused();
         const group = page.getByRole("region", { name: "No spending group budget", exact: true });
         const header = group.locator(".budget-group-header");
         const summary = group.locator(".budget-group-summary");

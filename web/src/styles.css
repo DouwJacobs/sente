@@ -3229,3 +3229,11 @@ body:has(dialog[open]) { overflow:hidden; }
 }
 
 .category-budget-create { margin-bottom:16px; }
+
+/* Period actions stay beside the heading, including on phones. */
+.budget-period-head { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:12px; }
+.budget-period-identity { min-width:0; }
+.budget-period-head>.toolbar-actions { justify-content:flex-end; }
+@media(max-width:760px) {
+  .budget-period-head .budget-selected-period { display:none; }
+}

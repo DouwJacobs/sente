@@ -106,8 +106,8 @@ export function Budgets({
         ) : (
           visiblePeriods.map((p) => (
             <section className="panel" key={p.id}>
-              <div className="section-head">
-                <div>
+              <div className="section-head budget-period-head">
+                <div className="budget-period-identity">
                   <h2>
                     <button
                       type="button"
@@ -117,20 +117,24 @@ export function Budgets({
                     >
                       {p.name}
                     </button>{" "}
-                    {String(p.id) === period && <Badge>Selected period</Badge>}
+                    {String(p.id) === period && <span className="budget-selected-period"><Badge>Selected period</Badge></span>}
                   </h2>
                   <p className="muted">
                     {p.start_date} — {p.end_date}
                   </p>
                 </div>
                 <div className="toolbar-actions">
-                  <Button variant="primary" aria-expanded={expandedPeriod === String(p.id)} aria-controls={"category-budgets-" + p.id} onClick={() => setExpandedPeriod(String(p.id))}>
-                    Edit budgets
-                  </Button>
-                  <Button variant="quiet" onClick={() => onDashboard(p.id)}>
-                    View spending
-                  </Button>
                   <ActionMenu label={"Actions for " + p.name}>
+                    <Button variant="quiet" onClick={() => onDashboard(p.id)}>
+                      View spending
+                    </Button>
+                    {expandedPeriod !== String(p.id) && <Button
+                      variant="quiet"
+                      aria-controls={"category-budgets-" + p.id}
+                      onClick={() => setExpandedPeriod(String(p.id))}
+                    >
+                      Show spending groups
+                    </Button>}
                     <Button variant="quiet" onClick={() => startEdit(p)}>
                       Edit dates
                     </Button>
