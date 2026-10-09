@@ -1,6 +1,7 @@
+import { RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api";
-import { Button, Empty, Loading, Tabs } from "../../ui";
+import { ActionMenu, Button, Empty, Loading, Tabs } from "../../ui";
 import { useTask } from "../../shared/useTask";
 import type { PageProps } from "../../shared/types";
 import { useTransactionAccess } from "../../TransactionAccess";
@@ -75,25 +76,26 @@ export function NotificationCentre({ notify, onPreferences, onSource }: Pick<Pag
     });
   };
   return <section className="panel notification-centre" aria-label="Notification centre" aria-busy={loading || busy}>
-    <div className="section-head"><h2>Your notifications</h2><div className="actions">
-      <Button disabled={busy || loading} onClick={reload}>Refresh notifications</Button>
-      <Button disabled={busy || loading || !inbox?.unread_count} onClick={() => change("/notifications/read-all")}>Mark all as read</Button>
-      <Button onClick={onPreferences}>Notification preferences</Button>
+    <div className="notification-toolbar"><div className="notification-inbox-summary"><h2>Your notifications</h2><p className="muted" role="status">{loading ? "Checking your inbox…" : failed ? "Inbox unavailable" : inbox ? `${inbox.unread_count} unread · ${inbox.total} ${state || "total"} messages` : ""}</p></div><div className="notification-toolbar-actions">
+      <Button variant="quiet" className="notification-icon-action" aria-label="Refresh notifications" title="Refresh notifications" loading={loading} disabled={busy || loading} onClick={reload}><RefreshCw size={18} aria-hidden="true"/></Button>
+      <ActionMenu label="Notification actions">
+        <Button variant="quiet" disabled={busy || loading || !inbox?.unread_count} onClick={() => change("/notifications/read-all")}>Mark all as read</Button>
+        <Button variant="quiet" onClick={onPreferences}>Notification preferences</Button>
+      </ActionMenu>
     </div></div>
     <Tabs id="notification-state" label="Notification state" items={[{ id: "", label: "All" }, { id: "unread", label: "Unread" }, { id: "read", label: "Read" }]}
       value={state} onChange={value => { setState(value); setPage(0); }} />
     {linked && !inbox?.items.some(item => item.id === linked.id) && <div aria-label="Opened push message"><NotificationItem item={linked} busy={busy} onChange={change} onSource={openSource} /></div>}
     <div role="tabpanel" id={"notification-state-panel-" + state} aria-labelledby={"notification-state-tab-" + state}>
     {loading ? <Loading>Loading notifications</Loading> : failed ? <Empty kind="error" title="Notifications could not be loaded"><p>Try refreshing your inbox.</p><Button variant="primary" onClick={reload}>Retry notifications</Button></Empty> : inbox && <>
-      <p className="muted" role="status">{inbox.unread_count} unread · {inbox.total} {state || "total"} notifications</p>
       {!inbox.items.length ? <Empty kind={state === 'unread' ? 'complete' : 'start'} title="No notifications"><p>{state === 'unread' ? "You're up to date. New unread messages will appear here." : state === 'read' ? "Messages you mark as read will appear here." : "Budget alerts and account updates will appear here when there is something to know."}</p>{state && <Button onClick={() => { setState(''); setPage(0); }}>View all notifications</Button>}<Button variant="quiet" onClick={onPreferences}>Manage preferences</Button></Empty> :
       <ul className="notification-list">{inbox.items.map(item => <li key={item.id}>
         <NotificationItem item={item} busy={busy} onChange={change} onSource={openSource} />
       </li>)}</ul>}
-      {inbox.total > 20 && <nav className="actions" aria-label="Notification pages">
-        <Button disabled={busy || page === 0} onClick={() => setPage(v => v - 1)}>Previous notifications</Button>
+      {inbox.total > 20 && <nav className="notification-pages" aria-label="Notification pages">
+        <Button variant="quiet" aria-label="Previous notifications" title="Previous notifications" disabled={busy || page === 0} onClick={() => setPage(v => v - 1)}><ChevronLeft size={18} aria-hidden="true"/></Button>
         <span>Page {page + 1} of {Math.ceil(inbox.total / 20)}</span>
-        <Button disabled={busy || (page + 1) * 20 >= inbox.total} onClick={() => setPage(v => v + 1)}>Next notifications</Button>
+        <Button variant="quiet" aria-label="Next notifications" title="Next notifications" disabled={busy || (page + 1) * 20 >= inbox.total} onClick={() => setPage(v => v + 1)}><ChevronRight size={18} aria-hidden="true"/></Button>
       </nav>}
     </>}
     </div>

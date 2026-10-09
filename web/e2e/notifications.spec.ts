@@ -26,6 +26,7 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   await transaction.getByRole("button", { name: "Mark as read", exact: true }).click();
   await expect(page.getByRole("button", { name: "Notifications, 25 unread", exact: true })).toBeVisible();
   await expect(transaction.getByText("Read", { exact: true })).toBeVisible();
+  await transaction.getByLabel("Notification actions for Transaction message", { exact:true }).click();
   await transaction.getByRole("button", { name: "Dismiss", exact: true }).click();
   await expect(transaction).toHaveCount(0);
   await page.getByRole("button", { name: "Next notifications" }).click();
@@ -50,6 +51,7 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   await page.keyboard.press("End");
   await expect(page.getByRole("tab", { name:"Read", exact:true })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name:"No notifications", exact:true })).toBeVisible();
+  await page.getByLabel("Notification actions", { exact:true }).click();
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   const field = page.getByLabel("Budget thresholds · In-app", { exact:true });
   await field.selectOption("false");
@@ -63,6 +65,7 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   await expect(page.getByText("Notification preferences saved", { exact:true })).toBeVisible();
   await page.reload();
   await openInbox(page);
+  await page.getByLabel("Notification actions", { exact:true }).click();
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   await expect(field).toHaveValue("false");
   await expect(page.getByLabel("Projected overspend · In-app", { exact:true })).toHaveValue("false");
@@ -77,6 +80,7 @@ test("Persistent inbox, authorized links, preferences and responsive keyboard wo
   }
   await page.setViewportSize({ width:360, height:780 });
   await openInbox(page);
+  await page.getByLabel("Notification actions", { exact:true }).click();
   await page.getByRole("button", { name:"Mark all as read", exact:true }).click();
   await expect(page.getByRole("button", { name:"Notifications, 0 unread", exact:true })).toBeVisible();
   await page.getByRole("tab", { name:"Unread", exact:true }).click();
@@ -99,6 +103,7 @@ test("List failure retries and unavailable target fails safely", async ({ page }
 test("Preference stale-write keeps draft and explicit reload recovers", async ({ page }) => {
   await signIn(page);
   await openInbox(page);
+  await page.getByLabel("Notification actions", { exact:true }).click();
   await page.getByRole("button", { name:"Notification preferences", exact:true }).click();
   const field = page.getByLabel("System updates · In-app", { exact:true });
   await field.selectOption("false");

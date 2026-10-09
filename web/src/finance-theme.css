@@ -421,3 +421,34 @@ input[type=file]:not(:disabled)::file-selector-button:hover { background:var(--i
 .filter-card-head>.button { width:44px; height:44px; padding:0; }
 
 details.validation-reveal[open]::details-content { transition:none !important; content-visibility:visible; block-size:auto; opacity:1; }
+
+
+/* Inbox hierarchy and actions stay compact without shrinking touch targets. */
+.notification-centre { padding:16px; }
+.notification-toolbar { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.notification-inbox-summary { min-width:0; }
+.notification-inbox-summary h2 { margin:0 0 4px; font-size:16px; line-height:1.4; }
+.notification-inbox-summary p { margin:0; font-size:12px; line-height:1.5; }
+.notification-toolbar-actions,.notification-secondary-actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+.notification-icon-action { width:44px; height:44px; padding:0; }
+.notification-centre .notification-list { gap:8px; margin:12px 0 0; }
+.notification-centre .notification-item { padding:14px 16px; background:var(--surface); border:1px solid var(--border); border-radius:8px; }
+.notification-centre .notification-item.unread { background:var(--surface-soft); }
+.notification-item-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.notification-centre .notification-item h3 { font-size:14px; line-height:1.5; color:var(--text); overflow-wrap:anywhere; }
+.notification-read-state { display:inline-flex; align-items:center; gap:6px; font-size:11px; line-height:21px; color:var(--muted); flex-shrink:0; }
+.notification-unread-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+.notification-centre .notification-message { margin:8px 0; max-width:80ch; font-size:13px; line-height:1.6; }
+.notification-meta { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:11px; line-height:1.5; color:var(--muted); }
+.notification-severity.severity-warning { color:var(--pending); }
+.notification-severity.severity-critical,.notification-severity.severity-error { color:var(--negative); }
+.notification-item-actions { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.notification-secondary-actions { margin-left:auto; }
+.notification-pages { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:16px; font-size:12px; color:var(--muted); }
+.notification-pages .button { width:44px; height:44px; padding:0; }
+@media(max-width:760px) {
+ .notification-centre { padding:14px 12px; }
+ .notification-centre .notification-item { padding:12px; }
+ .notification-item-heading { gap:8px; }
+ .notification-centre .notification-item-actions>.button { padding:8px 10px; font-size:13px; width:auto; }
+}

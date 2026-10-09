@@ -25,6 +25,7 @@ const nav = [
   { name: "Settings", icon: Settings },
 ];
 const descriptions: Record<string, string> = {
+  Notifications: "Updates about your budgets, accounts and transactions.",
   Dashboard: "Income, spending, and review for your selected period.",
   Transactions: "Import, categorize, and review your transactions.",
   Review: "Check the details before approving.",
