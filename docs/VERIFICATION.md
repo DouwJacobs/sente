@@ -652,3 +652,42 @@ Compact summary/toolbar, clear read/unread surfaces and text, quieter type/sever
 CI run 37893805486 passed earlier source checks but stopped in classification-defaults: the page-wide Groceries locator matched both the visible category row and an option in a retained hidden form. The test now targets the category list's explicit Groceries Expense and Salary Income buttons, preserving import, rule mutation and category paging assertions. All three classification-defaults cases passed in run-5d32luww; the complete PR-selected browser gate subsequently passed in that run: 156 cases across 34 specs, 0 unexpected failures, flaky results or skips. This changes test targeting only; no application behavior, financial services, MCP contracts, permissions or schema changes.
 
 The GitHub rerun (37901682893) passed source checks and the first 28 browser specs, then exposed a desktop/no-preference timing failure in filter-layout-motion: its More filters click occurred during the outer filter reveal, leaving the native disclosure closed. The test now waits on actual Web Animations completion before activating the nested summary and asserts its open attribute. All four desktop/phone and normal/reduced-motion cases passed five explicit repetitions each (20 passed, no retries) in run-zxlluzf4. This is test synchronization with unchanged visibility, geometry, focus, selector and motion assertions; application behavior is unchanged.
+
+
+## MCP personal budget alerts — issue #75, 9 October 2026
+
+`codex/mcp-budget-alerts` starts from development `22099eb` in the existing WSL
+checkout. Added default-off `read_budget_alerts` and `manage_budget_alerts` consent,
+explicit single-scope `get_budget_alert_preferences`, and exact 1–100-scope
+`update_budget_alerts` proposals. Group 0 explicitly means No spending group;
+current personal versions, enabled/custom 1–100% thresholds and reset-to-defaults
+are validated. Shared preference saves and silent current-condition baselines run
+inside the existing atomic proposal transaction with exact before/after audit and
+once-only replay. Global notification preferences and scope carryover/suppression
+remain authoritative. No schema migration is introduced.
+
+OAuth/Settings share the new read/change controls, dependency/scope validation,
+explicit confirmation and optional automatic approval. Finance/legacy presets do
+not gain access. Household membership and unrestricted connection account scope
+are required because settings apply to shared budget combinations. Owner identity
+comes exclusively from the authenticated connection. Inbox content, global channel
+preferences, push registration/secrets and diagnostics remain browser-only.
+
+Verification: 15 frontend unit tests, production build, Go vet and all 16 MCP/inbox/
+push browser cases passed (360px light and 1440px dark for MCP). Four new backend
+integration tests passed under the race detector, covering consent/defaults,
+ownership, validation/bounds, revoked consent/membership/scope/automatic approval,
+stale/renamed scopes, audit rollback, replay, silent baselines, mute/reset, global
+precedence and duplicate suppression. The initial baseline `make test` hit Go's
+default ten-minute package timeout without assertion failures. The complete
+`go test -race ./... -timeout=30m -json` run exercised 252 top-level app tests
+and their subtests plus the domain packages (1,485.64s for app). It exited 1
+solely because the tool-catalogue assertion still expected 22 tools. Updated that
+expectation to 23; `go test -race ./internal/app -run TestMCPPrivacyAndTransport
+-count=1 -timeout=5m` then passed. The final four alert tests also passed in a
+separate race run (53.21s), including added percentage/batch bounds and revoked
+approval checks. No test failures remain after those targeted rechecks; the whole
+suite was not repeated after the assertion-only correction. The optional public
+starter pull and supplied FNB export checks skipped as configured. Only synthetic
+databases were used. No computer-use visual inspection, external MCP
+client certification or production deployment is claimed.

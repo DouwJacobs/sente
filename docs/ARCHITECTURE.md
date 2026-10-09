@@ -117,3 +117,6 @@ Migrations 29/30 add personal category/group-combination preferences and interna
 
 
 Issue #71: `features/budgets/BudgetGroups.tsx` owns the paged on-page group/category hierarchy and group membership dialogs; `CategoryBudgetModal.tsx` owns the shared focused add/edit draft used by Budgets and SpendingBucket. Dashboard routes its general Edit budgets action to Budgets; category drill-down keeps its nested editor. Category-budget load failures block writes, and saves retain the displayed period version for concurrency checks. The existing browser budget endpoint commits amount/recurrence and optional personal alert changes together. No backend/schema or MCP contract change.
+
+
+Issue #75: `mcp_budget_alerts.go` owns typed single-scope personal alert reads and exact batch proposal adapters. Independent default-off read/change consent in `mcp_permissions.go` bounds household-wide preferences; adapters call `saveBudgetAlertPreferencesTx` and `baselineBudgetAlertPreferencesTx` in the existing serialized proposal transaction. Before/after scope preferences, optimistic versions, stored result and audits commit atomically. No schema migration, notification inbox or push credential exposure. Shared MCP consent fields and proposal cards present these settings in OAuth/Settings.

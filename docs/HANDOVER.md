@@ -105,6 +105,66 @@ Scoped the single-column 640px General preferences rule to its own class. Config
 
 Removed the obsolete mobile rule hiding search-button spans, which also hid the shared button-content icon wrapper. Search retains theme-aware text color, quiet chrome treatment, 44px target and existing callback. Reusable Sente guidance records wrapper visibility and contrast checks. Browser-only CSS correction; no financial services, schemas, MCP contracts, permissions or consent changes.
 
+
+## MCP personal budget alerts — issue #75, 9 October 2026
+
+`codex/mcp-budget-alerts` starts from development `22099eb` in the existing WSL
+checkout. Added default-off `read_budget_alerts` and `manage_budget_alerts` consent,
+explicit single-scope `get_budget_alert_preferences`, and exact 1–100-scope
+`update_budget_alerts` proposals. Group 0 explicitly means No spending group;
+current personal versions, enabled/custom 1–100% thresholds and reset-to-defaults
+are validated. Shared preference saves and silent current-condition baselines run
+inside the existing atomic proposal transaction with exact before/after audit and
+once-only replay. Global notification preferences and scope carryover/suppression
+remain authoritative. No schema migration is introduced.
+
+OAuth/Settings share the new read/change controls, dependency/scope validation,
+explicit confirmation and optional automatic approval. Finance/legacy presets do
+not gain access. Household membership and unrestricted connection account scope
+are required because settings apply to shared budget combinations. Owner identity
+comes exclusively from the authenticated connection. Inbox content, global channel
+preferences, push registration/secrets and diagnostics remain browser-only.
+
+Verification: 15 frontend unit tests, production build, Go vet and all 16 MCP/inbox/
+push browser cases passed (360px light and 1440px dark for MCP). Four new backend
+integration tests passed under the race detector, covering consent/defaults,
+ownership, validation/bounds, revoked consent/membership/scope/automatic approval,
+stale/renamed scopes, audit rollback, replay, silent baselines, mute/reset, global
+precedence and duplicate suppression. The initial baseline `make test` hit Go's
+default ten-minute package timeout without assertion failures. The complete
+`go test -race ./... -timeout=30m -json` run exercised 252 top-level app tests
+and their subtests plus the domain packages (1,485.64s for app). It exited 1
+solely because the tool-catalogue assertion still expected 22 tools. Updated that
+expectation to 23; `go test -race ./internal/app -run TestMCPPrivacyAndTransport
+-count=1 -timeout=5m` then passed. The final four alert tests also passed in a
+separate race run (53.21s), including added percentage/batch bounds and revoked
+approval checks. No test failures remain after those targeted rechecks; the whole
+suite was not repeated after the assertion-only correction. The optional public
+starter pull and supplied FNB export checks skipped as configured. Only synthetic
+databases were used. No computer-use visual inspection, external MCP
+client certification or production deployment is claimed.
+
+
+## MCP alert permission check and owner preview — 9 October 2026
+
+Rechecked separate read/change grants, default-off legacy/finance behavior,
+read dependency, all-account/household scope, automatic approval and consent
+rechecks at prepare/approval/apply/replay. OAuth and Settings share the updated
+permission fields; the single-scope read tool and alert proposal path use their
+respective grants. Existing connection permissions were not changed for the owner.
+
+The owner development preview at http://127.0.0.1:5173 now runs `make dev` from
+`/home/douw/finance-tracker` on `codex/mcp-budget-alerts`, replacing the older
+`finance-tracker-ui` preview supervisor. It retains the same development database
+`/home/douw/finance-tracker/data/dev/finance.sqlite` and backups directory. API
+health returned 200; Vite serves both new consent fields; the running backend
+embeds application revision `ee4ed8e`. Log/PID records are ignored files
+`work/dev/mcp-budget-alerts-preview.log` and `work/dev/mcp-budget-alerts-preview.pid`.
+No production database or connection consent was modified.
+
+All four `TestMCPBudgetAlert` integration tests passed again (16.92s) during this
+permission/runtime recheck. No application code change was needed.
+
 ## Release browser prerequisites and budget handoff - 9 October 2026
 
 Development run 37904586295 failed after PR #90 because the prerequisite audit
