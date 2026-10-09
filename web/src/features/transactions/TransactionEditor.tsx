@@ -2,7 +2,7 @@ import { TransactionExtras } from "./TransactionExtras";
 import { Allocations } from "./Allocations";
 import { TransactionLabels } from "../../CoreWorkflows";
 import { useEffect, useState, useRef } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Plus } from "lucide-react";
 import { api, cents, decimal, money } from "../../api";
 import { Button, Field, Badge, Modal, validateFields } from "../../ui";
 import { ChoiceField } from "../../Choices";
@@ -272,7 +272,15 @@ export function TransactionEditor({
             className="transaction-editor-pane transaction-classification"
             aria-label="Classification"
           >
-            <h3>Classification</h3>
+            <div className="transaction-classification-head">
+              <h3>Classification</h3>
+              <Button
+                disabled={alloc.length >= 100 || !t.can_edit || busy}
+                onClick={() => setAlloc([...alloc, { category_id: null, amount: "0.00", note: "" }])}
+              >
+                <Plus size={16} />Add split
+              </Button>
+            </div>
             <ChoiceField
               source="/spending-groups"
               label="Spending group"

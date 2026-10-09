@@ -75,3 +75,7 @@ The UI branch now tightens the inbox toolbar and message cards: compact count su
 ## Budget period actions — 9 October 2026
 
 Removed the redundant Edit budgets button from period cards, moved View spending into the existing period menu, and retained selected-period groups by default. Collapsed periods use Show spending groups in that menu. Headers keep their menu top-right on phones; Selected period icon/text is hidden only on phones. Dashboard Edit budgets navigation remains. This presentation-only change does not alter financial services, permissions, schemas or MCP contracts. The Sente skill records responsive/action decisions.
+
+## Transaction classification layout — 9 October 2026
+
+Add split now belongs to the Classification card header on desktop and phone, keeping Spending group and Category adjacent. Phone category controls span the available width; single allocations no longer reserve an empty remove track, while split removal sits beside its amount. The reusable Sente skill records exact rules. This remains browser-only presentation: no financial service, schema, MCP contract or permission changes.

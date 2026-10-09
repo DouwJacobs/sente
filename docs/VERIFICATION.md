@@ -568,3 +568,11 @@ Compact summary/toolbar, clear read/unread surfaces and text, quieter type/sever
 - Coverage includes selected groups visible without a redundant button, 44px top-right period menus, phone-hidden selected status, View spending menu navigation, Escape/focus restoration, other-period empty-budget setup, persisted limits, paged category editing/error recovery, both themes and long names/large signed figures across phone/intermediate/desktop viewports.
 - Repository and installed Sente experience skills synchronized; skill validation and git diff --check passed. Structural and automated browser checks only; no computer-use or physical-device verification claimed.
 - Browser-only presentation/action ownership changes. No MCP tools, contracts/allowlists, consent, financial services or database schema changes. Synthetic fixtures remain separate from the owner's existing development database.
+
+## Transaction classification header and phone width — 9 October 2026
+
+- Production TypeScript/Vite build passed with the existing chunk-size advisory.
+- All 25 browser checks passed: editor-layout (4), density-refinements (5), mobile-core (13), workflows (3), using disposable synthetic databases. Evidence: web/test-results/run-5n44gl6k.
+- Editor checks cover one 44px Add split action at the classification header’s right edge, adjacent aligned group/category controls, full-width phone single/split categories, both themes at 360/390/900/1440px, and actual split save/reopen, invalid total handling and removal. Existing mobile draft/navigation and workflow checks also passed.
+- Reusable repository/installed Sente skills synchronized and validated; git diff --check passed. Automated geometry and browser coverage only; no manual visual or physical-device verification claimed.
+- Presentation-only browser work: no MCP tools, schemas, output allowlists, consent, proposal/audit contracts, permissions, shared financial services or database changes. Real development data remains separate from synthetic verification.
