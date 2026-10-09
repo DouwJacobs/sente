@@ -501,3 +501,6 @@ The test now opens Branding explicitly, waits for its named Save branding/Reload
 
 
 The complete local attempt (run-bfca7bxo) passed its first 11 specs, including the corrected audit cases, then exposed a desktop review test clicking a retained transaction row before the Needs review filter finished loading. The application intentionally ignores clicks while loading. The test now waits for its single filtered row and loading completion before opening the editor; all six core-improvements cases passed in run-0f_ikdyw. Remaining specs are being checked in that run. This is test synchronization, with no application behavior or weakened financial assertion.
+
+
+Final local browser coverage: all 53 specs passed across the first 11 unchanged successful specs in run-bfca7bxo and all 42 remaining specs in run-0f_ikdyw after the review wait fix: 207 passed cases, 0 skipped, no unexpected failures or flaky results in those final batches. The earlier unsynchronized review failure is excluded from this pass count. This is combined complete coverage, not a claim that the initial single full command passed. The 42-spec batch took 668.442s. GitHub must still verify and accept the exact merged revision/image before publication.
