@@ -1,5 +1,33 @@
 # Verification
 
+## CI runtime reduction  9 October 2026
+
+Changed only automation, CI helpers and operational documentation. Successful
+same-repository verification receipts bind source gates and browser spec coverage to
+the exact Git tree. Publication reuses matching coverage, fills missing browser specs
+and retains production-image acceptance. Missing/expired/mismatched/fork evidence,
+lookup limits and API errors retain checks. Documentation-only PRs skip suites while
+the required job succeeds. Dependabot groups weekly version updates on development
+and separately groups alert-driven security fixes on the default branch.
+
+Verification:
+- All 33 focused Python CI/evidence/browser-runner/release/publisher regressions
+  passed. Evidence cases cover matching/mismatched contents, merged PRs with an empty
+  PR array, fork exclusion, expired receipts, API failure, scoped/full receipts and
+  running only missing browser specs.
+- actionlint 1.7.7 passed for all three workflows; YAML checks verified reuse guards,
+  actions-read permissions and all ten Dependabot version/security configurations.
+- Read-only live GitHub evidence lookup found no existing receipts and correctly
+  selected normal verification. Existing successful runs cannot be reused
+  retrospectively; receipts begin after this change enters CI.
+- git diff --check passed. Application suites/image builds were not rerun for this
+  automation-only change. A real artifact-backed reuse run remains unverified at implementation time;
+  the first development push must establish successful receipts.
+
+MCP impact: no tools, schemas, output allowlists, permissions/consent, proposal
+previews/audits, shared services or financial behavior change.
+
+
 ## MCP tools, personal context and CI — 7 October 2026
 
 Scope: issues #6–#8 plus owner-requested MCP page/permission clarity and personal context with independent per-connection sharing consent. Schema 22 adds only personal context storage. No financial/source records are rewritten.

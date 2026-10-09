@@ -10,8 +10,12 @@ def needs_frontend(paths):
     def backend_only(path):
         return (path.startswith(("internal/", "cmd/", "docs/", "fixtures/demo/"))
                 or path in {"go.mod", "go.sum", "AGENTS.md", "README.md", "LICENSE",
-                            "scripts/test_demo.py", "scripts/demo.py", "scripts/ci-scope.test.py"})
+                            "NOTICE", "scripts/test_demo.py", "scripts/demo.py", "scripts/ci-scope.test.py"})
     return any(not backend_only(path) for path in paths)
+
+def needs_source(paths):
+    return any(not (path.startswith("docs/") or path in
+                    {"README.md", "AGENTS.md", "LICENSE", "NOTICE"}) for path in paths)
 
 def changed_browser_specs(paths):
     return sorted({Path(path).name for path in paths
@@ -19,6 +23,7 @@ def changed_browser_specs(paths):
 
 def main():
     required = True
+    source = True
     paths = []
     if os.environ.get("GITHUB_EVENT_NAME") == "pull_request" and os.environ.get("SENTE_FULL_VERIFICATION") != "true":
         try:
@@ -29,6 +34,7 @@ def main():
                 ["git", "diff", "--name-only", "-z", "--no-renames", f"{base}...{head}"])
             paths = output.decode().rstrip("\0").split("\0") if output else []
             required = needs_frontend(paths)
+            source = needs_source(paths)
         except (KeyError, OSError, ValueError, subprocess.CalledProcessError) as error:
             print(f"Scope detection unavailable; running frontend checks ({type(error).__name__})")
             paths = ["web/e2e/" + path.name for path in
@@ -36,6 +42,7 @@ def main():
     value = str(required).lower()
     print(f"Frontend checks: {value}")
     with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+        output.write(f"source={str(source).lower()}\n")
         output.write(f"frontend={value}\n")
         output.write("browser_specs=" + json.dumps(changed_browser_specs(paths)) + "\n")
 

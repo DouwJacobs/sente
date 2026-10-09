@@ -2,21 +2,111 @@ version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    target-branch: development
+    open-pull-requests-limit: 1
+    groups:
+      dependencies:
+        patterns: ['*']
     schedule:
       interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Johannesburg
   - package-ecosystem: docker
     directory: /
+    target-branch: development
+    open-pull-requests-limit: 1
+    groups:
+      dependencies:
+        patterns: ['*']
     schedule:
       interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Johannesburg
   - package-ecosystem: gomod
     directory: /
+    target-branch: development
+    open-pull-requests-limit: 1
+    groups:
+      dependencies:
+        patterns: ['*']
     schedule:
       interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Johannesburg
   - package-ecosystem: npm
     directory: /web
+    target-branch: development
+    open-pull-requests-limit: 1
+    groups:
+      dependencies:
+        patterns: ['*']
     schedule:
       interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Johannesburg
   - package-ecosystem: npm
     directory: /connectors/fnb/owner
+    target-branch: development
+    open-pull-requests-limit: 1
+    groups:
+      dependencies:
+        patterns: ['*']
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Africa/Johannesburg
+  # Default-branch configuration groups security fixes without routine updates.
+  - package-ecosystem: github-actions
+    directory: /
+    open-pull-requests-limit: 0
+    groups:
+      security-dependencies:
+        applies-to: security-updates
+        patterns: ['*']
+    schedule:
+      interval: weekly
+  # Default-branch configuration groups security fixes without routine updates.
+  - package-ecosystem: docker
+    directory: /
+    open-pull-requests-limit: 0
+    groups:
+      security-dependencies:
+        applies-to: security-updates
+        patterns: ['*']
+    schedule:
+      interval: weekly
+  # Default-branch configuration groups security fixes without routine updates.
+  - package-ecosystem: gomod
+    directory: /
+    open-pull-requests-limit: 0
+    groups:
+      security-dependencies:
+        applies-to: security-updates
+        patterns: ['*']
+    schedule:
+      interval: weekly
+  # Default-branch configuration groups security fixes without routine updates.
+  - package-ecosystem: npm
+    directory: /web
+    open-pull-requests-limit: 0
+    groups:
+      security-dependencies:
+        applies-to: security-updates
+        patterns: ['*']
+    schedule:
+      interval: weekly
+  # Default-branch configuration groups security fixes without routine updates.
+  - package-ecosystem: npm
+    directory: /connectors/fnb/owner
+    open-pull-requests-limit: 0
+    groups:
+      security-dependencies:
+        applies-to: security-updates
+        patterns: ['*']
     schedule:
       interval: weekly

@@ -34,6 +34,23 @@ GPL/source links remain browser-only. No database migration is introduced.
 
 The merged budget-hover fix preserves neutral expanded headers, pointer exit and touch behavior; its verification remains in VERIFICATION.md.
 
+## CI runtime reduction  9 October 2026
+
+CI changes add successful exact-Git-tree receipts to source verification.
+Publication reuses source gates and runs only browser specs absent from matching
+PR evidence; identical beta/stable source shares complete coverage. Image acceptance
+still runs for each channel/version. Missing/expired evidence, changed trees, forks
+and API errors retain verification. Documentation-only PRs retain a successful
+required job without test/toolchain setup. Dependabot routine updates are grouped,
+weekly Monday 06:00 Africa/Johannesburg, with one open version PR per configuration
+against development; separate default-branch entries group alert-driven security
+fixes without opening routine stable-branch version PRs.
+No application/MCP tools, schemas, output allowlists, permissions, consent,
+proposal previews/audits, shared financial services or migrations change.
+See VERIFICATION.md for actual checks; artifact-backed reuse remains to be
+verified in GitHub. Dependabot reads configuration from the default branch, so
+its new grouping activates after development is promoted to main.
+
 ## Remaining operational limits
 
 - Live FNB layout/MFA compatibility and overlapping real OFX identifier stability

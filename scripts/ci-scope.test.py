@@ -25,6 +25,11 @@ class ScopeTests(unittest.TestCase):
                         diff.assert_called_once_with(["git","diff","--name-only","-z","--no-renames","base...head"])
             return next(line+"\n" for line in output.read_text().splitlines() if line.startswith("frontend="))
 
+    def test_documentation_only_needs_no_source_checks(self):
+        self.assertFalse(scope.needs_source(["docs/PLAN.md", "README.md", "NOTICE"]))
+        self.assertTrue(scope.needs_source(["docs/PLAN.md", "internal/app/security.go"]))
+        self.assertTrue(scope.needs_source([".github/workflows/ci.yml"]))
+
     def test_backend_and_docs_only_skip_frontend(self):
         self.assertEqual(self.run_scope(changed=b"internal/app/security.go\\0docs/PLAN.md\\0".replace(b"\\0",b"\0")), "frontend=false\n")
 
