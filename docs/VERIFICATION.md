@@ -1,6 +1,35 @@
 # Verification
 
-## CI runtime reduction  9 October 2026
+## Release browser prerequisite and budget regressions - 9 October 2026
+
+Development run 37904586295 stopped at four outdated Rules prerequisite
+assertions after UI PR #90. No image was published for that run. The preceding
+CI-change run 37904571194 completed successfully.
+
+Test-only repairs:
+- Empty Rules waits for the loaded state, confirms no unsupported Add rule action,
+  and exercises Open Accounts and Create category.
+- Dashboard budget handoffs open the period menu, respect the phone-hidden selected
+  badge and follow Set up a budget on an empty dashboard.
+- Group totals wait for the post-save authoritative refresh, retaining the expected
+  R1,200 total and independent group/category checks.
+- Loading account buttons retain their accessible name and dimensions and use the
+  current centered spinner; no direct-text-node assumption remains.
+- The PR scope selector adds these three audits for their owning UI modules or
+  shared UI/styles; unrelated PRs retain the existing default browser suite.
+
+Verification: production TypeScript/Vite build passed. All 54 browser specs the
+failed CI run did not complete passed locally across isolated synthetic batches
+(228 cases), including all 15 cases in the repaired specs. About, account discovery
+and account icon specs had already passed on GitHub for the same application source
+and were not repeated. Browser-runner, source-scope and evidence regression checks
+passed; git diff --check passed. Final GitHub publication remains the remote gate.
+No browser UI control, real financial data, production deployment, application code,
+financial invariants, database migration or MCP tool/schema/permission/consent
+change. The primary checkout's concurrent MCP work was preserved.
+
+
+## CI runtime reduction — 9 October 2026
 
 Changed only automation, CI helpers and operational documentation. Successful
 same-repository verification receipts bind source gates and browser spec coverage to

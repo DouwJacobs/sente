@@ -40,7 +40,7 @@ GPL/source links remain browser-only. No database migration is introduced.
 
 The merged budget-hover fix preserves neutral expanded headers, pointer exit and touch behavior; its verification remains in VERIFICATION.md.
 
-## CI runtime reduction  9 October 2026
+## CI runtime reduction — 9 October 2026
 
 CI changes add successful exact-Git-tree receipts to source verification.
 Publication reuses source gates and runs only browser specs absent from matching
@@ -164,3 +164,22 @@ No production database or connection consent was modified.
 
 All four `TestMCPBudgetAlert` integration tests passed again (16.92s) during this
 permission/runtime recheck. No application code change was needed.
+
+## Release browser prerequisites and budget handoff - 9 October 2026
+
+Development run 37904586295 failed after PR #90 because the prerequisite audit
+expected a disabled Add rule button and obsolete account guidance on the empty
+Rules screen. Tests now wait for the loaded empty state and exercise Open Accounts
+and Create category directly. Checking the unreached suite also found dashboard
+tests using inline View spending, a phone-visible Selected period badge and an
+empty-dashboard Edit budgets action; they now follow the period action menu, phone
+badge visibility and Set up a budget. Saved group totals wait for the refreshed
+authoritative value without changing the expected amount.
+The pending-button audit now checks stable size/name and a centered spinner rather
+than looking for a direct text node and the former inline spinner gap.
+Related source paths select the three affected specs for PR verification, without
+expanding the default suite for unrelated changes. This catches these regressions
+before the complete release gate. Product behavior and MCP contracts are unchanged.
+The fix is isolated in /home/douw/finance-tracker-ci-fix on
+codex/release-audit-prerequisites; ongoing MCP edits in the primary checkout remain
+untouched. VERIFICATION.md records actual coverage.
