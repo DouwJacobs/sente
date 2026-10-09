@@ -92,7 +92,7 @@ export function Dashboard({
     budgetSort,
   ]);
   if (loading && !d) return <Loading>Loading this period</Loading>;
-  if (error) return <Empty title="Dashboard unavailable">{error}</Empty>;
+  if (error) return <Empty kind="error" title="Dashboard unavailable"><p>{error}</p><Button variant="primary" onClick={refresh}>Retry dashboard</Button></Empty>;
   if (!d) return null;
   const expense = d.categories.filter(
     (c: Row) => c.kind === "expense" && (c.target_cents || c.spent_cents),
@@ -174,8 +174,10 @@ export function Dashboard({
             </div>
           </div>
           {!d.spending_groups?.length ? (
-            <Empty title="No spending yet">
-              Import transactions to see your spending groups here.
+            <Empty kind="budget" title="No spending yet">
+              <p>Spending for this period will appear here once transactions are imported and categorized.</p>
+              <Button variant="primary" onClick={data.accounts.length ? onImport : onAccounts}>{data.accounts.length ? 'Import transactions' : 'Add an account'}</Button>
+              <Button variant="quiet" onClick={() => onBudgets(d.period.id)}>Set up a budget</Button>
             </Empty>
           ) : (
             d.spending_groups.map((g: Row) => (
@@ -220,8 +222,9 @@ export function Dashboard({
                 : "Totals cover the selected account only."}
             </p>
             {!expense.length ? (
-              <Empty title="No category spending yet">
-                Import transactions and review your categories to get started.
+              <Empty kind="categories" title="No category spending yet">
+                <p>Categorized expenses for the selected accounts and period will appear here.</p>
+                <Button onClick={onReview}>Review categories</Button>
               </Empty>
             ) : (
               <>
@@ -370,7 +373,7 @@ export function Dashboard({
           <section className="panel" aria-label="Bank-reported balances">
             <h2>Bank-reported balances</h2>
             {!d.balances.length ? (
-              <Empty
+              <Empty kind="accounts"
                 title={
                   data.accounts.length
                     ? "No balances for these accounts"
@@ -380,7 +383,7 @@ export function Dashboard({
                 {data.accounts.length
                   ? "Choose another account or refresh balances on the Accounts page."
                   : "Set up an account to begin."}
-                <Button onClick={onAccounts}>Open Accounts</Button>
+                <Button variant="primary" onClick={onAccounts}>Open Accounts</Button>
               </Empty>
             ) : (
               d.balances.map((a: Row) => (

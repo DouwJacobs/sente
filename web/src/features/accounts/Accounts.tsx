@@ -114,11 +114,12 @@ export function Accounts(
           </div>
         ))}
         {!list.loading && !list.error && !list.items.length && (
-          <Empty title="No accessible accounts">
+          <Empty kind="accounts" title="No accessible accounts">
             {data.user.admin
               ? "Connect FNB to discover accounts, add one manually, or import a discovery file."
               : "Ask an administrator to grant account access."}
-            {data.user.admin && <Button onClick={onManage}>Connect FNB</Button>}
+            {data.user.admin && <Button variant="primary" onClick={onManage}>Connect FNB</Button>}
+            {data.user.admin && <Button variant="quiet" onClick={() => m.edit({ name: "", bank_id: "", household: false })}>Add account manually</Button>}
           </Empty>
         )}
         <ListNavigation list={list} />

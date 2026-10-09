@@ -28,6 +28,7 @@ export function Imports({
     [connectionLoading, setConnectionLoading] = useState(true),
     [connectionError, setConnectionError] = useState("");
   const processed = useRef(new Set<number>());
+  const uploadPanel = useRef<HTMLDetailsElement>(null);
   const [processing, setProcessing] = useState(false);
   const [readyImports, setReadyImports] = useState<
       Record<number, () => Promise<boolean>>
@@ -322,7 +323,7 @@ export function Imports({
           may be missing.
         </p>
       </section>
-      <details className="panel upload-panel">
+      <details ref={uploadPanel} className="panel upload-panel">
         <summary>Upload a bank export</summary>
         <div className="upload-content">
           <div className="section-head">
@@ -411,7 +412,7 @@ export function Imports({
                 disabled={processing || busy || !files.length || !account}
                 onClick={preview}
               >
-                {busy ? "Importing statements" : "Import statement"}
+                Import statement
               </Button>
             </>
           ) : (
@@ -488,7 +489,7 @@ export function Imports({
           </p>
         )}
         {!loading && !historyError && !history.length ? (
-          <Empty
+          <Empty kind={filterQuery ? "filtered" : "start"}
             title={
               filterQuery
                 ? "No matching import activity"
@@ -498,9 +499,16 @@ export function Imports({
             {filterQuery
               ? "Try another category, spending group or description."
               : "Get transactions or upload an export to begin."}
-            {filterQuery && (
-              <Button onClick={onClearFilters}>Clear filters</Button>
+            {filterQuery && onClearFilters && (
+              <Button variant="primary" onClick={onClearFilters}>Clear filters</Button>
             )}
+            {!filterQuery && editors.length > 0 && <Button variant="primary" disabled={busy} onClick={() => {
+              if (uploadPanel.current) {
+                uploadPanel.current.open = true;
+                uploadPanel.current.querySelector<HTMLButtonElement>('.file-picker')?.focus();
+              }
+            }}>Upload a statement</Button>}
+            {!filterQuery && data.user.admin && <Button variant={editors.length ? 'quiet' : 'primary'} onClick={onBanking}>Manage bank connection</Button>}
           </Empty>
         ) : (
           [

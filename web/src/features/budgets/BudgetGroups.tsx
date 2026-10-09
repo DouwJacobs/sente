@@ -30,7 +30,7 @@ export function BudgetGroups({ period, revision, notify, refresh }: Props) {
       <Button disabled={busy || list.loading || !!list.error} onClick={() => { setGroupID(""); setAdding(true); }}><Plus size={16} />Add group</Button>
     </div>
     <ListStatus list={list} />
-    {!list.loading && !list.error && !list.items.length && <Empty title="Start building your budget">Add a group, then choose its categories and amounts.</Empty>}
+    {!list.loading && !list.error && !list.items.length && <Empty kind="budget" title="Start building your budget"><p>Add a spending group, then choose the categories and limits for this period.</p><Button variant="primary" disabled={busy} onClick={() => { setGroupID(""); setAdding(true); }}>Add first group</Button></Empty>}
     {list.items.map(group => <BudgetGroup key={group.id} group={group} period={period} revision={revision} notify={notify} refresh={refresh}
       onRemove={() => setRemoving(group)} />)}
     <ListNavigation list={list} />

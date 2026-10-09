@@ -95,10 +95,11 @@ export function Budgets({
           </Button>
         </div>
         <ListStatus list={periods} />
-        {!periods.loading && !visiblePeriods.length ? (
+        {!periods.loading && !periods.error && !visiblePeriods.length ? (
           <section className="panel">
-            <Empty title="No budget periods">
-              Create your first period to start budgeting.
+            <Empty kind="budget" title="No budget periods">
+              <p>Choose your dates, then set spending limits. Your first period can follow a calendar month or your payday.</p>
+              <Button variant="primary" onClick={() => startEdit({ ...data.next, version: 0 })}>Create first period</Button>
             </Empty>
           </section>
         ) : (

@@ -117,6 +117,7 @@ export function Categories({
                 )}
               </div>
               <ListStatus list={groupList} />
+              {!groupList.loading && !groupList.error && !groupList.items.length && <Empty kind="categories" title="Organize spending your way"><p>Use groups such as Essentials or Leisure to organize transactions without changing their categories.</p>{data.user.budget_member && <Button variant="primary" onClick={() => setSpendingEdit({})}>Create spending group</Button>}</Empty>}
               <div className="spending-group-grid">
                 {groupList.items.map((g) => (
                   <div className="classification-group-entry" key={g.id}>
@@ -165,9 +166,10 @@ export function Categories({
                 )}
               </div>
               <ListStatus list={categoryList} />
-              {!categoryList.loading && !categoryList.items.length ? (
-                <Empty title="Create your first categories">
-                  Create categories for the income and expenses you track.
+              {!categoryList.loading && !categoryList.error && !categoryList.items.length ? (
+                <Empty kind="categories" title="Create your first categories">
+                  <p>Give income and expenses a clear home, such as Salary, Groceries or Transport.</p>
+                  {data.user.budget_member && <Button variant="primary" onClick={() => setCreating(true)}>Add category</Button>}
                 </Empty>
               ) : (
                 <div className="spending-group-grid category-list">

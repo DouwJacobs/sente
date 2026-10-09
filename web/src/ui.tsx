@@ -1,9 +1,9 @@
 import {useEffect,useRef,useId,useState,Children,cloneElement,isValidElement,type ReactNode,type ButtonHTMLAttributes,type ReactElement,type FormHTMLAttributes,type ChangeEvent,type FocusEvent,type InvalidEvent,type Ref} from 'react'
-import {X,Menu,Eye,EyeOff,ChevronLeft,ChevronRight,CircleCheck,CircleAlert,Info,type LucideIcon} from 'lucide-react'
+import {X,Menu,Eye,EyeOff,ChevronLeft,ChevronRight,CircleCheck,CircleAlert,Info,Inbox,Search,CheckCheck,Wallet,Target,Tags,Plug,type LucideIcon} from 'lucide-react'
 import {createPortal} from 'react-dom'
 export function Spinner(){return <span className="spinner" aria-hidden="true"/>}
 export function Loading({children='Loading'}:{children?:ReactNode}){return <span className="loading-status" role="status"><Spinner/>{children}</span>}
-export function Button({children,variant='secondary',loading=false,type='button',...props}:ButtonHTMLAttributes<HTMLButtonElement>&{variant?:'primary'|'secondary'|'quiet'|'danger';loading?:boolean;ref?:Ref<HTMLButtonElement>}){return <button {...props} type={type} disabled={props.disabled||loading} aria-busy={loading||undefined} className={'button '+variant+' '+(props.className||'')}>{loading&&<Spinner/>}{children}</button>}
+export function Button({children,variant='secondary',loading=false,type='button',...props}:ButtonHTMLAttributes<HTMLButtonElement>&{variant?:'primary'|'secondary'|'quiet'|'danger';loading?:boolean;ref?:Ref<HTMLButtonElement>}){return <button {...props} type={type} disabled={props.disabled||loading} aria-busy={loading||undefined} className={'button '+variant+' '+(props.className||'')}>{loading&&<Spinner/>}<span className="button-content">{children}</span></button>}
 export function PageHeader({title,description,workspace,loading=false}:{title:string;description:string;workspace:string;loading?:boolean}){
  return <div className="page-head">
   <div><p className="eyebrow">{workspace} finances</p><h1 id="page-title">{title}</h1><p className="muted">{description}</p></div>
@@ -90,7 +90,18 @@ export function Field({label,children,hint,validate,serverError}: {label:string;
    ? <PasswordControl input={input} label={label}/> : input
  })}{hint&&<small id={id+'-hint'}>{hint}</small>}{message?<small className="field-error" id={id+'-error'} role="alert">{message}</small>:<span className="field-error-space" aria-hidden="true"/>}</div>
 }
-export function Empty({title,children}: {title:string;children?:ReactNode}){const content=Children.toArray(children),actions=content.filter(child=>isValidElement(child)&&child.type===Button),description=content.filter(child=>!actions.includes(child));return <div className="empty"><h3>{title}</h3>{description.length>0&&<div className="empty-description">{description}</div>}{actions.length>0&&<div className="empty-actions">{actions}</div>}</div>}
+type EmptyKind='start'|'filtered'|'complete'|'error'|'accounts'|'budget'|'categories'|'connection'
+const emptyIcons:Record<EmptyKind,LucideIcon>={start:Inbox,filtered:Search,complete:CheckCheck,error:CircleAlert,accounts:Wallet,budget:Target,categories:Tags,connection:Plug}
+export function Empty({title,children,kind='start',icon:CustomIcon}: {title:string;children?:ReactNode;kind?:EmptyKind;icon?:LucideIcon}){
+ const heading=useId(),Icon=CustomIcon||emptyIcons[kind]
+ const content=Children.toArray(children),actions=content.filter(child=>isValidElement(child)&&child.type===Button),description=content.filter(child=>!actions.includes(child))
+ return <section className={'empty empty-'+kind} aria-labelledby={heading}>
+  <span className="empty-visual" aria-hidden="true"><Icon size={26} strokeWidth={1.6}/></span>
+  <h3 id={heading}>{title}</h3>
+  {description.length>0&&<div className="empty-description">{description}</div>}
+  {actions.length>0&&<div className="empty-actions">{actions}</div>}
+ </section>
+}
 export function StatusIcon({label,icon:Icon,tone='neutral'}: {label:string;icon:LucideIcon;tone?:'neutral'|'pending'|'good'|'bad'}) {
  return <span className={'status-icon '+tone} role="img" aria-label={label} title={label}><Icon size={16} aria-hidden="true"/></span>
 }

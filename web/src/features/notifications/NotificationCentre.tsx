@@ -84,9 +84,9 @@ export function NotificationCentre({ notify, onPreferences, onSource }: Pick<Pag
       value={state} onChange={value => { setState(value); setPage(0); }} />
     {linked && !inbox?.items.some(item => item.id === linked.id) && <div aria-label="Opened push message"><NotificationItem item={linked} busy={busy} onChange={change} onSource={openSource} /></div>}
     <div role="tabpanel" id={"notification-state-panel-" + state} aria-labelledby={"notification-state-tab-" + state}>
-    {loading ? <Loading>Loading notifications</Loading> : failed ? <Empty title="Notifications could not be loaded"><p>Try refreshing your inbox.</p><Button onClick={reload}>Retry notifications</Button></Empty> : inbox && <>
+    {loading ? <Loading>Loading notifications</Loading> : failed ? <Empty kind="error" title="Notifications could not be loaded"><p>Try refreshing your inbox.</p><Button variant="primary" onClick={reload}>Retry notifications</Button></Empty> : inbox && <>
       <p className="muted" role="status">{inbox.unread_count} unread · {inbox.total} {state || "total"} notifications</p>
-      {!inbox.items.length ? <Empty title="No notifications"><p>{state ? "No messages match this filter." : "New messages will appear here."}</p></Empty> :
+      {!inbox.items.length ? <Empty kind={state === 'unread' ? 'complete' : 'start'} title="No notifications"><p>{state === 'unread' ? "You're up to date. New unread messages will appear here." : state === 'read' ? "Messages you mark as read will appear here." : "Budget alerts and account updates will appear here when there is something to know."}</p>{state && <Button onClick={() => { setState(''); setPage(0); }}>View all notifications</Button>}<Button variant="quiet" onClick={onPreferences}>Manage preferences</Button></Empty> :
       <ul className="notification-list">{inbox.items.map(item => <li key={item.id}>
         <NotificationItem item={item} busy={busy} onChange={change} onSource={openSource} />
       </li>)}</ul>}

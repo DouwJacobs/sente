@@ -45,7 +45,7 @@ export function ChoiceField({label,value,options,onChange,empty='Not set',disabl
  <div className="choice-list"><button type="button" className="choice-row" disabled={saving} aria-pressed={value===null} onClick={()=>choose(null)}><span>{empty}</span>{value===null&&<Check size={18} aria-label="Selected"/>}</button>
  {popularLoading&&!query.trim()&&<Loading>Loading most used</Loading>}
  {used.length>0&&<><h3>Most used</h3>{rows(used)}<h3>All categories</h3></>}{source&&<ListStatus list={list}/>} {rows(filtered)} {source&&<ListNavigation list={list}/>}
- {!filtered.length&&<Empty title="No matches">{quickCreate?'Create this category below.':'Try another search'+(create?' or create a category.':'.')}</Empty>}</div>
+ {!filtered.length&&<Empty kind="filtered" title="No matches">{quickCreate?'Create this category below.':'Try another search'+(create?' or create a category.':'.')}</Empty>}</div>
  {quickCreate&&query.trim()&&!exact&&<Field label="New category type"><select value={kind} disabled={saving} onChange={e=>setKind(e.target.value as 'expense'|'income')}><option value="expense">Expense (refunds reduce spending)</option><option value="income">Income</option></select></Field>}
  {(create||quickCreate)&&!exact&&<Button type={query.trim()?'submit':'button'} className="choice-create" loading={saving} disabled={saving} onClick={()=>{if(!query.trim())setCreating(true)}}><Plus size={16}/>{saving?'Creating':query.trim()?'Create “'+query.trim()+'”':'Create category'}</Button>}
  </Form>}</Modal>}</div>

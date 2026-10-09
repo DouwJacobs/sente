@@ -267,3 +267,47 @@ input[type=file]:not(:disabled)::file-selector-button:hover { background:var(--i
 .dashboard-overview.long-values .stat { container-type:inline-size; }
 .dashboard-overview.long-values .stat>strong { font-size:clamp(16px,7cqw,24px); }
 .dashboard-overview.long-values .stat.budget>strong { font-size:clamp(18px,8cqw,28px); }
+
+/* Shared experience: quiet feedback, stable actions and intentional empty states. */
+:root { --motion-fast:120ms; --motion-enter:180ms; --motion-ease:cubic-bezier(.2,.8,.2,1); }
+.button-content { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-width:0; }
+.button-content>svg { flex:none; width:18px; height:18px; }
+.account-action-menu .button-content { justify-content:flex-start; text-align:left; }
+.button[aria-busy=true] { position:relative; }
+.button[aria-busy=true]>.spinner { position:absolute; left:50%; margin-left:-7px; }
+.button[aria-busy=true]>.button-content { opacity:0; }
+.button,.nav-item,.choice-row,.action-row,.transaction-detail,summary,input,select,textarea {
+ transition:background-color var(--motion-fast) ease,color var(--motion-fast) ease,border-color var(--motion-fast) ease,box-shadow var(--motion-fast) ease;
+}
+.button:not(:disabled):active { box-shadow:inset 0 0 0 100px rgba(0,0,0,.07); }
+.button:disabled { cursor:not-allowed; }
+.button[aria-busy=true] { cursor:wait; }
+.empty { display:flex; flex-direction:column; align-items:center; padding:36px 20px; gap:12px; min-width:0; }
+.empty-visual { display:grid; place-items:center; width:56px; height:56px; border-radius:18px; background:var(--surface-soft); color:var(--muted); flex:none; }
+.empty-complete .empty-visual { background:var(--income-bg); color:var(--income); }
+.empty-error .empty-visual { background:var(--danger-bg); color:var(--negative); }
+.empty h3 { margin:0; font-size:16px; line-height:1.4; letter-spacing:-.2px; }
+.empty-description { max-width:440px; color:var(--muted); text-wrap:pretty; overflow-wrap:anywhere; }
+.empty-description p { margin:0; max-width:100%; }
+.empty .empty-actions { margin-top:4px; gap:8px; max-width:100%; }
+.empty-actions .button { white-space:normal; }
+.modal[open] { animation:overlay-enter var(--motion-enter) var(--motion-ease); }
+.modal[open]::backdrop { animation:overlay-enter var(--motion-enter) ease; }
+.account-actions[open] .account-action-menu,.mobile-more,.toast { animation:surface-enter var(--motion-enter) var(--motion-ease); }
+@keyframes surface-enter { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+@keyframes overlay-enter { from { opacity:0; } to { opacity:1; } }
+@media(max-width:760px) {
+ .empty { padding:28px 12px; }
+ .empty-actions { width:100%; }
+ .empty-actions .button { flex:1 1 100%; width:100%; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .button,.nav-item,.choice-row,.action-row,.transaction-detail,summary,input,select,textarea { transition:none; }
+ .modal[open],.modal[open]::backdrop,.account-actions[open] .account-action-menu,.mobile-more,.toast { animation:none; }
+}
+
+.global-search-body>.empty { min-height:220px; justify-content:center; }
+.global-search-body .empty-description { max-width:360px; }
+.empty .empty-actions .button-content { flex-wrap:wrap; }
+.empty .empty-description:empty { display:none; }
+@media(prefers-reduced-motion:reduce) { .spinner { animation:none; } }

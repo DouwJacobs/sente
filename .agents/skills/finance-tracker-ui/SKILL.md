@@ -51,3 +51,7 @@ Categories and Spending groups share the same grid and choice-row presentation, 
 Prefer shared StatusIcon for routine status/type markers instead of pill badges, following UI.md's compact status conventions. Preserve visible explanatory warnings and permission wording using icon-plus-text. Automatic/merchant rule rows use one shared actions menu. Keep logos square in dimensions and circular in shape, including their flex basis; avoid decorative arrows that imply unavailable navigation.
 
 Apply [compact workspace controls](../../../docs/UI.md#compact-workspace-controls) on Dashboard and Transactions: unboxed balanced dashboard scope, compact headings/tabs, visible search and account/period summary, and detailed transaction scope behind one accessible Filters disclosure. Preserve values while collapsed and across tabs, review defaults, Escape focus return and 44px icon targets. Use geometry and workflow checks to verify content is visible early in narrow and desktop viewports.
+
+## Polished experience
+
+For empty-state copy, hierarchy, action routing, motion and stable loading buttons, read [the Sente experience skill](../sente-experience/SKILL.md). Keep those implemented decisions synchronized with docs/UI.md.

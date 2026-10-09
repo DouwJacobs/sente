@@ -504,3 +504,17 @@ The complete local attempt (run-bfca7bxo) passed its first 11 specs, including t
 
 
 Final local browser coverage: all 53 specs passed across the first 11 unchanged successful specs in run-bfca7bxo and all 42 remaining specs in run-0f_ikdyw after the review wait fix: 207 passed cases, 0 skipped, no unexpected failures or flaky results in those final batches. The earlier unsynchronized review failure is excluded from this pass count. This is combined complete coverage, not a claim that the initial single full command passed. The 42-spec batch took 668.442s. GitHub must still verify and accept the exact merged revision/image before publication.
+
+## Intentional UI states and interaction polish — 9 October 2026
+
+Implemented on `codex/polished-ui` in `/home/douw/finance-tracker-ui`, starting from freshly fetched `origin/development` at `a61c784`. The original checkout was not changed.
+
+- Production TypeScript/Vite build passed. All 15 frontend unit tests passed.
+- 52 browser cases across 12 specs passed in isolated sequential synthetic-fixture batches: experience (6), polish (3), theme-states (2), global-search (4), budget-group-interaction (4), transaction-filters (2), mobile-core (13), toasts (2), notifications (3), budget-category-editor (2), onboarding (3), login-toast (8).
+- New experience coverage exercises first-use/import routing, upload disclosure focus, default versus restricted review completion, explicit filter clearing, category creation, Escape/opener focus, dashboard error recovery, reduced motion, pending-button dimensions/names/locks, 44px empty-state actions and overflow at 360/390/768/1440px in light/dark. Existing mobile cases include short landscape and both sides of navigation/editor breakpoints.
+- Inspected actual synthetic screenshots for a 360px light first-use transaction screen and a 1440px dark review-complete screen. Review images are saved beside the Windows workspace under `Sente UI previews`; screenshots also remain in isolated browser output. This is screenshot inspection, not physical-device or live-data verification.
+- The reproducible `.agents/skills/sente-experience/SKILL.md` passed skill-creator validation and is installed as `C:/Users/douw1/.codex/skills/sente-experience/SKILL.md`. The existing project UI skill and docs/UI.md route to it.
+
+Initial checks exposed outdated exact tab/error-copy locators and geometry captured midway through entrance motion. Locators now follow contextual headings and counted tabs. The toast check waits for the dialog entrance before taking its no-reflow baseline; its exact geometry assertion remains. Dialogs now fade with fixed geometry rather than translating, while menus/toasts retain short restrained entry motion. Final related checks passed. No test retries were used to mask failures.
+
+MCP impact: presentation only; no tools, fields, permission/consent scopes, financial service behavior or schema migrations change. Synthetic data only; no deployment, production banking, full backend race suite or physical-device certification is claimed. Vite retains its existing large-chunk advisory.

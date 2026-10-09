@@ -101,7 +101,7 @@ export function Setup({
             disabled={busy}
             type="submit"
           >
-            {busy ? "Creating account" : "Create account"}
+            Create account
           </Button>
         </Form>
       </div>
@@ -174,7 +174,7 @@ export function Login({
             disabled={busy}
             type="submit"
           >
-            {busy ? "Signing in" : "Sign in"}
+            Sign in
           </Button>
         </Form>
       </div>

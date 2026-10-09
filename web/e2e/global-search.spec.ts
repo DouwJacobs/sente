@@ -64,7 +64,7 @@ test('search loading, failed request and retry remain distinct',async({page})=>{
  await expect(search.getByRole('status')).toContainText('Searching')
  await expect(input).not.toHaveAttribute('aria-activedescendant',/.+/)
  release()
- await expect(search.getByText('Search could not be completed.')).toBeVisible()
+ await expect(search.getByRole('heading',{name:'Search could not be completed',exact:true})).toBeVisible()
  await expect(search.getByText(/No results/)).toHaveCount(0)
  await expect(page.getByRole('alert')).toBeVisible()
  fail=false;await search.getByRole('button',{name:'Retry search',exact:true}).click()
