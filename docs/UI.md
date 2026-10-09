@@ -197,3 +197,6 @@ General preferences alone uses general-preferences-grid for its single bounded 6
 
 
 The topbar search is an icon-only shared Button with a 44px target, transparent resting background and var(--text) icon color against var(--chrome). Preserve its visible button-content wrapper on every viewport; do not hide all descendant spans to remove an obsolete text label. Scope icon geometry through .button-content>svg. Verify the actual SVG is visible and its contrast against chrome is at least 3:1 in phone/desktop light/dark, plus search opening and focus restoration.
+
+
+MCP personal budget alert consent has separate read and change switches, excluded from finance presets. Explain household/all-account scope and that inbox/global channels/push devices are not shared. Exact proposal previews show personal scope before/after switches, nullable thresholds and versions; null means 75/90/100%, settings carry across periods, and saves do not send historical alerts. Existing shared forms, validation, confirmation reset and automatic approval controls apply.

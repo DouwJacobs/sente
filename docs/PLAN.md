@@ -95,3 +95,6 @@ Personal budget alerts are configurable per expense-category/spending-group comb
 ## Releases and distribution
 
 Development pushes produce verified beta versions; main pushes produce verified stable versions. Mutable beta/development and main/latest image channels are backed by immutable SemVer/SHA tags and recorded digests. Release binaries, browser About, MCP initialization and OCI labels share metadata. Standard GPL-3.0 applies to original project code, preserving upstream/dependency licenses; forks and sales are permitted under its terms. See [release scope, compatibility and recovery](RELEASES.md).
+
+
+Personal scoped budget alerts also support explicitly consented MCP reads and exact prepare/approve/apply proposals for the connection owner. Separate read/change grants default off; budget editing never grants alert access. Household membership and unrestricted connection account scope apply. Shared preference services preserve silent baselines and global notification precedence; inbox, global channels and push devices remain browser-only. See [MCP.md](MCP.md).

@@ -73,3 +73,6 @@ Notification producers: `notification_budget_producers.go` uses `budget_notifica
 
 
 Issue #69: `notification_budget_preferences.go` owns personal category/group setting contracts, shared atomic save helpers and silent baselines; `notification_budget_preference_schema.go` owns immutable migrations 29/30. `CategoryBudgetAlert.tsx` owns the personal fields used by `features/budgets/CategoryBudgetModal.tsx` for dashboard and Budgets add/edit workflows; NotificationPreferences owns global type/channel choices. Producers continue using shared allocation arithmetic; internal delivery scope metadata permits push preference rechecks without adding inbox/MCP output fields.
+
+
+`mcp_budget_alerts.go` adapts explicit personal category/group alert reads and proposals to the shared `notification_budget_preferences.go` save/baseline services. Consent stays in `mcp_permissions.go`; exact preference evidence follows `mcp_changes.go` proposal/audit transactions. MCP Settings/OAuth reuse shared permission fields; `MCPProposalCard` owns before/after presentation.

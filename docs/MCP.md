@@ -244,7 +244,7 @@ Review queue allocation hydration uses one query for the already authorized retu
 
 ## Browser-only notification infrastructure
 
-Notification inbox/preference APIs are authenticated browser workflows. Notification messages, source references, preferences, receipts and account dependencies are not MCP tool output or saved session context. Existing connection consent does not expand to personal notifications. Future MCP exposure needs explicit consent and current recipient/account/source checks; the shared financial writer may eventually emit via notifyTx inside its existing SQL transaction without introducing a separate MCP mutation path. Notification producers, suppression, push device/channel preferences, direct personal message links and administrator diagnostics remain browser-only. Connections have no notification consent; there are no new tools, input/output fields, allowlists, capabilities or proposal permissions, and nothing is appended to saved context. Detectors use authorized reads/shared budget allocation arithmetic without changing the financial writer or its audit/preview contracts. Diagnostic metadata and push secrets are not MCP output.
+Notification inbox and global type/channel preference APIs are authenticated browser workflows. Notification messages, source references, global type/channel preferences, receipts and account dependencies are not MCP tool output or saved session context. Existing connection consent does not expand to personal notifications. Future MCP exposure needs explicit consent and current recipient/account/source checks; the shared financial writer may eventually emit via notifyTx inside its existing SQL transaction without introducing a separate MCP mutation path. Notification producers, push device/channel preferences, direct personal message links and administrator diagnostics remain browser-only; shared suppression services also serve exact personal budget alert proposals. Personal scoped budget alerts have the separate opt-in contract below; other notification workflows add no MCP output or consent, and nothing is appended to saved context. Detectors use authorized reads/shared budget allocation arithmetic without changing the financial writer or its audit/preview contracts. Diagnostic metadata and push secrets are not MCP output.
 
 ## Security hardening and credential retention
 
@@ -255,7 +255,54 @@ Browser connection/consent/proposal/context writes recheck their initiating sess
 Branding/PWA identity editing, public manifest/icons, installation, static caching and frontend update prompts are host presentation workflows. They introduce no MCP tools, input/output schema fields, financial allowlist entries, capabilities, consent, proposal effects or financial write-service changes. Public identity is explicitly described by the browser settings; existing private workspace names are not opted in automatically. Image bytes are excluded from audits. Notification registration remains explicit and uses the same root worker. See [PWA](PWA.md).
 
 
-Issue #69: personal category/spending-group budget alert switches and thresholds remain browser-only. Internal notification scope metadata is not part of inbox/MCP output. No MCP tool, input/output schema, allowlist, consent/capability, proposal preview/audit or financial write-service change is introduced.
+Issue #69 introduced browser personal category/spending-group budget alert switches and thresholds. Issue #75 exposes only those settings under the separate consent below. Internal notification scope metadata is not part of inbox/MCP output. No MCP tool, input/output schema, allowlist, consent/capability, proposal preview/audit or financial write-service change is introduced.
 
 
-Issue #71 changes browser budget presentation only. Budgets plus/pencil actions and dashboard drill-down share the existing authorized category-budget save, including optional personal alerts. Existing financial tools, schemas, output allowlists, consent, proposals and audits remain unchanged; personal alert editing remains browser-only.
+Issue #71 changes browser budget presentation only. Budgets plus/pencil actions and dashboard drill-down share the existing authorized category-budget save, including optional personal alerts. Existing financial tools, schemas, output allowlists, consent, proposals and audits remain unchanged; personal alerts have the separately consented issue #75 proposal path below.
+
+
+## Personal budget alert preferences — issue #75
+
+`get_budget_alert_preferences` reads one explicit `category_id` / `group_id`
+combination for the authenticated connection owner. Group 0 means No spending
+group; omitting a group rejects. Household membership and unrestricted connection
+account scope are required because these preferences apply to shared budget
+combinations across all periods. The scope must exist in a saved budget. Read
+results contain only category/group IDs, redacted names, `enabled`, nullable
+`threshold` and the personal `version` (0 before customization). A null threshold
+means the default 75/90/100% sequence. No arbitrary recipient/user ID is accepted.
+
+Independent `read_budget_alerts` consent is off on existing connections and new
+presets. `manage_budget_alerts` is a separate custom change capability, requiring
+that read consent. Legacy/finance editing, `update_budget` and other notification
+permissions never grant it. OAuth and Settings use the shared consent controls;
+read-only OAuth connections must reconnect for proposal access. Automatic approval
+is separately opt-in for `manage_budget_alerts`, remains off by default, and is
+rechecked before an automatically approved proposal applies.
+
+`prepare_change` operation `update_budget_alerts` takes 1–100 distinct
+`budget_alerts`, each with positive `category_id`, explicit nonnegative `group_id`
+and current nonnegative `version`. Supply `enabled` and a whole `threshold` from
+1 to 100; null or omitted threshold selects the default sequence. This is a full
+replacement of that scope's settings, so muting while retaining a custom threshold
+must include the threshold read from the scope. Alternatively `reset=true` restores
+enabled defaults and must omit `enabled` and `threshold`. Changes carry across
+saved periods without editing their budget amounts or recurrence.
+
+Preparation uses the shared preference save and silent baseline services inside a
+rolled-back preview. Settings shows exact before/after personal scope names,
+versions, switches and thresholds. Approval applies no changes. Apply rechecks
+owner, consent, current membership/account scope, scope identity and personal
+versions, then saves every selected scope, current-condition baselines, proposal
+result and exact `mcp.applied` audit together. Any stale scope/version, invalid
+item or audit failure rolls back the complete batch. Replays return the stored
+result after current consent checks, without repeating saves or notifications.
+
+Global notification type/channel preferences remain authoritative. Silent
+baselining consumes active current-period conditions for only the selected scopes;
+threshold/mute/reset changes never replay historical alerts. Existing refund/reset,
+future-period carryover, duplicate suppression and push delivery rechecks remain.
+Inbox messages, global channel settings, browser push registration/subscriptions,
+secrets, receipts and diagnostics stay outside these tools, proposals and saved
+context. Permission JSON remains schema version 1 with default-false optional
+flags; no database migration is needed.
