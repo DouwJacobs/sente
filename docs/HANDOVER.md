@@ -1,6 +1,6 @@
 # Maintainer handover
 
-Updated 8 October 2026. Read [AGENTS.md](../AGENTS.md), [PLAN.md](PLAN.md) and
+Updated 9 October 2026. Read [AGENTS.md](../AGENTS.md), [PLAN.md](PLAN.md) and
 [ARCHITECTURE.md](ARCHITECTURE.md) before work; UI changes also use UI.md and the
 project UI skill. [Documentation index](README.md) maps the current guides.
 
@@ -23,9 +23,9 @@ confirmed development pushes should create beta tags/images and main pushes stab
 versions/main/latest. [Release guide](RELEASES.md) owns version allocation, image
 verification, publication, compatibility and upgrade/recovery procedures.
 
-Local release checks and stable/beta production-image acceptance passed; see VERIFICATION.md for coverage and host-specific test limits. Review and final-revision CI are pending. No release tag, image publication, merge or
-production deployment has occurred. Owner will configure `DOCKERHUB_USERNAME` and
-`DOCKERHUB_TOKEN` GitHub secrets. Publication credentials never enter builds/tests.
+PR #76 merged as acfbc37 after green PR checks. The owner approved public source/images: the repository is public, Docker Hub secret names are configured, and development exists from that approved source. Both initial release runs stopped before image publishing because the complete browser gate found an obsolete settings-action locator in the mobile audit test. `codex/release-browser-gate` retains its stacking checks against the current Branding buttons; four targeted audit cases passed. A broader attempt also exposed an unsynchronized review-row click; its loading wait is corrected and all six core-improvements cases passed. All 53 local browser specs (207 cases) passed in the corrected batches; see VERIFICATION.md. GitHub checks and final-revision release publication remain the gate. No new SemVer release/tag/image or production deployment is claimed. Publication credentials never enter builds/tests. See VERIFICATION.md for coverage and host-specific test limits.
+
+Frontend application update awareness is tracked separately in #88; existing PWA refresh notification #26 covers a different behavior.
 
 MCP impact: existing initialization already uses the shared build version; release
 metadata is verified through that contract. No tools, input schemas, output allowlists,

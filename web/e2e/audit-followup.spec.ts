@@ -12,7 +12,17 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`audit pr
  const spacing=await page.locator('.context-bar').evaluate(el=>({padding:parseFloat(getComputedStyle(el).paddingTop),gap:parseFloat(getComputedStyle(el).gap)}));expect(spacing.padding).toBeLessThanOrEqual(12);expect(spacing.gap).toBeLessThanOrEqual(12)
  if(width===1440){const footer=await page.locator('.spending-panel > .panel-footer').boundingBox(),panel=await page.locator('.spending-panel').boundingBox();expect(panel!.y+panel!.height-footer!.y-footer!.height).toBeLessThan(30)}
  await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await go(page,'Settings',width);await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(0)
- const actions=page.locator('.settings-save-actions .button');if(width===360){const first=await actions.nth(0).boundingBox(),second=await actions.nth(1).boundingBox();expect(second!.y).toBeGreaterThanOrEqual(first!.y+first!.height);expect(Math.abs(first!.width-second!.width)).toBeLessThan(1)}
+ if(width===360){
+  await page.getByRole('tab',{name:'Branding',exact:true}).click()
+  const panel=page.getByRole('tabpanel',{name:'Branding',exact:true})
+  const save=panel.getByRole('button',{name:'Save branding',exact:true})
+  const reload=panel.getByRole('button',{name:'Reload saved branding',exact:true})
+  await expect(save).toBeVisible();await expect(reload).toBeVisible()
+  const first=await save.boundingBox(),second=await reload.boundingBox()
+  expect(first).not.toBeNull();expect(second).not.toBeNull()
+  expect(second!.y).toBeGreaterThanOrEqual(first!.y+first!.height)
+  expect(Math.abs(first!.width-second!.width)).toBeLessThan(1)
+ }
  await page.route('**/api/accounts**',route=>route.fulfill({json:{items:[],total:0,list_version:'empty-accounts'}}));await page.route('**/api/categories**',route=>route.fulfill({json:{items:[],total:0,list_version:'empty-categories'}}));await page.route('**/api/rules**',route=>route.fulfill({json:{items:[],total:0,list_version:'empty-rules'}}))
  await page.route('**/api/dashboard?**',async route=>{const response=await route.fetch(),body=await response.json();await route.fulfill({json:{...body,pending_count:0,unassigned_count:0,uncategorized_count:0,categories:[],category_total:0,balances:[],balance_total:0}})})
  await page.reload();await expect(page.getByRole('button',{name:/Set up accounts/})).toBeVisible();await expect(page.getByRole('button',{name:/Review transactions/})).toHaveCount(0)
