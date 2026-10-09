@@ -589,3 +589,7 @@ Compact summary/toolbar, clear read/unread surfaces and text, quieter type/sever
 - Production TypeScript/Vite build passed with the existing chunk advisory. All 6 global-search browser checks passed (run-rl7w9g2b).
 - Actual SVG visibility, >=3:1 icon/chrome contrast and 44px targets verified at phone 360/light and 390/dark and desktop 1440/light/dark. Existing search open/focus, selection, nested editing, failure/retry and proposal-preview checks passed using synthetic data. No manual visual or physical-device verification claimed.
 - Obsolete mobile span-hiding rule removed; shared icon selector now includes button-content. Repository and installed Sente skills updated/validated; git diff --check passed. Browser-only CSS correction, with no MCP contract, financial service, schema, permission or consent changes.
+
+## PR #90 browser locator correction - 9 October 2026
+
+CI run 37893805486 passed earlier source checks but stopped in classification-defaults: the page-wide Groceries locator matched both the visible category row and an option in a retained hidden form. The test now targets the category list's explicit Groceries Expense and Salary Income buttons, preserving import, rule mutation and category paging assertions. All three classification-defaults cases passed in run-5d32luww; the complete PR-selected browser gate continues in that run. This changes test targeting only; no application behavior, financial services, MCP contracts, permissions or schema changes.
