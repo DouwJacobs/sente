@@ -336,14 +336,14 @@ input[type=file]:not(:disabled)::file-selector-button:hover { background:var(--i
 .account-tools { padding:16px 20px; }
 .account-tools>h2 { font-size:14px; margin-bottom:8px; }
 .account-tool { margin:0; }
-.account-tool>summary { min-height:44px; padding:10px 36px 10px 0; background:transparent; border:0; border-radius:6px; }
+.account-tool>summary { min-height:44px; padding:10px 36px 10px 12px; background:transparent; border:0; border-radius:6px; }
 .account-tool>summary::after { right:12px; }
 .account-tool>summary:hover { background:var(--interaction-hover); }
 .account-tool[open]>summary { margin-bottom:12px; }
 .account-tools .panel { padding:0; margin:0 0 16px; border:0; box-shadow:none; background:transparent; }
 .account-tool>.footnote { margin-top:8px; }
 .advanced-transaction-filters { margin:12px 0 0; padding:0; border:0; background:transparent; }
-.advanced-transaction-filters>summary { min-height:44px; padding:10px 36px 10px 0; background:transparent; border:0; }
+.advanced-transaction-filters>summary { min-height:44px; padding:10px 36px 10px 12px; background:transparent; border:0; }
 .advanced-transaction-filters>summary:hover { background:var(--interaction-hover); }
 .advanced-transaction-filters>summary::after { right:12px; }
 .advanced-filter-grid { margin-top:12px; }
@@ -377,7 +377,7 @@ input[type=file]:not(:disabled)::file-selector-button:hover { background:var(--i
 .transaction-filter-disclosure .field-error-space { display:none; }
 .transaction-filter-disclosure .active-filter-summary { margin:14px 0; }
 .advanced-transaction-filters { margin-top:16px; }
-.advanced-transaction-filters>summary { padding-left:10px; background:var(--surface-soft); border-radius:6px; }
+.advanced-transaction-filters>summary { padding-left:12px; background:var(--surface-soft); border-radius:6px; }
 .advanced-filter-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; padding-top:4px; }
 .advanced-filter-grid .filter-pair-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 

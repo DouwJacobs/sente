@@ -74,7 +74,7 @@ General preferences uses one column bounded at 640px. Save default lives in a wr
 
 Give a creation action one owner. For a settled empty category/group/period/rule/merchant list, hide the equivalent header action and use the empty state's authorized action. Retain header creation while loading, after failure and for populated lists. Preserve permission and prerequisite checks. Dashboard Edit budgets appears only when populated targets make it useful. Import history reports history; connection setup/fetch and export upload have their own panels. Do not repeat those actions in history. Show Get transactions when loading/error/connected, and promote Connect FNB when no connection exists.
 
-Accounts groups Transaction import health and the administrator-only Import an account discovery file under one Account tools panel. Use 16px × 20px desktop / 12px × 16px phone padding, a 14px section heading and compact 44px disclosure rows. Expanded health has no nested panel border, shadow or padding. Keep hidden-account administration separate and preserve all callbacks/permissions.
+Accounts groups Transaction import health and the administrator-only Import an account discovery file under one Account tools panel. Use 16px × 20px desktop / 12px × 16px phone padding, a 14px section heading and compact 44px disclosure rows. Account tools and More filters summaries use 12px left text padding, 36px reserved on the right and 10px vertical padding; the entire row owns hover/focus treatment so text never touches its edge. Expanded health has no nested panel border, shadow or padding. Keep hidden-account administration separate and preserve all callbacks/permissions.
 
 ## Interaction and motion
 
