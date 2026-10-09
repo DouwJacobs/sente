@@ -183,3 +183,25 @@ before the complete release gate. Product behavior and MCP contracts are unchang
 The fix is isolated in /home/douw/finance-tracker-ci-fix on
 codex/release-audit-prerequisites; ongoing MCP edits in the primary checkout remain
 untouched. VERIFICATION.md records actual coverage.
+
+## Application release awareness — issue #88, 9 October 2026
+
+`codex/application-updates` starts from development `dcfe4b0` in the primary WSL
+source. About now shows release status, exact newer stable/beta version, release
+notes, manual checks and pre-upgrade backup/migration guidance. Desktop version
+and phone More → Settings show a quiet accessible confirmed-update indicator.
+Existing PWA asset refresh remains separate; no container upgrade/restart occurs.
+
+The credential-free server checker uses only fixed public GitHub release metadata,
+strict SemVer precedence, serialized process caching, bounded response/pagination/
+deadlines and capped provider backoff. Dev/local/modified/unknown builds remain
+unsupported. Failed checks never claim current; retained release details are
+explicitly outdated. No financial/user/household/connection context is sent upstream.
+MCP remains unchanged: no new tools, schemas, output fields, permissions, consent,
+proposals/audits or financial services. No schema migration is introduced.
+
+Focused backend race tests, Go vet, 17 frontend unit tests, production build and
+seven synthetic About browser cases passed; see VERIFICATION.md. No production
+financial data, manual visual inspection, live update-provider certification or
+production deployment is claimed. The normal watched development preview will
+honestly report that release checks are unsupported for its dev build.

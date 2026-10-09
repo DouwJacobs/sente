@@ -306,3 +306,5 @@ Inbox messages, global channel settings, browser push registration/subscriptions
 secrets, receipts and diagnostics stay outside these tools, proposals and saved
 context. Permission JSON remains schema version 1 with default-false optional
 flags; no database migration is needed.
+
+Application release awareness (#88) remains browser-only host information. GET/POST `/api/build/update` exposes selected public release metadata to signed-in users; no MCP tools, input schemas, output allowlists, grants/consent, proposal previews/audits or shared financial services change. MCP initialization continues to expose only the existing installed build version. No database migration is introduced.

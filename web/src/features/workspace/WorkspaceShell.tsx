@@ -1,3 +1,4 @@
+import { useApplicationUpdate } from "../../shared/applicationUpdate";
 import { buildLabel, useBuildInfo } from "../../shared/buildInfo";
 import { useEffect, useRef, type ReactNode } from "react";
 import {
@@ -73,6 +74,8 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   const { info } = useBuildInfo();
+  const { status: update } = useApplicationUpdate();
+  const updateAvailable = update?.state === "available";
   const moreVisible = useExitPresence(more);
   const shellRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -157,10 +160,11 @@ export function WorkspaceShell({
             type="button"
             className="sidebar-version"
             onClick={onAbout}
-            aria-label="About Sente"
+            aria-label={updateAvailable ? `About Sente, update available: ${update.available_version}` : "About Sente"}
             title={info ? buildLabel(info) : "About Sente"}
           >
             {info ? (info.version === "dev" ? "Development" : info.version) : "About"}
+            {updateAvailable && <span className="version-update-label">Update available</span>}
           </button>
         </div>
       </aside>
@@ -268,6 +272,7 @@ export function WorkspaceShell({
                 <button key={n.name} aria-current={current === n.name ? "page" : undefined} onClick={() => go(n.name)}>
                   <n.icon size={19} />
                   {n.name}
+                  {n.name === "Settings" && updateAvailable && <small className="version-update-label">Update available</small>}
                 </button>
               ))}
           </nav>
