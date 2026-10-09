@@ -29,6 +29,7 @@ type TransactionFiltersProps={
 export function TransactionFilters({data,revision,value,onChange,onClear,active,imports,account,period,onAccountChange,onPeriodChange,unassigned,onUnassignedChange}:TransactionFiltersProps){
  const[expanded,setExpanded]=useState(false),toggle=useRef<HTMLButtonElement>(null),panelId=useId()
  const summaries=[value.category&&(value.category==='uncategorized'?'Uncategorized':'Category: '+(data.categories.find(c=>String(c.id)===value.category)?.name||'#'+value.category)),value.group&&(value.group==='unassigned'?'No spending group':'Group: '+(data.spendingGroups.find(g=>String(g.id)===value.group)?.name||'#'+value.group)),value.direction&&(value.direction==='out'?'Money out':'Money in'),!imports&&value.acceptance&&(value.acceptance==='needs_category'?'Needs category':'Accepted'),!imports&&value.seen&&(value.seen==='0'?'Unseen':'Seen'),!imports&&value.date_from&&'From '+value.date_from,!imports&&value.date_to&&'To '+value.date_to,!imports&&value.minimum&&'Minimum '+value.minimum,!imports&&value.maximum&&'Maximum '+value.maximum,!imports&&value.merchant&&'Merchant selected',!imports&&value.tag&&'Tag selected'].filter(Boolean)
+ const advancedCount=[value.date_from,value.date_to,value.minimum,value.maximum,value.merchant,value.tag].filter(Boolean).length
  const selectedPeriod=unassigned?undefined:data.periods.find(p=>String(p.id)===period)
  const scopeSummary=[account?(data.accounts.find(a=>String(a.id)===account)?.name||'Selected account'):'All accounts',!imports&&(unassigned?'No budget period':selectedPeriod?.name||'All periods')].filter(Boolean).join(' · ')
  return <section className="transaction-filters transaction-controls" aria-label="Transaction filters" onKeyDown={e=>{if(expanded&&e.key==='Escape'){e.preventDefault();setExpanded(false);toggle.current?.focus()}}}>
@@ -53,13 +54,19 @@ export function TransactionFilters({data,revision,value,onChange,onClear,active,
   <Field label="Money direction"><select value={value.direction} onChange={e=>onChange({...value,direction:e.target.value})}><option value="">Money in and out</option><option value="in">Money in</option><option value="out">Money out</option></select></Field>
   {!imports&&<Field label="Acceptance"><select value={value.acceptance||''} onChange={e=>onChange({...value,acceptance:e.target.value})}><option value="">All acceptance states</option><option value="needs_category">Needs category</option><option value="accepted">Accepted</option></select></Field>}
   {!imports&&<Field label="Seen by you"><select value={value.seen||''} onChange={e=>onChange({...value,seen:e.target.value})}><option value="">Seen and unseen</option><option value="0">Unseen</option><option value="1">Seen</option></select></Field>}
+ </div>
+ {!imports&&<details className="details advanced-transaction-filters">
+  <summary>More filters{advancedCount ? ` (${advancedCount} active)` : ''}</summary>
+  <div className="transaction-filter-grid advanced-filter-grid">
   {!imports&&<><Field label="From date"><input type="date" value={value.date_from||''} onChange={e=>onChange({...value,date_from:e.target.value})}/></Field>
   <Field label="To date" validate={v=>v&&value.date_from&&v<value.date_from?'End date must follow start date.':''}><input type="date" value={value.date_to||''} onChange={e=>onChange({...value,date_to:e.target.value})}/></Field>
   <Field label="Minimum signed amount" validate={v=>v?moneyError(v):''} hint="Use negative amounts for expenses."><input inputMode="decimal" value={value.minimum||''} onChange={e=>onChange({...value,minimum:e.target.value})}/></Field>
   <Field label="Maximum signed amount" validate={v=>v?moneyError(v):''}><input inputMode="decimal" value={value.maximum||''} onChange={e=>onChange({...value,maximum:e.target.value})}/></Field>
   </>}
   {!imports&&<><div className="context-filter"><PagedSelect url={'/labels?kind=merchant'+(account?'&account='+account:'')} label="Merchant" value={value.merchant||''} onChange={merchant=>onChange({...value,merchant})} empty="All merchants" optionLabel={m=>m.name+(account?'':' · '+m.account_name)}/></div><div className="context-filter"><PagedSelect url={'/labels?kind=tag'+(account?'&account='+account:'')} label="Tag" value={value.tag||''} onChange={tag=>onChange({...value,tag})} empty="All tags" optionLabel={t=>t.name+(account?'':' · '+t.account_name)}/></div></>}
- </div>
+  </div>
+ </details>}
+
  </div>
  {value.excluded&&<p className="footnote">Showing household transactions unassigned or marked outside budgets. Clear filters to broaden.</p>}
  {imports&&<p className="footnote">Shows imports containing matching transactions. Import issues and original import details show every row; use View transactions to see only matches.</p>}

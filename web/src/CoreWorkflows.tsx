@@ -40,6 +40,7 @@ export function AccountHealth({revision,notify,onBanking,onImports}:{revision:nu
 export function PeriodNavigation({period,revision,onChange,notify,compact=false}:{period:string;revision:number;onChange:(id:string)=>void;notify:PageProps['notify'];compact?:boolean}){
  const[nav,setNav]=useState<Row|null>(null)
  useEffect(()=>{let alive=true;api('/periods/navigation?period='+period).then(v=>alive&&setNav(v)).catch(e=>notify(e.message,true));return()=>{alive=false}},[period,revision])
+ if(!nav||(!nav.previous&&!nav.next&&(!nav.current||String(nav.current.id)===period)))return null
  return <nav className="toolbar-actions period-navigation" aria-label="Budget periods"><Button variant="quiet" aria-label="Previous period" disabled={!nav?.previous} title={nav?.previous?.name} onClick={()=>onChange(String(nav!.previous.id))}><ChevronLeft size={18}/></Button><Button variant="quiet" aria-label="Current period" title="Current period" disabled={!nav?.current} onClick={()=>onChange(String(nav!.current.id))}>{compact?<RotateCcw size={16} aria-hidden="true"/>:"Current period"}</Button><Button variant="quiet" aria-label="Next period" disabled={!nav?.next} title={nav?.next?.name} onClick={()=>onChange(String(nav!.next.id))}><ChevronRight size={18}/></Button></nav>
 }
 export function DailyGuide({period,remaining,hasTargets,account}:{period:Row;remaining:number;hasTargets:boolean;account:string}){

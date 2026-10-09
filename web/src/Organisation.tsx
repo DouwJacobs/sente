@@ -32,10 +32,10 @@ export function MerchantRules(props:PageProps){
  return <section className="panel">
   <div className="section-head">
    <div><h2>Merchant naming rules</h2><p className="muted">Recognize merchants across accounts, with an optional account scope.</p></div>
-   <Button onClick={()=>openEditor()}>Add merchant rule</Button>
+   {(list.loading||list.error||list.items.length>0)&&<Button onClick={()=>openEditor()}>Add merchant rule</Button>}
   </div>
   <ListStatus list={list}/>
-  {!list.loading&&!list.error&&!list.items.length&&<Empty kind="categories" title="Recognize your regular merchants"><p>Turn bank descriptions into familiar merchant names. You can also set a default category for future imports.</p><Button variant="primary" onClick={()=>openEditor()}>Create merchant rule</Button></Empty>}
+  {!list.loading&&!list.error&&!list.items.length&&<Empty kind="categories" title="Recognize your regular merchants"><p>Turn bank descriptions into familiar merchant names. You can also set a default category for future imports.</p><Button variant="primary" onClick={()=>openEditor()}>Add merchant rule</Button></Empty>}
   {list.items.map(rule=>(
    <div className="line rule-list-row merchant-rule-row" key={rule.id}>
     <div className="merchant-identity">

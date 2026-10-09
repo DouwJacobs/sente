@@ -70,9 +70,9 @@ export function GeneralSettings({
                   onChange={(e) => setStartDay(e.target.value)}
                 />
               </Field>
-              <Button type="submit" loading={busy} disabled={busy}>
-                Save default
-              </Button>
+              <div className="form-actions">
+                <Button variant="primary" type="submit" loading={busy} disabled={busy}>Save default</Button>
+              </div>
             </Form>
           )}
         </section>

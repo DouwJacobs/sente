@@ -54,3 +54,10 @@ The merged budget-hover fix preserves neutral expanded headers, pointer exit and
 publication notes through the budget editor/product-tour work are retained in
 [the prior handover](archive/handover-2026-10-08-before-releases.md); earlier histories
 are indexed in [the archive](archive/README.md). Historical notes are not current scope.
+
+
+## Approved UI audit refinements — 9 October 2026
+
+Continuing on `codex/polished-ui`, implemented all eight audit decisions: compact desktop ledger rows; progressive advanced filters; classification-first editor with draft summary and no duplicate heading/blank errors; intrinsic desktop save; single empty-state action ownership; consistent compact headers and useful-only period navigation; grouped Account tools; and static reduced-motion disclosure angles. The repository and installed Sente experience skills record reproducible values, copy and behavior. See VERIFICATION.md for final checks.
+
+The owner preview remains at http://127.0.0.1:5173 from `/home/douw/finance-tracker-ui`, using the previous development SQLite database at `/home/douw/finance-tracker/data/dev/finance.sqlite` and API port 8081. The preview supervisor log/PID and pre-preview snapshot live in the worktree's ignored `work/dev` directory. Synthetic verification uses disposable databases separately.

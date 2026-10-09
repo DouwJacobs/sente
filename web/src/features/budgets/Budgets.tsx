@@ -86,20 +86,20 @@ export function Budgets({
           <p className="muted">
             Set limits for each spending group and category.
           </p>
-          <Button
+          {(periods.loading || periods.error || visiblePeriods.length > 0) && <Button
             variant="primary"
             onClick={() => startEdit({ ...data.next, version: 0 })}
           >
             <Plus size={17} />
             New period
-          </Button>
+          </Button>}
         </div>
         <ListStatus list={periods} />
         {!periods.loading && !periods.error && !visiblePeriods.length ? (
           <section className="panel">
             <Empty kind="budget" title="No budget periods">
               <p>Choose your dates, then set spending limits. Your first period can follow a calendar month or your payday.</p>
-              <Button variant="primary" onClick={() => startEdit({ ...data.next, version: 0 })}>Create first period</Button>
+              <Button variant="primary" onClick={() => startEdit({ ...data.next, version: 0 })}>New period</Button>
             </Empty>
           </section>
         ) : (

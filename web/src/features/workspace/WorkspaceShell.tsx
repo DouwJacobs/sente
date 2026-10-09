@@ -213,7 +213,7 @@ export function WorkspaceShell({
             </Button>
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className={["Dashboard", "Transactions"].includes(current) ? "workspace-compact" : undefined}>
+        <main id="main-content" tabIndex={-1} className="workspace-compact">
           <PageHeader
             title={current}
             description={descriptions[current]}

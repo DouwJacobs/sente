@@ -166,7 +166,7 @@ export function Dashboard({
                   <option value="remaining">Remaining: lowest first</option>
                 </select>
               </Field>
-              {d.has_targets && (
+              {d.has_targets && d.spending_groups?.length > 0 && (
                 <Button onClick={() => onBudgets(d.period.id)}>
                   Edit budgets
                 </Button>

@@ -31,7 +31,7 @@ export function Allocations({
   return (
     <>
       <div className="section-head allocation-heading">
-        <h4>{alloc.length > 1 ? "Split categories" : "Category"}</h4>
+        {alloc.length > 1 && <h4>Split categories</h4>}
         <Button
           disabled={alloc.length >= 100 || !t.can_edit}
           onClick={() =>

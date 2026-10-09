@@ -124,27 +124,19 @@ export function Accounts(
         )}
         <ListNavigation list={list} />
       </section>
-      <details className="panel secondary-section">
-        <summary>Transaction import health</summary>
-        <AccountHealth
-          revision={props.revision}
-          notify={props.notify}
-          onBanking={onManage}
-          onImports={onTransactions}
-        />
-      </details>
-      {data.user.admin && (
-        <>
-          <details className="panel">
-            <summary>Import an account discovery file</summary>
-            <p className="footnote">
-              Use an account-only file from the owner-run discovery tool.
-            </p>
-            <AccountDiscovery {...props} />
-          </details>
-          <HiddenAccounts management={m} />
-        </>
-      )}{" "}
+      <section className="panel account-tools" aria-label="Account tools">
+        <h2>Account tools</h2>
+        <details className="account-tool secondary-section">
+          <summary>Transaction import health</summary>
+          <AccountHealth revision={props.revision} notify={props.notify} onBanking={onManage} onImports={onTransactions}/>
+        </details>
+        {data.user.admin && <details className="account-tool">
+          <summary>Import an account discovery file</summary>
+          <p className="footnote">Use an account-only file from the owner-run discovery tool.</p>
+          <AccountDiscovery {...props}/>
+        </details>}
+      </section>
+      {data.user.admin && <HiddenAccounts management={m}/>}
       {m.editor}
     </>
   );

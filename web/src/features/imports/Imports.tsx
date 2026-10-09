@@ -28,7 +28,6 @@ export function Imports({
     [connectionLoading, setConnectionLoading] = useState(true),
     [connectionError, setConnectionError] = useState("");
   const processed = useRef(new Set<number>());
-  const uploadPanel = useRef<HTMLDetailsElement>(null);
   const [processing, setProcessing] = useState(false);
   const [readyImports, setReadyImports] = useState<
       Record<number, () => Promise<boolean>>
@@ -293,7 +292,7 @@ export function Imports({
               </p>
             </div>
             <div className="toolbar-actions">
-              <Button
+              {(connectionLoading || connectionError || connection?.connection) && <Button
                 variant="primary"
                 loading={busy}
                 disabled={
@@ -306,8 +305,8 @@ export function Imports({
                 onClick={fetchLive}
               >
                 Get transactions
-              </Button>
-              <Button onClick={onBanking}>
+              </Button>}
+              <Button variant={connection?.connection ? 'secondary' : 'primary'} onClick={onBanking}>
                 {connection?.connection ? "Connection settings" : "Connect FNB"}
               </Button>
             </div>
@@ -323,7 +322,7 @@ export function Imports({
           may be missing.
         </p>
       </section>
-      <details ref={uploadPanel} className="panel upload-panel">
+      <details className="panel upload-panel">
         <summary>Upload a bank export</summary>
         <div className="upload-content">
           <div className="section-head">
@@ -498,17 +497,11 @@ export function Imports({
           >
             {filterQuery
               ? "Try another category, spending group or description."
-              : "Get transactions or upload an export to begin."}
+              : "Completed imports will appear here, with their accounts and any issues that need attention."}
             {filterQuery && onClearFilters && (
               <Button variant="primary" onClick={onClearFilters}>Clear filters</Button>
             )}
-            {!filterQuery && editors.length > 0 && <Button variant="primary" disabled={busy} onClick={() => {
-              if (uploadPanel.current) {
-                uploadPanel.current.open = true;
-                uploadPanel.current.querySelector<HTMLButtonElement>('.file-picker')?.focus();
-              }
-            }}>Upload a statement</Button>}
-            {!filterQuery && data.user.admin && <Button variant={editors.length ? 'quiet' : 'primary'} onClick={onBanking}>Manage bank connection</Button>}
+
           </Empty>
         ) : (
           [

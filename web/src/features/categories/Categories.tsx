@@ -105,7 +105,7 @@ export function Categories({
                     category.
                   </p>
                 </div>
-                {data.user.budget_member && (
+                {data.user.budget_member && (groupList.loading || groupList.error || groupList.items.length > 0) && (
                   <Button
                     onClick={() => {
                       setSpendingEdit({});
@@ -117,7 +117,7 @@ export function Categories({
                 )}
               </div>
               <ListStatus list={groupList} />
-              {!groupList.loading && !groupList.error && !groupList.items.length && <Empty kind="categories" title="Organize spending your way"><p>Use groups such as Essentials or Leisure to organize transactions without changing their categories.</p>{data.user.budget_member && <Button variant="primary" onClick={() => setSpendingEdit({})}>Create spending group</Button>}</Empty>}
+              {!groupList.loading && !groupList.error && !groupList.items.length && <Empty kind="categories" title="Organize spending your way"><p>Use groups such as Essentials or Leisure to organize transactions without changing their categories.</p>{data.user.budget_member && <Button variant="primary" onClick={() => setSpendingEdit({})}>Add spending group</Button>}</Empty>}
               <div className="spending-group-grid">
                 {groupList.items.map((g) => (
                   <div className="classification-group-entry" key={g.id}>
@@ -158,7 +158,7 @@ export function Categories({
                     Limits are set on expense categories in Budgets.
                   </p>
                 </div>
-                {data.user.budget_member && (
+                {data.user.budget_member && (categoryList.loading || categoryList.error || categoryList.items.length > 0) && (
                   <Button onClick={() => setCreating(true)}>
                     <Plus size={16} />
                     Add category

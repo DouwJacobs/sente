@@ -3,7 +3,7 @@ import { Allocations } from "./Allocations";
 import { TransactionLabels } from "../../CoreWorkflows";
 import { useEffect, useState, useRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { api, cents, decimal } from "../../api";
+import { api, cents, decimal, money } from "../../api";
 import { Button, Field, Badge, Modal, validateFields } from "../../ui";
 import { ChoiceField } from "../../Choices";
 import { moneyError } from "../../validation";
@@ -263,7 +263,109 @@ export function TransactionEditor({
         className="transaction-editor-fields"
         disabled={!t.can_edit || busy}
       >
+        <section className="transaction-editor-summary" aria-label="Transaction summary">
+          <div><strong>{description || 'Untitled transaction'}</strong><small>{date} · {t.account_name}</small></div>
+          <strong>{moneyError(amount) ? 'Check amount below' : money(cents(amount))}</strong>
+        </section>
         <div className="transaction-editor-grid">
+          <section
+            className="transaction-editor-pane transaction-classification"
+            aria-label="Classification"
+          >
+            <h3>Classification</h3>
+            <ChoiceField
+              source="/spending-groups"
+              label="Spending group"
+              value={spendingGroup}
+              onChange={(id, group) => {
+                const isTransfer =
+                  group?.name.trim().toLowerCase() === "transfer";
+                if (
+                  (t.transfer_counterpart_id ||
+                    t.transfer_counterpart_hidden) &&
+                  !isTransfer
+                ) {
+                  notify(
+                    "Unlink the transfer before changing its spending group.",
+                    true,
+                  );
+                  return;
+                }
+                setSpendingGroup(id);
+                setTransfer(isTransfer);
+              }}
+              options={data.spendingGroups.map((g) => ({
+                id: g.id,
+                name: g.name,
+                color: g.color,
+              }))}
+              disabled={!t.can_edit || busy}
+            />
+            <Allocations
+              transaction={t}
+              data={data}
+              refresh={refresh}
+              notify={notify}
+              alloc={alloc}
+              setAlloc={setAlloc}
+              update={update}
+              original={original}
+              allocated={allocated}
+              busy={busy}
+            />
+            {transfer && (
+              <p className="muted">
+                Transfer excluded from income and spending. No category is
+                required.
+              </p>
+            )}
+            {canSaveRule && (
+              <details className="details editor-section">
+                <summary>
+                  Automatically categorize similar transactions
+                  {saveRule ? " · Enabled" : ""}
+                </summary>
+                <div className="rule-offer">
+                  <h3>Proposed automatic rule</h3>
+                  <p className="muted">
+                    Uses this category and group for future matches in this
+                    account, and fills eligible uncategorized entries already
+                    imported. Existing categories, splits and groups are kept.
+                    Rule-applied entries start unseen.
+                  </p>
+                  <label className="check">
+                    <input
+                      type="checkbox"
+                      checked={saveRule}
+                      onChange={(e) => setSaveRule(e.target.checked)}
+                    />
+                    Use this category and spending group for similar
+                    transactions in this account
+                  </label>
+                  <Field
+                    label="Description contains"
+                    hint="Use the shop or service name, leaving out reference numbers."
+                    validate={(value) =>
+                      !saveRule
+                        ? ""
+                        : value.trim().length < 2
+                          ? "Use at least 2 non-space characters."
+                          : new TextEncoder().encode(value.trim()).length > 200
+                            ? "Use a shorter description match."
+                            : ""
+                    }
+                  >
+                    <input
+                      required={saveRule}
+                      maxLength={200}
+                      value={pattern}
+                      onChange={(e) => setPattern(e.target.value)}
+                    />
+                  </Field>
+                </div>
+              </details>
+            )}
+          </section>
           <section
             className="transaction-editor-pane"
             aria-label="Transaction details"
@@ -388,104 +490,6 @@ export function TransactionEditor({
                 </div>
               )}
             </details>
-          </section>
-          <section
-            className="transaction-editor-pane transaction-classification"
-            aria-label="Classification"
-          >
-            <h3>Classification</h3>
-            <ChoiceField
-              source="/spending-groups"
-              label="Spending group"
-              value={spendingGroup}
-              onChange={(id, group) => {
-                const isTransfer =
-                  group?.name.trim().toLowerCase() === "transfer";
-                if (
-                  (t.transfer_counterpart_id ||
-                    t.transfer_counterpart_hidden) &&
-                  !isTransfer
-                ) {
-                  notify(
-                    "Unlink the transfer before changing its spending group.",
-                    true,
-                  );
-                  return;
-                }
-                setSpendingGroup(id);
-                setTransfer(isTransfer);
-              }}
-              options={data.spendingGroups.map((g) => ({
-                id: g.id,
-                name: g.name,
-                color: g.color,
-              }))}
-              disabled={!t.can_edit || busy}
-            />
-            <Allocations
-              transaction={t}
-              data={data}
-              refresh={refresh}
-              notify={notify}
-              alloc={alloc}
-              setAlloc={setAlloc}
-              update={update}
-              original={original}
-              allocated={allocated}
-              busy={busy}
-            />
-            {transfer && (
-              <p className="muted">
-                Transfer excluded from income and spending. No category is
-                required.
-              </p>
-            )}
-            {canSaveRule && (
-              <details className="details editor-section">
-                <summary>
-                  Automatically categorize similar transactions
-                  {saveRule ? " · Enabled" : ""}
-                </summary>
-                <div className="rule-offer">
-                  <h3>Proposed automatic rule</h3>
-                  <p className="muted">
-                    Uses this category and group for future matches in this
-                    account, and fills eligible uncategorized entries already
-                    imported. Existing categories, splits and groups are kept.
-                    Rule-applied entries start unseen.
-                  </p>
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      checked={saveRule}
-                      onChange={(e) => setSaveRule(e.target.checked)}
-                    />
-                    Use this category and spending group for similar
-                    transactions in this account
-                  </label>
-                  <Field
-                    label="Description contains"
-                    hint="Use the shop or service name, leaving out reference numbers."
-                    validate={(value) =>
-                      !saveRule
-                        ? ""
-                        : value.trim().length < 2
-                          ? "Use at least 2 non-space characters."
-                          : new TextEncoder().encode(value.trim()).length > 200
-                            ? "Use a shorter description match."
-                            : ""
-                    }
-                  >
-                    <input
-                      required={saveRule}
-                      maxLength={200}
-                      value={pattern}
-                      onChange={(e) => setPattern(e.target.value)}
-                    />
-                  </Field>
-                </div>
-              </details>
-            )}
           </section>
         </div>
       </fieldset>

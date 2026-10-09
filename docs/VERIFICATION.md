@@ -518,3 +518,17 @@ Implemented on `codex/polished-ui` in `/home/douw/finance-tracker-ui`, starting 
 Initial checks exposed outdated exact tab/error-copy locators and geometry captured midway through entrance motion. Locators now follow contextual headings and counted tabs. The toast check waits for the dialog entrance before taking its no-reflow baseline; its exact geometry assertion remains. Dialogs now fade with fixed geometry rather than translating, while menus/toasts retain short restrained entry motion. Final related checks passed. No test retries were used to mask failures.
 
 MCP impact: presentation only; no tools, fields, permission/consent scopes, financial service behavior or schema migrations change. Synthetic data only; no deployment, production banking, full backend race suite or physical-device certification is claimed. Vite retains its existing large-chunk advisory.
+
+
+## Approved density and layout refinements — 9 October 2026
+
+All eight owner-approved audit findings are implemented on `codex/polished-ui`: natural compact desktop rows, progressive advanced filters, classification-first editor, intrinsic desktop save action, single create/setup action ownership, consistent compact headers/useful-only period navigation, grouped Account tools and preserved static reduced-motion chevrons. Repository and installed Sente experience skills were updated; skill-creator validation passed.
+
+- Production TypeScript/Vite build and all 15 frontend unit tests passed.
+- 55 browser cases across 14 specs passed in final sequential synthetic batches: density-refinements (5), experience (6), editor-layout (2), transaction-filters (2), core-improvements (6), ui-hierarchy (2), workspace-controls (2), mobile-core (13), settings (4), onboarding (3), rules (3), budget-category-editor (2), polish (3), theme-states (2).
+- Final coverage combines the successful experience/editor-layout/transaction-filters specs in run-70m80lmt, all nine specs in run-vgl099sf and polish/theme-states in run-57ljw9uq. The first batch stopped at an obsolete expectation that an entirely ineffective Budget periods strip must remain visible. That test now requires absence for the fixture's unavailable navigation; financial, rebalancing and account-health assertions remain. Its two failed cases are excluded from the final pass count. No retries masked failures.
+- New density checks verify natural desktop row height, common/advanced filter grouping, preserved date restrictions while collapsed, active counts, classification visible in the first phone viewport, no duplicate Category heading, compact Account tools, distinct reduced-motion open/closed angles, intrinsic desktop save width and minimum 44px height, shared header sizes, empty action ownership and viewport containment at 360/390/900/1440px in light/dark.
+- Inspected actual updated screenshots of the 360px light editor, 1440px light settings and transaction list, and 390px dark filters. Windows workspace `Sente UI previews/updated-*` retains these. This is synthetic screenshot inspection, not physical-device verification.
+- Owner preview UI (5173) and API health (8081) returned HTTP 200 from Windows. Preview retains the previous development database; all browser tests use independent disposable synthetic databases.
+
+Presentation only: no schema, financial access, MCP contract or financial-service changes. No deployment or push. Existing Vite large-chunk advisory remains.
