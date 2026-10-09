@@ -143,3 +143,24 @@ suite was not repeated after the assertion-only correction. The optional public
 starter pull and supplied FNB export checks skipped as configured. Only synthetic
 databases were used. No computer-use visual inspection, external MCP
 client certification or production deployment is claimed.
+
+
+## MCP alert permission check and owner preview — 9 October 2026
+
+Rechecked separate read/change grants, default-off legacy/finance behavior,
+read dependency, all-account/household scope, automatic approval and consent
+rechecks at prepare/approval/apply/replay. OAuth and Settings share the updated
+permission fields; the single-scope read tool and alert proposal path use their
+respective grants. Existing connection permissions were not changed for the owner.
+
+The owner development preview at http://127.0.0.1:5173 now runs `make dev` from
+`/home/douw/finance-tracker` on `codex/mcp-budget-alerts`, replacing the older
+`finance-tracker-ui` preview supervisor. It retains the same development database
+`/home/douw/finance-tracker/data/dev/finance.sqlite` and backups directory. API
+health returned 200; Vite serves both new consent fields; the running backend
+embeds application revision `ee4ed8e`. Log/PID records are ignored files
+`work/dev/mcp-budget-alerts-preview.log` and `work/dev/mcp-budget-alerts-preview.pid`.
+No production database or connection consent was modified.
+
+All four `TestMCPBudgetAlert` integration tests passed again (16.92s) during this
+permission/runtime recheck. No application code change was needed.
