@@ -76,3 +76,5 @@ Issue #69: `notification_budget_preferences.go` owns personal category/group set
 
 
 `mcp_budget_alerts.go` adapts explicit personal category/group alert reads and proposals to the shared `notification_budget_preferences.go` save/baseline services. Consent stays in `mcp_permissions.go`; exact preference evidence follows `mcp_changes.go` proposal/audit transactions. MCP Settings/OAuth reuse shared permission fields; `MCPProposalCard` owns before/after presentation.
+
+Application release awareness: `internal/releases` owns transport-independent public-release checking and SemVer comparison; `internal/app/build_info.go` adapts authenticated browser routes. `web/src/shared/applicationUpdate.ts` owns the public browser contract/shared request state; `features/settings/ApplicationUpdate.tsx` owns About status, manual check and backup guidance. WorkspaceShell only composes the quiet indicator.

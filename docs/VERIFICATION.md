@@ -691,3 +691,11 @@ suite was not repeated after the assertion-only correction. The optional public
 starter pull and supplied FNB export checks skipped as configured. Only synthetic
 databases were used. No computer-use visual inspection, external MCP
 client certification or production deployment is claimed.
+
+## Application release awareness — issue #88, 9 October 2026
+
+- `go test -race ./internal/releases ./internal/app -run 'TestStrictSemVer|TestChannelsAndNoDowngrades|TestUnsupportedNeverRequests|TestCacheStalenessFailuresAndConcurrency|TestProviderFailuresAndBounds|TestProviderBackoff|TestPublishedReleasesAcrossPages|TestBuildInfoAuthorizationAndSafeOutput|TestApplicationUpdateAuthorizationAndLocalBuild' -count=1 -timeout=5m` passed. Coverage: complete SemVer precedence/numeric identifiers/metadata, current/newer/older stable and beta channels, unsupported builds/no upstream requests, concurrent cache sharing, explicit retry cooldown, expiry/stale/recovery, published vs draft releases, sorted multi-page selection, three-page/4 MiB limits, malformed/null/inconsistent metadata, network/cancellation/HTTP/redirect/rate failures, redacted diagnostics and capped provider retry backoff. Browser API checks cover anonymous rejection, all signed-in roles, GET/manual POST, safe output and no-store responses.
+- `go vet ./...` passed. These are affected-domain/integration checks; the full financial backend suite was not rerun for this public-metadata feature.
+- `npm test`: all 17 frontend unit tests passed. `npm run build` passed; existing bundle-size advisory remains.
+- `python3 scripts/test-browser.py about.spec.ts`: seven synthetic cases passed. Existing About navigation/report privacy/recovery plus release indicators and available/unavailable-stale/current/unknown/unsupported states, release/upgrade links, inline failure with no toast noise, keyboard-triggered retry and overflow checks at 360px/1440px in light/dark. No computer-use or manual visual inspection was performed.
+- MCP impact: browser-only public release metadata; installed MCP initialization remains unchanged. No tools, input schemas, output allowlists, grants/consent, proposal previews/audits, financial services or database migrations change. All data/provider fixtures are synthetic; no production data, live-provider guarantee, Docker upgrade or production deployment.

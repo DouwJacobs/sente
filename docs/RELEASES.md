@@ -226,3 +226,11 @@ SBOM/provenance. Release source archives contain the exact source/build scripts 
 lockfiles; package managers retrieve the pinned third-party dependencies. Redistributors
 must fulfill applicable corresponding-source and dependency-notice obligations.
 GPL permits commercial use, selling and forks; no extra no-sale/no-fork terms apply.
+
+## Frontend release checks
+
+Settings → About shows installed build details, stable/beta update status, a newer version’s release notes and this upgrade guide. The version entry point (Settings in phone More) quietly indicates confirmed updates. A deliberate Check for updates action retries without toast noise. Local/dev, modified and unrecognized versions are unsupported. No install, download, restart or data changes occur.
+
+The server anonymously requests only the fixed public GitHub releases endpoint; no version, financial/user/household/connection context or credentials are sent. It compares strict SemVer precedence, including numeric beta identifiers, and never recommends a downgrade or a different channel. Requests have a six-second total deadline, at most three 100-release pages and a 4 MiB limit per page. Incomplete listings, malformed metadata, rate limits and connection failures produce unavailable/unknown rather than up to date. Last successful metadata is labelled outdated after failure. Successes are cached for six hours, failures for five minutes; explicit retries share a one-minute cooldown and honor provider backoff capped at one hour. Browser responses remain authenticated and non-cacheable.
+
+This checks application/container releases independently of Settings → PWA’s already-deployed browser asset refresh. Before manually upgrading, follow the pre-upgrade snapshot procedure above; image rollback does not reverse migrations.

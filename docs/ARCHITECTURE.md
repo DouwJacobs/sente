@@ -120,3 +120,7 @@ Issue #71: `features/budgets/BudgetGroups.tsx` owns the paged on-page group/cate
 
 
 Issue #75: `mcp_budget_alerts.go` owns typed single-scope personal alert reads and exact batch proposal adapters. Independent default-off read/change consent in `mcp_permissions.go` bounds household-wide preferences; adapters call `saveBudgetAlertPreferencesTx` and `baselineBudgetAlertPreferencesTx` in the existing serialized proposal transaction. Before/after scope preferences, optimistic versions, stored result and audits commit atomically. No schema migration, notification inbox or push credential exposure. Shared MCP consent fields and proposal cards present these settings in OAuth/Settings.
+
+## Application release awareness — issue #88
+
+`internal/releases` owns strict SemVer precedence, fixed public GitHub metadata retrieval, response/deadline/pagination bounds and a process-local serialized cache. `internal/app/build_info.go` exposes authenticated GET/CSRF-protected POST `/api/build/update`, with public selected metadata only. Six-hour success/five-minute failure caching, a one-minute manual cooldown and capped provider backoff bound traffic. `shared/applicationUpdate.ts` shares browser request/status state between WorkspaceShell and the About-owned ApplicationUpdate component. Stable and beta channels remain separate; no database/schema, financial service, credential, MCP contract or consent changes.

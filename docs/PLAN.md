@@ -98,3 +98,5 @@ Development pushes produce verified beta versions; main pushes produce verified 
 
 
 Personal scoped budget alerts also support explicitly consented MCP reads and exact prepare/approve/apply proposals for the connection owner. Separate read/change grants default off; budget editing never grants alert access. Household membership and unrestricted connection account scope apply. Shared preference services preserve silent baselines and global notification precedence; inbox, global channels and push devices remain browser-only. See [MCP.md](MCP.md).
+
+Application release awareness in Settings → About compares the installed published stable or beta version with its own channel. Local/dev/modified/unknown builds are explicitly unsupported. A quiet version/Settings indicator appears only for a confirmed newer release. Checks are credential-free, server-side and cached; failures remain unavailable, with prior results labelled outdated. Release notes and backup/migration guidance precede a manual administrator-controlled Docker upgrade. This is separate from browser-worker refresh and performs no installation or restart.
