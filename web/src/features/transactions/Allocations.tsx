@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { cents, money } from "../../api";
 import { Button, Field } from "../../ui";
 import { CategoryChoice } from "../../Choices";
@@ -30,21 +30,7 @@ export function Allocations({
 }) {
   return (
     <>
-      <div className="section-head allocation-heading">
-        <h4>{alloc.length > 1 ? "Split categories" : "Category"}</h4>
-        <Button
-          disabled={alloc.length >= 100 || !t.can_edit}
-          onClick={() =>
-            setAlloc([
-              ...alloc,
-              { category_id: null, amount: "0.00", note: "" },
-            ])
-          }
-        >
-          <Plus size={16} />
-          Add split
-        </Button>
-      </div>
+      {alloc.length > 1 && <div className="allocation-heading"><h4>Split categories</h4></div>}
       {alloc.map((a, i) => (
         <div
           className={

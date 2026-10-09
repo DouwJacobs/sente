@@ -14,6 +14,12 @@ http://127.0.0.1:5173 with its separate persistent development database. No prod
 financial data is used for verification. Owner policy excludes computer-use UI checks
 unless explicitly requested; automated synthetic workflows remain allowed.
 
+## UI experience work — 9 October 2026
+
+`codex/polished-ui` in `/home/douw/finance-tracker-ui` starts from `origin/development` at `a61c784`. It adds contextual first-use, filtered, completed and failure states with real setup/import/recovery actions; consistent responsive icon/copy/action hierarchy; stable pending buttons; and reduced-motion-aware shared transitions. Dialogs fade without moving their geometry. Existing financial semantics, request locks, drafts and permissions remain.
+
+The reusable [Sente experience skill](../.agents/skills/sente-experience/SKILL.md) records exact copy, visual values and action-routing decisions and is installed in the owner's Windows Codex skills folder. docs/UI.md and the existing UI skill route future work to it. Production build, 15 unit tests and 52 browser cases passed across targeted sequential synthetic batches; see [VERIFICATION.md](VERIFICATION.md#intentional-ui-states-and-interaction-polish--9-october-2026). Phone-light and desktop-dark empty-state screenshots were inspected. No production deployment was performed.
+
 ## Current release work — #62, #63, #66
 
 Started from f651682 (PR #74), on `codex/release-channels`, then integrated main 3bffea7 (budget hover fix). The other agent's
@@ -65,3 +71,36 @@ its new grouping activates after development is promoted to main.
 publication notes through the budget editor/product-tour work are retained in
 [the prior handover](archive/handover-2026-10-08-before-releases.md); earlier histories
 are indexed in [the archive](archive/README.md). Historical notes are not current scope.
+
+
+## Approved UI audit refinements — 9 October 2026
+
+Continuing on `codex/polished-ui`, implemented all eight audit decisions: compact desktop ledger rows; progressive advanced filters; classification-first editor with draft summary and no duplicate heading/blank errors; intrinsic desktop save; single empty-state action ownership; consistent compact headers and useful-only period navigation; grouped Account tools; and static reduced-motion disclosure angles. The repository and installed Sente experience skills record reproducible values, copy and behavior. See VERIFICATION.md for final checks.
+
+The owner preview remains at http://127.0.0.1:5173 from `/home/douw/finance-tracker-ui`, using the previous development SQLite database at `/home/douw/finance-tracker/data/dev/finance.sqlite` and API port 8081. The preview supervisor log/PID and pre-preview snapshot live in the worktree's ignored `work/dev` directory. Synthetic verification uses disposable databases separately.
+
+
+## Transaction filter layout and motion follow-up — 9 October 2026
+
+The existing UI worktree now groups filter controls into aligned sections, moves range guidance outside field tracks, uses one searchable/paged Merchant and Tag selector, and puts active restrictions at the footer. Clear filters is a labelled reset-arrow icon in the card header (search-bar equivalent only while collapsed); Import transactions is inside Transaction actions. Shared open/close transitions cover filters, native disclosures, action menus, budget expanders, dialogs and phone More, preserving immediate guards/focus and reduced motion. The installed/repository Sente experience skill records these decisions. See VERIFICATION.md for final checks; owner preview still uses the existing development database.
+
+
+## Notification inbox UI follow-up — 9 October 2026
+
+The UI branch now tightens the inbox toolbar and message cards: compact count summary, refresh icon, bulk/preferences menu, clear unread/read hierarchy, quieter metadata/timestamps, one-row source/read/menu actions and icon pagination. Explicit read/dismiss, authorized source navigation, push-only messages, empty/error recovery and preference drafts retain their callbacks. Inbox CSS is scoped to avoid changing push-device cards. Reproducible decisions are in the updated Sente experience skill; verification is recorded in VERIFICATION.md. Preview continues on the existing development database.
+
+## Budget period actions — 9 October 2026
+
+Removed the redundant Edit budgets button from period cards, moved View spending into the existing period menu, and retained selected-period groups by default. Collapsed periods use Show spending groups in that menu. Headers keep their menu top-right on phones; Selected period icon/text is hidden only on phones. Dashboard Edit budgets navigation remains. This presentation-only change does not alter financial services, permissions, schemas or MCP contracts. The Sente skill records responsive/action decisions.
+
+## Transaction classification layout — 9 October 2026
+
+Add split now belongs to the Classification card header on desktop and phone, keeping Spending group and Category adjacent. Phone category controls span the available width; single allocations no longer reserve an empty remove track, while split removal sits beside its amount. The reusable Sente skill records exact rules. This remains browser-only presentation: no financial service, schema, MCP contract or permission changes.
+
+## Configuration/PWA paired cards — 9 October 2026
+
+Scoped the single-column 640px General preferences rule to its own class. Configuration and PWA retain the shared two-column equal-height desktop grid and full-width natural-height phone stack. No financial service, database, MCP contract, permission or draft behavior changes. The reusable Sente skill records the scope and responsive layout.
+
+## Mobile search icon visibility — 9 October 2026
+
+Removed the obsolete mobile rule hiding search-button spans, which also hid the shared button-content icon wrapper. Search retains theme-aware text color, quiet chrome treatment, 44px target and existing callback. Reusable Sente guidance records wrapper visibility and contrast checks. Browser-only CSS correction; no financial services, schemas, MCP contracts, permissions or consent changes.

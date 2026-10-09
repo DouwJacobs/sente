@@ -9,6 +9,7 @@ async function signIn(page: Page, url = "/") {
 }
 async function preferences(page: Page) {
   await page.getByRole("button", { name: /^Notifications,/ }).click();
+  await page.getByLabel("Notification actions", { exact:true }).click();
   await page.getByRole("button", { name: "Notification preferences", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Browser push devices" })).toBeVisible();
   await expect(page.getByLabel("System updates · Browser push", { exact: true })).toBeVisible();
@@ -86,6 +87,7 @@ test("Denied permission and unsupported browsers keep in-app preferences usable"
 test("Push click link survives sign-in; administrator diagnostics filter and wrap", async ({ page }) => {
   await signIn(page, "/?notifications=1");
   await expect(page.getByRole("heading", { name: "Your notifications", exact: true })).toBeVisible();
+  await page.getByLabel("Notification actions", { exact:true }).click();
   await page.getByRole("button", { name: "Notification preferences", exact: true }).click();
   await page.route("**/api/notifications/diagnostics?*", route => {
     const params = new URL(route.request().url()).searchParams;
@@ -127,6 +129,7 @@ test("Push-only message loads after sign-in and supports explicit read/dismiss",
   await expect(article).toBeVisible();
   await article.getByRole("button", { name: "Mark as read", exact: true }).click();
   await expect(article.getByText("Read", { exact: true })).toBeVisible();
+  await article.getByLabel(/^Notification actions for/).click();
   await article.getByRole("button", { name: "Dismiss", exact: true }).click();
   await expect(article).toHaveCount(0);
   expect(new URL(page.url()).searchParams.has("message")).toBeFalsy();

@@ -292,7 +292,7 @@ export function Imports({
               </p>
             </div>
             <div className="toolbar-actions">
-              <Button
+              {(connectionLoading || connectionError || connection?.connection) && <Button
                 variant="primary"
                 loading={busy}
                 disabled={
@@ -305,8 +305,8 @@ export function Imports({
                 onClick={fetchLive}
               >
                 Get transactions
-              </Button>
-              <Button onClick={onBanking}>
+              </Button>}
+              <Button variant={connection?.connection ? 'secondary' : 'primary'} onClick={onBanking}>
                 {connection?.connection ? "Connection settings" : "Connect FNB"}
               </Button>
             </div>
@@ -411,7 +411,7 @@ export function Imports({
                 disabled={processing || busy || !files.length || !account}
                 onClick={preview}
               >
-                {busy ? "Importing statements" : "Import statement"}
+                Import statement
               </Button>
             </>
           ) : (
@@ -488,7 +488,7 @@ export function Imports({
           </p>
         )}
         {!loading && !historyError && !history.length ? (
-          <Empty
+          <Empty kind={filterQuery ? "filtered" : "start"}
             title={
               filterQuery
                 ? "No matching import activity"
@@ -497,10 +497,11 @@ export function Imports({
           >
             {filterQuery
               ? "Try another category, spending group or description."
-              : "Get transactions or upload an export to begin."}
-            {filterQuery && (
-              <Button onClick={onClearFilters}>Clear filters</Button>
+              : "Completed imports will appear here, with their accounts and any issues that need attention."}
+            {filterQuery && onClearFilters && (
+              <Button variant="primary" onClick={onClearFilters}>Clear filters</Button>
             )}
+
           </Empty>
         ) : (
           [

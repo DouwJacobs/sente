@@ -22,6 +22,8 @@ for(const width of [1440,360])test(`toasts overlay pages and dialogs without shi
  await dialog.getByLabel('Account name',{exact:true}).fill('Synthetic toast account')
  await dialog.getByLabel('FNB account number',{exact:true}).fill('98765432100')
  await page.route('**/api/accounts/1',async route=>{if(route.request().method()==='PUT')await route.fulfill({status:503,json:{error:'Synthetic connection error'}});else await route.continue()})
+ // Measure settled layout; entrance motion is unrelated to toast-induced reflow.
+ await dialog.evaluate(async element=>{await Promise.all(element.getAnimations().map(animation=>animation.finished))})
  const body=dialog.locator('.modal-body'),modalBefore=await body.evaluate(el=>el.getBoundingClientRect().top+el.closest('dialog')!.scrollTop)
  await dialog.getByRole('button',{name:'Save account',exact:true}).click()
  await expect(toast).toContainText('Synthetic connection error')

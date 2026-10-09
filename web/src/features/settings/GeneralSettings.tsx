@@ -23,7 +23,7 @@ export function GeneralSettings({
 }) {
   return (
     <>
-      <div className="general-settings-grid">
+      <div className="general-settings-grid general-preferences-grid">
         <section className="panel">
           <h2>Preferences</h2>
           <Field label="Appearance">
@@ -70,9 +70,9 @@ export function GeneralSettings({
                   onChange={(e) => setStartDay(e.target.value)}
                 />
               </Field>
-              <Button type="submit" loading={busy} disabled={busy}>
-                Save default
-              </Button>
+              <div className="form-actions">
+                <Button variant="primary" type="submit" loading={busy} disabled={busy}>Save default</Button>
+              </div>
             </Form>
           )}
         </section>

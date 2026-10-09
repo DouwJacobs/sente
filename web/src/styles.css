@@ -2598,7 +2598,6 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
 .transaction-editor-pane .editor-section[open]>summary{margin-bottom:6px}
 .transaction-editor-pane .allocation-heading{margin:4px 0 8px;gap:8px}
 .allocation-heading h4{margin:0;font-size:.85rem;font-weight:500;color:var(--muted)}
-.allocation-heading .button{min-height:36px;padding:6px 10px}
 .transaction-editor-pane .editor-allocation{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.5fr) auto;gap:8px 12px;margin:0 0 8px;padding:0;border:0;background:transparent}
 .transaction-editor-pane .single-allocation{grid-template-columns:minmax(0,1fr)}
 .transaction-editor-pane .editor-allocation>.field:first-child{grid-column:1}
@@ -2645,7 +2644,7 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
   color:var(--text);
 }
 .topbar-search-btn:hover:not(:disabled) { background:var(--interaction-hover); }
-.topbar-search-btn>svg { width:18px; height:18px; flex-shrink:0; }
+.topbar-search-btn .button-content>svg { width:18px; height:18px; flex-shrink:0; }
 
 /* Global Search – modal */
 .global-search-container { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
@@ -2768,9 +2767,6 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
     min-width: 44px;
     padding: 0;
     justify-content: center;
-  }
-  .topbar-search-btn span {
-    display: none;
   }
 }
 
@@ -2922,7 +2918,6 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
   .transaction-editor-pane .editor-allocation>.button { grid-column:2; grid-row:1; min-width:44px; min-height:44px; padding:10px; }
   .transaction-editor-pane .allocation-note { grid-row:3; }
   .transaction-editor-pane .single-allocation>.field:nth-child(2) { grid-column:1 / -1; }
-  .allocation-heading .button { min-height:44px; }
   .transaction-editor-pane .editor-section>summary,
   .transaction-editor-pane .allocation-note>summary,
   .transaction-editor-extras>summary,
@@ -3229,3 +3224,22 @@ body:has(dialog[open]) { overflow:hidden; }
 }
 
 .category-budget-create { margin-bottom:16px; }
+
+/* Period actions stay beside the heading, including on phones. */
+.budget-period-head { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:12px; }
+.budget-period-identity { min-width:0; }
+.budget-period-head>.toolbar-actions { justify-content:flex-end; }
+@media(max-width:760px) {
+  .budget-period-head .budget-selected-period { display:none; }
+}
+
+/* Classification owns its split action; field tracks remain uninterrupted. */
+.transaction-classification-head { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; margin-bottom:12px; }
+.transaction-classification-head h3 { margin:0; font-size:1rem; }
+.transaction-classification-head>.button { width:auto; min-height:44px; padding:8px 10px; }
+@media(max-width:700px) {
+  .transaction-editor-pane .single-allocation { grid-template-columns:minmax(0,1fr); }
+  .transaction-editor-pane .editor-allocation>.field:first-child { grid-column:1 / -1; }
+  .transaction-editor-pane .split-allocation>.field:nth-child(2) { grid-column:1; }
+  .transaction-editor-pane .split-allocation>.button { grid-column:2; grid-row:2; }
+}

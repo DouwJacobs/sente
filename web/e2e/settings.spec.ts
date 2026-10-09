@@ -49,3 +49,23 @@ for(const width of [360,1440])test('ordinary users see General, PWA, MCP, Notifi
  await expect(page.getByLabel('Current password',{exact:true})).toBeVisible()
  expect(management).toEqual([])
 })
+
+for(const {width,theme} of [{width:1440,theme:'light'},{width:900,theme:'dark'},{width:390,theme:'dark'},{width:360,theme:'light'}])test(`paired Configuration and PWA cards ${width} ${theme}`,async({page})=>{
+ await page.setViewportSize({width,height:900});await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme);
+ await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible();
+ if(width<=760){await page.getByRole('navigation',{name:'Mobile navigation',exact:true}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()}else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click();
+ for(const tab of ['Configuration','PWA']){
+  await page.getByRole('tab',{name:tab,exact:true}).click();
+  const grid=page.locator(tab==='Configuration'?'.configuration-source-forms':'#settings-panel-pwa .general-settings-grid');
+  await expect(grid.locator(':scope>.panel')).toHaveCount(2);
+  if(tab==='PWA')await expect(page.getByLabel('PWA name source',{exact:true})).toBeVisible();
+  const bounds=(await grid.boundingBox())!,left=(await grid.locator(':scope>.panel').nth(0).boundingBox())!,right=(await grid.locator(':scope>.panel').nth(1).boundingBox())!;
+  if(width>760){
+   expect(Math.abs(left.y-right.y)).toBeLessThan(2);expect(Math.abs(left.height-right.height)).toBeLessThan(2);expect(Math.abs(left.width-right.width)).toBeLessThan(2);expect(right.x-left.x-left.width).toBeCloseTo(24,0);
+  }else{
+   expect(Math.abs(left.width-bounds.width)).toBeLessThan(2);expect(Math.abs(right.width-bounds.width)).toBeLessThan(2);expect(Math.abs(left.x-right.x)).toBeLessThan(2);expect(right.y-left.y-left.height).toBeCloseTo(16,0);
+  }
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ }
+ await page.getByRole('tab',{name:'General',exact:true}).click();const preference=(await page.locator('.general-preferences-grid>.panel').boundingBox())!;expect(preference.width).toBeLessThanOrEqual(640);
+});

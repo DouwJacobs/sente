@@ -109,7 +109,6 @@ test('account editing, user setup, category limits and explicit bulk review',asy
  await page.getByRole('button',{name:'Update access'}).click()
  await expect(page.getByText('Account access updated')).toBeVisible()
  await navigate(page,'Budgets')
- await page.getByRole('button',{name:'Edit budgets'}).first().click()
  const budgetGroup=page.getByRole('region',{name:'No spending group budget',exact:true})
  await budgetGroup.locator('.budget-group-summary').click()
  await budgetGroup.getByRole('button',{name:'Edit budget for Groceries in No spending group',exact:true}).click()

@@ -14,7 +14,7 @@ import {
   Sun,
   Moon,
 } from "lucide-react";
-import { Button, PageHeader } from "../../ui";
+import { Button, PageHeader, useExitPresence } from "../../ui";
 import type { Data, Row } from "../../shared/types";
 const nav = [
   { name: "Dashboard", icon: LayoutDashboard },
@@ -25,6 +25,7 @@ const nav = [
   { name: "Settings", icon: Settings },
 ];
 const descriptions: Record<string, string> = {
+  Notifications: "Updates about your budgets, accounts and transactions.",
   Dashboard: "Income, spending, and review for your selected period.",
   Transactions: "Import, categorize, and review your transactions.",
   Review: "Check the details before approving.",
@@ -72,6 +73,7 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   const { info } = useBuildInfo();
+  const moreVisible = useExitPresence(more);
   const shellRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
@@ -213,7 +215,7 @@ export function WorkspaceShell({
             </Button>
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className={["Dashboard", "Transactions"].includes(current) ? "workspace-compact" : undefined}>
+        <main id="main-content" tabIndex={-1} className="workspace-compact">
           <PageHeader
             title={current}
             description={descriptions[current]}
@@ -254,8 +256,8 @@ export function WorkspaceShell({
           <span>More</span>
         </button>
       </nav>
-      {more && (
-        <div className="mobile-more" id="mobile-more-pages" ref={moreRef}>
+      {moreVisible && (
+        <div className={"mobile-more"+(!more?" is-closing":"")} inert={!more} aria-hidden={!more} id="mobile-more-pages" ref={moreRef}>
           <nav aria-label="More pages">
             {visibleNav
               .filter(
