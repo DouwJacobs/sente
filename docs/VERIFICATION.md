@@ -576,3 +576,10 @@ Compact summary/toolbar, clear read/unread surfaces and text, quieter type/sever
 - Editor checks cover one 44px Add split action at the classification header’s right edge, adjacent aligned group/category controls, full-width phone single/split categories, both themes at 360/390/900/1440px, and actual split save/reopen, invalid total handling and removal. Existing mobile draft/navigation and workflow checks also passed.
 - Reusable repository/installed Sente skills synchronized and validated; git diff --check passed. Automated geometry and browser coverage only; no manual visual or physical-device verification claimed.
 - Presentation-only browser work: no MCP tools, schemas, output allowlists, consent, proposal/audit contracts, permissions, shared financial services or database changes. Real development data remains separate from synthetic verification.
+
+## Configuration and PWA paired-card restoration — 9 October 2026
+
+- Production TypeScript/Vite build passed (existing chunk-size advisory retained).
+- All 20 browser checks passed: settings (8), PWA (10), configuration (2). Evidence: web/test-results/run-w25zedzy. Geometry verifies two equal-width/equal-height cards with aligned tops and a 24px gap at 1440/900px; full-width stacked cards with a 16px gap at 390/360px, both themes. General preferences retains its 640px maximum. Existing permission visibility, mounted drafts, PWA save/install/update behavior and configuration import/export workflows pass.
+- Repository/installed Sente skill updated and validation passed; git diff --check passed. Automated structural/browser coverage only, no manual visual or physical-device verification claimed.
+- Browser-only CSS scope correction and General wrapper class. No financial service, schema, MCP tool/input/output, permissions, consent or proposal/audit changes. Owner development data is separate from the disposable synthetic test fixtures.

@@ -79,3 +79,7 @@ Removed the redundant Edit budgets button from period cards, moved View spending
 ## Transaction classification layout — 9 October 2026
 
 Add split now belongs to the Classification card header on desktop and phone, keeping Spending group and Category adjacent. Phone category controls span the available width; single allocations no longer reserve an empty remove track, while split removal sits beside its amount. The reusable Sente skill records exact rules. This remains browser-only presentation: no financial service, schema, MCP contract or permission changes.
+
+## Configuration/PWA paired cards — 9 October 2026
+
+Scoped the single-column 640px General preferences rule to its own class. Configuration and PWA retain the shared two-column equal-height desktop grid and full-width natural-height phone stack. No financial service, database, MCP contract, permission or draft behavior changes. The reusable Sente skill records the scope and responsive layout.

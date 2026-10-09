@@ -107,3 +107,6 @@ Budget period cards keep the selected period’s spending groups visible by defa
 
 
 The transaction Classification card places its heading and sole 44px Add split action in a minmax(0,1fr) / auto header row with a 12px gap and 12px bottom spacing. Spending group is followed directly by Category; no action row interrupts those fields. Keep Split categories only when multiple allocations exist. At 700px and below, every category selector spans the card’s full content width. A single allocation uses one grid track without a reserved remove-button column; splits place amount and its 44px remove action together beneath the full-width category. Preserve signed amounts, allocation totals, 100-split cap, view-only/pending locks, notes, validation and draft behavior.
+
+
+General preferences alone uses general-preferences-grid for its single bounded 640px track. Keep the shared general-settings-grid at two equal minmax(0,1fr) desktop columns with a 24px gap and align-items:stretch: Configuration source forms and PWA installation/identity cards share equal top/bottom edges at natural row height. At 760px and below the shared grid uses one full-width track and 16px gaps with natural card heights. Never apply the General preferences width restriction to all settings grids; preserve mounted drafts and access-specific cards.

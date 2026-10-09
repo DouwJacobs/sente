@@ -23,7 +23,7 @@ export function GeneralSettings({
 }) {
   return (
     <>
-      <div className="general-settings-grid">
+      <div className="general-settings-grid general-preferences-grid">
         <section className="panel">
           <h2>Preferences</h2>
           <Field label="Appearance">
