@@ -17,9 +17,26 @@ def needs_source(paths):
     return any(not (path.startswith("docs/") or path in
                     {"README.md", "AGENTS.md", "LICENSE", "NOTICE"}) for path in paths)
 
+UI_AUDITS = {"audit-followup.spec.ts", "dashboard-buckets.spec.ts", "ui-backlog.spec.ts"}
+RELATED_BROWSER_SPECS = {
+    "web/src/Rules.tsx": {"audit-followup.spec.ts"},
+    "web/src/features/categories/Categories.tsx": {"audit-followup.spec.ts"},
+    "web/src/features/accounts/Accounts.tsx": {"ui-backlog.spec.ts"},
+    "web/src/features/dashboard/Dashboard.tsx": {"dashboard-buckets.spec.ts"},
+    "web/src/features/budgets/Budgets.tsx": {"dashboard-buckets.spec.ts"},
+    "web/src/features/budgets/BudgetGroups.tsx": {"dashboard-buckets.spec.ts"},
+    "web/src/ui.tsx": UI_AUDITS,
+    "web/src/styles.css": UI_AUDITS,
+    "web/src/finance-theme.css": UI_AUDITS,
+    "web/src/App.tsx": UI_AUDITS,
+}
+
 def changed_browser_specs(paths):
-    return sorted({Path(path).name for path in paths
-                   if Path(path).parent == Path("web/e2e") and path.endswith(".spec.ts")})
+    specs = {Path(path).name for path in paths
+             if Path(path).parent == Path("web/e2e") and path.endswith(".spec.ts")}
+    for path in paths:
+        specs.update(RELATED_BROWSER_SPECS.get(path, set()))
+    return sorted(specs)
 
 def main():
     required = True
