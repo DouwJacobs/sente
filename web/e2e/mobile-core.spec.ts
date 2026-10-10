@@ -71,7 +71,8 @@ for (const [width, height] of [[360, 800], [640, 360]]) {
       await page.getByRole('button', { name: /^Filters/ }).click();
       const account = (await page.getByLabel('Accounts', { exact: true }).boundingBox())!;
       const period = (await page.getByLabel('Budget period', { exact: true }).boundingBox())!;
-      expect(period.y).toBeGreaterThanOrEqual(account.y + account.height);
+      expect(Math.abs(period.y-account.y)).toBeLessThanOrEqual(1);
+      expect(period.x).toBeGreaterThanOrEqual(account.x + account.width);
       await expect(page.locator('.transaction-head .check')).toBeHidden();
       await page.getByRole('button', { name: /^Filters/ }).click();
       for (const amount of await page.locator('.transaction-amount').all()) await fits(page, amount, 'amount');

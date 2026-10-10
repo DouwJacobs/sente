@@ -25,6 +25,11 @@ class ScopeTests(unittest.TestCase):
                         diff.assert_called_once_with(["git","diff","--name-only","-z","--no-renames","base...head"])
             return next(line+"\n" for line in output.read_text().splitlines() if line.startswith("frontend="))
 
+    def test_documentation_only_needs_no_source_checks(self):
+        self.assertFalse(scope.needs_source(["docs/PLAN.md", "README.md", "NOTICE"]))
+        self.assertTrue(scope.needs_source(["docs/PLAN.md", "internal/app/security.go"]))
+        self.assertTrue(scope.needs_source([".github/workflows/ci.yml"]))
+
     def test_backend_and_docs_only_skip_frontend(self):
         self.assertEqual(self.run_scope(changed=b"internal/app/security.go\\0docs/PLAN.md\\0".replace(b"\\0",b"\0")), "frontend=false\n")
 
@@ -46,8 +51,21 @@ class ScopeTests(unittest.TestCase):
 
     def test_changed_browser_specs_use_only_root_spec_names(self):
         self.assertEqual(scope.changed_browser_specs(["web/e2e/about.spec.ts",
-                         "web/e2e/about.spec.ts","web/src/App.tsx","docs/not.spec.ts"]),
+                         "web/e2e/about.spec.ts","web/src/shared/buildInfo.ts","docs/not.spec.ts"]),
                          ["about.spec.ts"])
+
+    def test_related_ui_specs_join_only_affected_prs(self):
+        self.assertEqual(scope.changed_browser_specs(["web/src/Rules.tsx"]),
+                         ["audit-followup.spec.ts"])
+        self.assertEqual(scope.changed_browser_specs(["web/src/features/budgets/Budgets.tsx"]),
+                         ["dashboard-buckets.spec.ts"])
+        self.assertEqual(scope.changed_browser_specs(["web/src/features/accounts/Accounts.tsx"]),
+                         ["ui-backlog.spec.ts"])
+        self.assertEqual(set(scope.changed_browser_specs(["web/src/ui.tsx"])), scope.UI_AUDITS)
+        self.assertEqual(scope.changed_browser_specs(["internal/app/accounts.go",
+                          "web/src/shared/buildInfo.ts", "docs/UI.md"]), [])
+        self.assertEqual(scope.changed_browser_specs(["web/src/Rules.tsx",
+                          "web/e2e/audit-followup.spec.ts"]), ["audit-followup.spec.ts"])
 
     def test_release_call_forces_full_source_verification(self):
         with tempfile.TemporaryDirectory() as directory:

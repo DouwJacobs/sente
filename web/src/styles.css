@@ -2598,7 +2598,6 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
 .transaction-editor-pane .editor-section[open]>summary{margin-bottom:6px}
 .transaction-editor-pane .allocation-heading{margin:4px 0 8px;gap:8px}
 .allocation-heading h4{margin:0;font-size:.85rem;font-weight:500;color:var(--muted)}
-.allocation-heading .button{min-height:36px;padding:6px 10px}
 .transaction-editor-pane .editor-allocation{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,.5fr) auto;gap:8px 12px;margin:0 0 8px;padding:0;border:0;background:transparent}
 .transaction-editor-pane .single-allocation{grid-template-columns:minmax(0,1fr)}
 .transaction-editor-pane .editor-allocation>.field:first-child{grid-column:1}
@@ -2645,7 +2644,7 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
   color:var(--text);
 }
 .topbar-search-btn:hover:not(:disabled) { background:var(--interaction-hover); }
-.topbar-search-btn>svg { width:18px; height:18px; flex-shrink:0; }
+.topbar-search-btn .button-content>svg { width:18px; height:18px; flex-shrink:0; }
 
 /* Global Search – modal */
 .global-search-container { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
@@ -2768,9 +2767,6 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
     min-width: 44px;
     padding: 0;
     justify-content: center;
-  }
-  .topbar-search-btn span {
-    display: none;
   }
 }
 
@@ -2922,7 +2918,6 @@ button.bucket-category::after { content:''; position:absolute; right:10px; top:c
   .transaction-editor-pane .editor-allocation>.button { grid-column:2; grid-row:1; min-width:44px; min-height:44px; padding:10px; }
   .transaction-editor-pane .allocation-note { grid-row:3; }
   .transaction-editor-pane .single-allocation>.field:nth-child(2) { grid-column:1 / -1; }
-  .allocation-heading .button { min-height:44px; }
   .transaction-editor-pane .editor-section>summary,
   .transaction-editor-pane .allocation-note>summary,
   .transaction-editor-extras>summary,
@@ -3229,3 +3224,58 @@ body:has(dialog[open]) { overflow:hidden; }
 }
 
 .category-budget-create { margin-bottom:16px; }
+
+/* Period actions stay beside the heading, including on phones. */
+.budget-period-head { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:12px; }
+.budget-period-identity { min-width:0; }
+.budget-period-head>.toolbar-actions { justify-content:flex-end; }
+@media(max-width:760px) {
+  .budget-period-head .budget-selected-period { display:none; }
+}
+
+/* Classification owns its split action; field tracks remain uninterrupted. */
+.transaction-classification-head { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px; margin-bottom:12px; }
+.transaction-classification-head h3 { margin:0; font-size:1rem; }
+.transaction-classification-head>.button { width:auto; min-height:44px; padding:8px 10px; }
+@media(max-width:700px) {
+  .transaction-editor-pane .single-allocation { grid-template-columns:minmax(0,1fr); }
+  .transaction-editor-pane .editor-allocation>.field:first-child { grid-column:1 / -1; }
+  .transaction-editor-pane .split-allocation>.field:nth-child(2) { grid-column:1; }
+  .transaction-editor-pane .split-allocation>.button { grid-column:2; grid-row:2; }
+}
+
+/* Public release awareness is distinct from installed browser asset refreshes. */
+.application-update { margin-top:24px; min-width:0; }
+.application-update p { overflow-wrap:anywhere; }
+.application-update .button { margin-top:8px; }
+.version-update-label { display:block; color:var(--accent); font-size:var(--type-xs); }
+@media(max-width:760px) { .application-update .button { width:100%; } }
+
+
+/* Complete period flows fit their card; node labels stay attached to their ribbons. */
+.spending-sankey { min-width: 0; margin-bottom: 24px; }
+.spending-sankey .section-head { flex-wrap: wrap; }
+.sankey-total { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sankey-chart { width: 100%; min-width: 0; }
+.sankey-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sankey-band { fill: var(--accent); fill-opacity: .18; }
+.sankey-band:hover { fill-opacity: .4; }
+.sankey-node { fill: var(--accent); }
+.sankey-label { display: flex; flex-direction: column; justify-content: center; height: 42px; width: fit-content; max-width: 100%; padding: 2px 4px; border-radius: 4px; background: var(--surface); color: var(--text); font-size: 12px; line-height: 18px; }
+.sankey-label strong { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sankey-label span { font-variant-numeric: tabular-nums; font-size: 11px; white-space: nowrap; }
+.sankey-breakdown { margin-top: 16px; }
+.sankey-breakdown > summary { min-height: 44px; padding: 12px 36px 12px 12px; cursor: pointer; }
+.sankey-breakdown table { width: 100%; table-layout: fixed; }
+.sankey-breakdown th, .sankey-breakdown td { padding: 12px; text-align: left; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .spending-sankey { margin-bottom: 16px; }
+  .sankey-breakdown table, .sankey-breakdown tbody, .sankey-breakdown tfoot { display: block; }
+  .sankey-breakdown thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .sankey-breakdown tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; margin-bottom: 16px; }
+  .sankey-breakdown th, .sankey-breakdown td { display: block; padding: 0; min-width: 0; }
+  .sankey-breakdown th { grid-column: 1 / -1; }
+  .sankey-breakdown td::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); }
+}
+
+.spending-controls .account-action-menu .button { border: 0; }

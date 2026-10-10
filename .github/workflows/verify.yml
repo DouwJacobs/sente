@@ -10,6 +10,7 @@ on:
         type: boolean
 permissions:
   contents: read
+  actions: read
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -22,47 +23,64 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref }}
+      - name: Find successful checks for identical source
+        id: reused
+        if: inputs.full && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci-evidence.py find
       - name: Select frontend verification
         id: scope
         run: python3 scripts/ci-scope.py
         env:
           SENTE_FULL_VERIFICATION: ${{ inputs.full }}
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+      - if: (steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true') || (steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true')
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
         with:
           go-version-file: go.mod
           cache: true
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      - if: (steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true') || (steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true')
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22.21.1
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Backend tests and race detection
+        if: steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true'
         shell: bash
         run: |
           mkdir -p work/test-audit
           go test -race -json -timeout=10m ./... | tee work/test-audit/backend.jsonl
       - name: Go vet
+        if: steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true'
         run: go vet ./...
       - name: CI and release regression checks
-        run: python3 scripts/ci-scope.test.py && python3 scripts/test-browser.test.py && python3 scripts/release-metadata.test.py && python3 scripts/publish-release.test.py
+        if: steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true'
+        run: python3 scripts/ci-evidence.test.py && python3 scripts/ci-scope.test.py && python3 scripts/test-browser.test.py && python3 scripts/release-metadata.test.py && python3 scripts/publish-release.test.py
       - name: Active FNB worker invariants
+        if: steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true'
         run: node --test connectors/fnb/owner/*.test.mjs
       - name: Synthetic demo invariants
+        if: steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true'
         run: python3 scripts/test_demo.py
       - name: Install frontend dependencies
-        if: steps.scope.outputs.frontend == 'true'
+        if: steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true'
         run: npm ci
         working-directory: web
-      - name: Frontend tests and production build
-        if: steps.scope.outputs.frontend == 'true'
-        run: npm test && npm run build
+      - name: Frontend unit tests
+        if: steps.scope.outputs.frontend == 'true' && steps.reused.outputs.frontend != 'true'
+        run: npm test
+        working-directory: web
+      - name: Build frontend for browser workflows
+        if: steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true'
+        run: npm run build
         working-directory: web
       - name: Install Chromium
-        if: steps.scope.outputs.frontend == 'true'
+        if: steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true'
         run: npx playwright install --with-deps chromium
         working-directory: web
       - name: Synthetic bank DOM invariants
-        if: steps.scope.outputs.frontend == 'true'
+        if: steps.scope.outputs.frontend == 'true' && steps.reused.outputs.frontend != 'true'
         run: node scripts/test-fnb-dom.mjs
       - name: Pull-request browser workflows
         if: github.event_name == 'pull_request' && !inputs.full && steps.scope.outputs.frontend == 'true'
@@ -72,10 +90,26 @@ jobs:
         run: npm run test:pr
         working-directory: web
       - name: Complete synthetic browser suite
-        if: (github.event_name != 'pull_request' || inputs.full) && steps.scope.outputs.frontend == 'true'
+        if: (github.event_name != 'pull_request' || inputs.full) && steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true'
         timeout-minutes: 20
-        run: npm run test:e2e
-        working-directory: web
+        env:
+          VERIFIED_BROWSER_SPECS: ${{ steps.reused.outputs.browser_specs }}
+        run: python3 scripts/ci-evidence.py browser
+      - name: Record successful source checks
+        if: steps.scope.outputs.source == 'true'
+        env:
+          VERIFIED_FRONTEND: ${{ steps.scope.outputs.frontend }}
+          SENTE_FULL_VERIFICATION: ${{ inputs.full }}
+          E2E_CHANGED_SPECS: ${{ steps.scope.outputs.browser_specs }}
+        run: python3 scripts/ci-evidence.py record
+      - name: Store exact-source verification evidence
+        if: steps.scope.outputs.source == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: source-verification
+          path: work/test-audit/source-verification.json
+          if-no-files-found: error
+          retention-days: 30
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:

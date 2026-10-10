@@ -1,5 +1,5 @@
 import {useState,useEffect,useRef,useId} from 'react'
-import {Button,Loading,Modal} from './ui'
+import {Button,Loading,Modal,Empty} from './ui'
 import {SpendingGroupEditor} from './SpendingGroupEditor'
 import {Search,X} from 'lucide-react'
 import {api,money} from './api'
@@ -236,21 +236,17 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
             </div>
           </div>
 
-          <div id={resultId} ref={listRef} className="global-search-body" role="listbox" aria-label="Search results" aria-busy={loading}>
+          <div id={resultId} ref={listRef} className="global-search-body" role={flatItems.length && !loading && !error ? "listbox" : undefined} aria-label="Search results" aria-busy={loading}>
             {!hasQuery ? (
-              <div className="search-empty-state">
-                <p className="search-shortcut-hint">Search categories, groups, transactions and rules.</p>
-              </div>
+              <Empty kind="filtered" title="Find something in your finances"><p>Search categories, groups, transactions and rules. Try a merchant name or a bank description.</p></Empty>
             ) : loading ? (
               <div className="search-empty-state">
                 <Loading>Searching…</Loading>
               </div>
             ) : error ? (
-              <div className="search-empty-state"><p>Search could not be completed.</p><Button onClick={()=>setRetry(v=>v+1)}>Retry search</Button></div>
+              <Empty kind="error" title="Search could not be completed"><p>Your search is still here. Try again when your connection is available.</p><Button variant="primary" onClick={()=>setRetry(v=>v+1)}>Retry search</Button></Empty>
             ) : flatItems.length === 0 ? (
-              <div className="search-empty-state">
-                <p role="status" className="search-shortcut-hint">No results for "{query}"</p>
-              </div>
+              <Empty kind="filtered" title="No search results"><p role="status">No results for "{query}". Try a shorter name or a different description.</p><Button variant="primary" onClick={()=>{setQuery('');inputRef.current?.focus()}}>Clear search</Button></Empty>
             ) : (
               sections.map(section => (
                 <div key={section.name} className="search-section">

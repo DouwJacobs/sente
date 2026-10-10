@@ -1,5 +1,62 @@
 # Verification
 
+## Release browser prerequisite and budget regressions - 9 October 2026
+
+Development run 37904586295 stopped at four outdated Rules prerequisite
+assertions after UI PR #90. No image was published for that run. The preceding
+CI-change run 37904571194 completed successfully.
+
+Test-only repairs:
+- Empty Rules waits for the loaded state, confirms no unsupported Add rule action,
+  and exercises Open Accounts and Create category.
+- Dashboard budget handoffs open the period menu, respect the phone-hidden selected
+  badge and follow Set up a budget on an empty dashboard.
+- Group totals wait for the post-save authoritative refresh, retaining the expected
+  R1,200 total and independent group/category checks.
+- Loading account buttons retain their accessible name and dimensions and use the
+  current centered spinner; no direct-text-node assumption remains.
+- The PR scope selector adds these three audits for their owning UI modules or
+  shared UI/styles; unrelated PRs retain the existing default browser suite.
+
+Verification: production TypeScript/Vite build passed. All 54 browser specs the
+failed CI run did not complete passed locally across isolated synthetic batches
+(228 cases), including all 15 cases in the repaired specs. About, account discovery
+and account icon specs had already passed on GitHub for the same application source
+and were not repeated. Browser-runner, source-scope and evidence regression checks
+passed; git diff --check passed. Final GitHub publication remains the remote gate.
+No browser UI control, real financial data, production deployment, application code,
+financial invariants, database migration or MCP tool/schema/permission/consent
+change. The primary checkout's concurrent MCP work was preserved.
+
+
+## CI runtime reduction — 9 October 2026
+
+Changed only automation, CI helpers and operational documentation. Successful
+same-repository verification receipts bind source gates and browser spec coverage to
+the exact Git tree. Publication reuses matching coverage, fills missing browser specs
+and retains production-image acceptance. Missing/expired/mismatched/fork evidence,
+lookup limits and API errors retain checks. Documentation-only PRs skip suites while
+the required job succeeds. Dependabot groups weekly version updates on development
+and separately groups alert-driven security fixes on the default branch.
+
+Verification:
+- All 33 focused Python CI/evidence/browser-runner/release/publisher regressions
+  passed. Evidence cases cover matching/mismatched contents, merged PRs with an empty
+  PR array, fork exclusion, expired receipts, API failure, scoped/full receipts and
+  running only missing browser specs.
+- actionlint 1.7.7 passed for all three workflows; YAML checks verified reuse guards,
+  actions-read permissions and all ten Dependabot version/security configurations.
+- Read-only live GitHub evidence lookup found no existing receipts and correctly
+  selected normal verification. Existing successful runs cannot be reused
+  retrospectively; receipts begin after this change enters CI.
+- git diff --check passed. Application suites/image builds were not rerun for this
+  automation-only change. A real artifact-backed reuse run remains unverified at implementation time;
+  the first development push must establish successful receipts.
+
+MCP impact: no tools, schemas, output allowlists, permissions/consent, proposal
+previews/audits, shared services or financial behavior change.
+
+
 ## MCP tools, personal context and CI — 7 October 2026
 
 Scope: issues #6–#8 plus owner-requested MCP page/permission clarity and personal context with independent per-connection sharing consent. Schema 22 adds only personal context storage. No financial/source records are rewritten.
@@ -504,3 +561,198 @@ The complete local attempt (run-bfca7bxo) passed its first 11 specs, including t
 
 
 Final local browser coverage: all 53 specs passed across the first 11 unchanged successful specs in run-bfca7bxo and all 42 remaining specs in run-0f_ikdyw after the review wait fix: 207 passed cases, 0 skipped, no unexpected failures or flaky results in those final batches. The earlier unsynchronized review failure is excluded from this pass count. This is combined complete coverage, not a claim that the initial single full command passed. The 42-spec batch took 668.442s. GitHub must still verify and accept the exact merged revision/image before publication.
+
+## Intentional UI states and interaction polish — 9 October 2026
+
+Implemented on `codex/polished-ui` in `/home/douw/finance-tracker-ui`, starting from freshly fetched `origin/development` at `a61c784`. The original checkout was not changed.
+
+- Production TypeScript/Vite build passed. All 15 frontend unit tests passed.
+- 52 browser cases across 12 specs passed in isolated sequential synthetic-fixture batches: experience (6), polish (3), theme-states (2), global-search (4), budget-group-interaction (4), transaction-filters (2), mobile-core (13), toasts (2), notifications (3), budget-category-editor (2), onboarding (3), login-toast (8).
+- New experience coverage exercises first-use/import routing, upload disclosure focus, default versus restricted review completion, explicit filter clearing, category creation, Escape/opener focus, dashboard error recovery, reduced motion, pending-button dimensions/names/locks, 44px empty-state actions and overflow at 360/390/768/1440px in light/dark. Existing mobile cases include short landscape and both sides of navigation/editor breakpoints.
+- Inspected actual synthetic screenshots for a 360px light first-use transaction screen and a 1440px dark review-complete screen. Review images are saved beside the Windows workspace under `Sente UI previews`; screenshots also remain in isolated browser output. This is screenshot inspection, not physical-device or live-data verification.
+- The reproducible `.agents/skills/sente-experience/SKILL.md` passed skill-creator validation and is installed as `C:/Users/douw1/.codex/skills/sente-experience/SKILL.md`. The existing project UI skill and docs/UI.md route to it.
+
+Initial checks exposed outdated exact tab/error-copy locators and geometry captured midway through entrance motion. Locators now follow contextual headings and counted tabs. The toast check waits for the dialog entrance before taking its no-reflow baseline; its exact geometry assertion remains. Dialogs now fade with fixed geometry rather than translating, while menus/toasts retain short restrained entry motion. Final related checks passed. No test retries were used to mask failures.
+
+MCP impact: presentation only; no tools, fields, permission/consent scopes, financial service behavior or schema migrations change. Synthetic data only; no deployment, production banking, full backend race suite or physical-device certification is claimed. Vite retains its existing large-chunk advisory.
+
+
+## Approved density and layout refinements — 9 October 2026
+
+All eight owner-approved audit findings are implemented on `codex/polished-ui`: natural compact desktop rows, progressive advanced filters, classification-first editor, intrinsic desktop save action, single create/setup action ownership, consistent compact headers/useful-only period navigation, grouped Account tools and preserved static reduced-motion chevrons. Repository and installed Sente experience skills were updated; skill-creator validation passed.
+
+- Production TypeScript/Vite build and all 15 frontend unit tests passed.
+- 55 browser cases across 14 specs passed in final sequential synthetic batches: density-refinements (5), experience (6), editor-layout (2), transaction-filters (2), core-improvements (6), ui-hierarchy (2), workspace-controls (2), mobile-core (13), settings (4), onboarding (3), rules (3), budget-category-editor (2), polish (3), theme-states (2).
+- Final coverage combines the successful experience/editor-layout/transaction-filters specs in run-70m80lmt, all nine specs in run-vgl099sf and polish/theme-states in run-57ljw9uq. The first batch stopped at an obsolete expectation that an entirely ineffective Budget periods strip must remain visible. That test now requires absence for the fixture's unavailable navigation; financial, rebalancing and account-health assertions remain. Its two failed cases are excluded from the final pass count. No retries masked failures.
+- New density checks verify natural desktop row height, common/advanced filter grouping, preserved date restrictions while collapsed, active counts, classification visible in the first phone viewport, no duplicate Category heading, compact Account tools, distinct reduced-motion open/closed angles, intrinsic desktop save width and minimum 44px height, shared header sizes, empty action ownership and viewport containment at 360/390/900/1440px in light/dark.
+- Inspected actual updated screenshots of the 360px light editor, 1440px light settings and transaction list, and 390px dark filters. Windows workspace `Sente UI previews/updated-*` retains these. This is synthetic screenshot inspection, not physical-device verification.
+- Owner preview UI (5173) and API health (8081) returned HTTP 200 from Windows. Preview retains the previous development database; all browser tests use independent disposable synthetic databases.
+
+Presentation only: no schema, financial access, MCP contract or financial-service changes. No deployment or push. Existing Vite large-chunk advisory remains.
+
+
+## Organized transaction filters and open/close motion — 9 October 2026
+
+Implemented on `codex/polished-ui`: grouped/paired scope, classification and review controls; grouped advanced ranges; signed guidance outside field tracks; one searchable Merchant/Tag control with bounded results, account disambiguation and clear choice; footer restrictions; reset-arrow Clear filters in the card header; and Import transactions inside Transaction actions. Shared transitions cover filter panels, budget expanders, native disclosures, action menus, phone More and dialog exits. Dismissal/focus/accessibility stay immediate; reduced motion skips visual exits.
+
+- Final production TypeScript/Vite build and all 15 frontend unit tests passed. The existing large-chunk advisory remains.
+- 62 browser cases across 16 specs passed in final sequential disposable synthetic batches: filter-layout-motion (4), density-refinements (5), transaction-filters (2), workspace-controls (2), core-improvements (6), experience (6), polish (3), theme-states (2), global-search (4), budget-group-interaction (4), mobile-core (13), toasts (2), budget-category-editor (2), editor-layout (2), ui-hierarchy (2), onboarding (3). Final coverage is the 11-spec run-x7u91eze, successful filter-layout-motion/editor-layout specs in run-0fyfyedb, and all three specs in run-_5oatzui; this combined coverage is not a claim that earlier attempts passed.
+- New checks use 75 synthetic merchants and search beyond the initial page, verify one selector/no Find more action, aligned min/max inputs, unchanged background geometry during search/selection, restored opener focus, picker-only Escape, retained selected values across collapse, header clearing and menu import placement. They inspect inert/aria-hidden dialog exit snapshots with no open dialog attribute under normal motion and no snapshot under reduced motion, at phone/desktop widths.
+- Initial checks caught selection hydration briefly disabling the opener before focus restoration. ChoiceField now retains the chosen row before closing. The nested picker no longer allows Escape to collapse its parent filter card. Animated closed disclosures initially prevented immediate invalid-field focus: validateFields now temporarily bypasses the transition, flushes open geometry and focuses the field before normal motion resumes. Two retained-row tests now wait for Loading transactions to finish before selection/reopening; financial persistence and exact allocation assertions remain. Mobile alignment assertions now require the approved paired scope tracks instead of old vertical stacking. Geometry baselines wait for entrance transitions to finish. Earlier failed attempts are excluded from the final count; no retries masked failures.
+- Inspected full synthetic phone/desktop filter screenshots; updated evidence is in the Windows workspace under `Sente UI previews/organized-filters-*`. These are screenshot checks, not physical-device verification. Repository/installed Sente experience skill was updated and validated.
+- UI/API preview returned HTTP 200 at ports 5173/8081 and retains the prior development database. All verification uses separate disposable synthetic databases. No deployment, push, schema or financial-service/MCP contract change.
+
+
+## Disclosure hover spacing — 9 October 2026
+
+Account tools' two summaries and transaction More filters now use a consistent 12px left text inset inside the hover surface, with 10px vertical padding, 36px chevron clearance and existing 44px targets. Production build passed. All nine existing density-refinements/filter-layout-motion cases passed in run-gmu1rc1u across desktop, intermediate and phone sizes, light/dark and normal/reduced motion. No new tests were added for this spacing-only edit. Repository and installed Sente experience skills record the exact padding and passed validation. Preview hot-reloads the same worktree; no deployment or database changes.
+
+
+## Notification inbox refinement — 9 October 2026
+
+Compact summary/toolbar, clear read/unread surfaces and text, quieter type/severity/timestamps, source-first one-row actions with labelled read icon and optional dismiss menu, and 44px icon pagination are implemented. Presentation is scoped to the notification centre; push-device cards retain their existing styling. Workspace Notifications now has a meaningful accessible page description. Financial message content, explicit read/dismiss, access checks, refresh/privacy behavior and preference/push semantics remain.
+
+- Production TypeScript/Vite build passed, retaining the existing large-chunk advisory.
+- All 12 browser cases across notification-layout (4), notifications (3) and notification-delivery (5) passed in run-7w6vl2c0. Geometry checks cover 360px light, 390px dark, 900px dark and 1440px light with long messages, visible 44px controls, menu Escape/focus restoration, eligible-only read/dismiss controls and viewport containment. Existing real-fixture workflows cover recipient privacy, authorized targets/unavailable recovery, explicit read/dismiss/bulk read, pagination, preference drafts/stale save/reload, denied/unsupported push, device opt-in/test/removal, diagnostics and push-only links.
+- Inspected actual before/after 390px dark synthetic inbox screenshots. Desktop/phone evidence is saved beside the Windows workspace in Sente UI previews/notifications-before-* and notifications-after-*. This is screenshot inspection, not physical-device or live-provider certification.
+- Earlier checks used an unseeded layout fixture, then corrected the isolated layout mock; a temporary fixture syntax error was corrected before baseline capture. The first delivery attempt used an obsolete direct preferences locator and was stopped; the final locators open the real inbox/card menus and keep all permission, read/dismiss and persistence assertions. Earlier failures are excluded from the final count; no retries masked failures.
+- Updated repository/installed Sente experience skill passed validation. Owner preview retains the prior development database; synthetic verification uses separate disposable databases. No schema, financial service, MCP contract, deployment or push change.
+
+## Budget period action cleanup — 9 October 2026
+
+- Production TypeScript/Vite build passed; the existing chunk-size advisory remains.
+- 40 browser cases passed across budget-group-interaction (4), dashboard-connections (4), budget-category-editor (2), onboarding (3), mobile-budget-settings (20), handover (2), workflows (3), and responsive-geometry (2). Final evidence: run-jgx6r3iq for the first four completed specs, run-rnmbck73 for the remaining four. The initial mobile batch was interrupted at an obsolete Edit budgets locator; it is excluded from the final count and was corrected before the complete rerun.
+- Coverage includes selected groups visible without a redundant button, 44px top-right period menus, phone-hidden selected status, View spending menu navigation, Escape/focus restoration, other-period empty-budget setup, persisted limits, paged category editing/error recovery, both themes and long names/large signed figures across phone/intermediate/desktop viewports.
+- Repository and installed Sente experience skills synchronized; skill validation and git diff --check passed. Structural and automated browser checks only; no computer-use or physical-device verification claimed.
+- Browser-only presentation/action ownership changes. No MCP tools, contracts/allowlists, consent, financial services or database schema changes. Synthetic fixtures remain separate from the owner's existing development database.
+
+## Transaction classification header and phone width — 9 October 2026
+
+- Production TypeScript/Vite build passed with the existing chunk-size advisory.
+- All 25 browser checks passed: editor-layout (4), density-refinements (5), mobile-core (13), workflows (3), using disposable synthetic databases. Evidence: web/test-results/run-5n44gl6k.
+- Editor checks cover one 44px Add split action at the classification header’s right edge, adjacent aligned group/category controls, full-width phone single/split categories, both themes at 360/390/900/1440px, and actual split save/reopen, invalid total handling and removal. Existing mobile draft/navigation and workflow checks also passed.
+- Reusable repository/installed Sente skills synchronized and validated; git diff --check passed. Automated geometry and browser coverage only; no manual visual or physical-device verification claimed.
+- Presentation-only browser work: no MCP tools, schemas, output allowlists, consent, proposal/audit contracts, permissions, shared financial services or database changes. Real development data remains separate from synthetic verification.
+
+## Configuration and PWA paired-card restoration — 9 October 2026
+
+- Production TypeScript/Vite build passed (existing chunk-size advisory retained).
+- All 20 browser checks passed: settings (8), PWA (10), configuration (2). Evidence: web/test-results/run-w25zedzy. Geometry verifies two equal-width/equal-height cards with aligned tops and a 24px gap at 1440/900px; full-width stacked cards with a 16px gap at 390/360px, both themes. General preferences retains its 640px maximum. Existing permission visibility, mounted drafts, PWA save/install/update behavior and configuration import/export workflows pass.
+- Repository/installed Sente skill updated and validation passed; git diff --check passed. Automated structural/browser coverage only, no manual visual or physical-device verification claimed.
+- Browser-only CSS scope correction and General wrapper class. No financial service, schema, MCP tool/input/output, permissions, consent or proposal/audit changes. Owner development data is separate from the disposable synthetic test fixtures.
+
+## Mobile search visibility — 9 October 2026
+
+- Production TypeScript/Vite build passed with the existing chunk advisory. All 6 global-search browser checks passed (run-rl7w9g2b).
+- Actual SVG visibility, >=3:1 icon/chrome contrast and 44px targets verified at phone 360/light and 390/dark and desktop 1440/light/dark. Existing search open/focus, selection, nested editing, failure/retry and proposal-preview checks passed using synthetic data. No manual visual or physical-device verification claimed.
+- Obsolete mobile span-hiding rule removed; shared icon selector now includes button-content. Repository and installed Sente skills updated/validated; git diff --check passed. Browser-only CSS correction, with no MCP contract, financial service, schema, permission or consent changes.
+
+## PR #90 browser locator correction - 9 October 2026
+
+CI run 37893805486 passed earlier source checks but stopped in classification-defaults: the page-wide Groceries locator matched both the visible category row and an option in a retained hidden form. The test now targets the category list's explicit Groceries Expense and Salary Income buttons, preserving import, rule mutation and category paging assertions. All three classification-defaults cases passed in run-5d32luww; the complete PR-selected browser gate subsequently passed in that run: 156 cases across 34 specs, 0 unexpected failures, flaky results or skips. This changes test targeting only; no application behavior, financial services, MCP contracts, permissions or schema changes.
+
+The GitHub rerun (37901682893) passed source checks and the first 28 browser specs, then exposed a desktop/no-preference timing failure in filter-layout-motion: its More filters click occurred during the outer filter reveal, leaving the native disclosure closed. The test now waits on actual Web Animations completion before activating the nested summary and asserts its open attribute. All four desktop/phone and normal/reduced-motion cases passed five explicit repetitions each (20 passed, no retries) in run-zxlluzf4. This is test synchronization with unchanged visibility, geometry, focus, selector and motion assertions; application behavior is unchanged.
+
+
+## MCP personal budget alerts — issue #75, 9 October 2026
+
+`codex/mcp-budget-alerts` starts from development `22099eb` in the existing WSL
+checkout. Added default-off `read_budget_alerts` and `manage_budget_alerts` consent,
+explicit single-scope `get_budget_alert_preferences`, and exact 1–100-scope
+`update_budget_alerts` proposals. Group 0 explicitly means No spending group;
+current personal versions, enabled/custom 1–100% thresholds and reset-to-defaults
+are validated. Shared preference saves and silent current-condition baselines run
+inside the existing atomic proposal transaction with exact before/after audit and
+once-only replay. Global notification preferences and scope carryover/suppression
+remain authoritative. No schema migration is introduced.
+
+OAuth/Settings share the new read/change controls, dependency/scope validation,
+explicit confirmation and optional automatic approval. Finance/legacy presets do
+not gain access. Household membership and unrestricted connection account scope
+are required because settings apply to shared budget combinations. Owner identity
+comes exclusively from the authenticated connection. Inbox content, global channel
+preferences, push registration/secrets and diagnostics remain browser-only.
+
+Verification: 15 frontend unit tests, production build, Go vet and all 16 MCP/inbox/
+push browser cases passed (360px light and 1440px dark for MCP). Four new backend
+integration tests passed under the race detector, covering consent/defaults,
+ownership, validation/bounds, revoked consent/membership/scope/automatic approval,
+stale/renamed scopes, audit rollback, replay, silent baselines, mute/reset, global
+precedence and duplicate suppression. The initial baseline `make test` hit Go's
+default ten-minute package timeout without assertion failures. The complete
+`go test -race ./... -timeout=30m -json` run exercised 252 top-level app tests
+and their subtests plus the domain packages (1,485.64s for app). It exited 1
+solely because the tool-catalogue assertion still expected 22 tools. Updated that
+expectation to 23; `go test -race ./internal/app -run TestMCPPrivacyAndTransport
+-count=1 -timeout=5m` then passed. The final four alert tests also passed in a
+separate race run (53.21s), including added percentage/batch bounds and revoked
+approval checks. No test failures remain after those targeted rechecks; the whole
+suite was not repeated after the assertion-only correction. The optional public
+starter pull and supplied FNB export checks skipped as configured. Only synthetic
+databases were used. No computer-use visual inspection, external MCP
+client certification or production deployment is claimed.
+
+## Application release awareness — issue #88, 9 October 2026
+
+- `go test -race ./internal/releases ./internal/app -run 'TestStrictSemVer|TestChannelsAndNoDowngrades|TestUnsupportedNeverRequests|TestCacheStalenessFailuresAndConcurrency|TestProviderFailuresAndBounds|TestProviderBackoff|TestPublishedReleasesAcrossPages|TestBuildInfoAuthorizationAndSafeOutput|TestApplicationUpdateAuthorizationAndLocalBuild' -count=1 -timeout=5m` passed. Coverage: complete SemVer precedence/numeric identifiers/metadata, current/newer/older stable and beta channels, unsupported builds/no upstream requests, concurrent cache sharing, explicit retry cooldown, expiry/stale/recovery, published vs draft releases, sorted multi-page selection, three-page/4 MiB limits, malformed/null/inconsistent metadata, network/cancellation/HTTP/redirect/rate failures, redacted diagnostics and capped provider retry backoff. Browser API checks cover anonymous rejection, all signed-in roles, GET/manual POST, safe output and no-store responses.
+- `go vet ./...` passed. These are affected-domain/integration checks; the full financial backend suite was not rerun for this public-metadata feature.
+- `npm test`: all 17 frontend unit tests passed. `npm run build` passed; existing bundle-size advisory remains.
+- `python3 scripts/test-browser.py about.spec.ts`: seven synthetic cases passed. Existing About navigation/report privacy/recovery plus release indicators and available/unavailable-stale/current/unknown/unsupported states, release/upgrade links, inline failure with no toast noise, keyboard-triggered retry and overflow checks at 360px/1440px in light/dark. No computer-use or manual visual inspection was performed.
+- MCP impact: browser-only public release metadata; installed MCP initialization remains unchanged. No tools, input schemas, output allowlists, grants/consent, proposal previews/audits, financial services or database migrations change. All data/provider fixtures are synthetic; no production data, live-provider guarantee, Docker upgrade or production deployment.
+
+## Dashboard spending flow — issue #94, 10 October 2026
+
+Synthetic checks on `codex/dashboard-sankey` in the primary WSL source:
+
+- Frontend `npm test`: 20 tests passed, including positive/net/refund flow
+  reconciliation, same-category group identity and zero/negative percentages.
+- Production `npm run build`: passed. Vite retains its >500 kB main chunk advisory.
+- `dashboard-sankey.spec.ts`: 10 browser cases passed. Both themes at
+  360/390/800/1280px; labels centre on the corresponding node within 1px;
+  Debt R20,000 / Day-to-day R9,000 node-height ratio is 2.222222; no chart or
+  page horizontal overflow/internal chart scrolling. Complete names are available
+  in the responsive table. Account/period refresh, real API total reconciliation,
+  net refunds, zero/empty/loading/failure/retry workflows passed.
+- `dashboard-buckets.spec.ts`: all 7 existing browser cases passed, preserving
+  budget navigation, independent group/category limits and mobile workflows.
+- Final browser artifacts: `web/test-results/run-bywcz590` (ignored, synthetic).
+  Initial test-only failures were corrected by reopening the table after scope
+  remount and selecting the chart SVG separately from the empty-state icon.
+- `git diff --check`: passed.
+
+No production financial data, manual visual inspection, physical-device certification,
+new chart library or production deployment. The complete browser
+`spending_breakdown` is deliberately excluded by MCP's existing output allowlist;
+the budget-summary regression assertion checks non-disclosure. No tools, input
+schemas, permissions/consent, proposal/audit or shared write-service changes; no migration.
+
+Backend completion: `go test ./internal/app -run 'TestDashboard|TestMCPCoreReadCoverage'
+-count=1` passed (53.5s), and `go vet ./...` passed. This covers complete
+unpaged aggregates, split/refund/transfer/uncategorised reconciliation, custom inclusive
+period dates, private/hidden access and MCP non-disclosure. The extra broad
+`go test ./... -timeout=30m` run was stopped after 7.6 minutes once the affected
+checks passed; it is not a full-suite pass. Its completed classification, ledger,
+money, releases and statements packages passed.
+
+## Spending action menu and dedicated Sankey page — 10 October 2026
+
+Frontend tests: all 20 passed. Production build passed (existing Vite main-chunk
+size advisory remains). All 47 synthetic browser cases passed:
+dashboard-sankey (10), dashboard-buckets (7), dashboard-connections (4),
+budget-category-editor (2), budget-group-interaction (4), mobile-budget-settings (20).
+Artifacts: `web/test-results/run-f1n0jopr` (ignored).
+
+New-page checks cover a chart-free dashboard; native hamburger keyboard opening,
+Escape/focus restoration; borderless menu items at rest and hover; menu-to-chart
+navigation; Back to dashboard preserving account scope and focusing main content;
+12px Spending breakdown inset; chart proportions/aligned labels/no internal scrolling
+in both themes at 360/390/800/1280px; authorized API reconciliation; empty, refund,
+zero, loading, failure and retry states. Existing budget editors, paged categories,
+hover/touch behavior, layouts, short landscape and settings workflows passed after
+routing their Edit budgets actions through the new menu.
+
+No manual visual/physical-device inspection, production financial data or deployment.
+No backend financial calculation or API shape changed in this follow-up; prior financial
+and MCP coverage remains applicable. This navigation/presentation change remains
+browser-only and does not change MCP tools, schemas, output allowlists, permissions,
+consent, proposals/audits, shared financial services or migrations.

@@ -255,3 +255,67 @@ for (const {width,theme} of desktopPhoneCases) test(`Saved MCP context and expli
  await agent.getByRole('button', {name:'Revoke', exact:true}).click()
  await expect(agent).toHaveCount(0)
 })
+
+for (const {width, theme} of desktopPhoneCases) test(`MCP personal budget alert consent and exact preview ${width} ${theme}`, async ({page}) => {
+ await page.setViewportSize({width, height:900});
+ await page.addInitScript(t => localStorage.setItem('finance-theme', t), theme);
+ const name = `Synthetic alert agent ${width} ${theme}`;
+ const {token, endpoint} = await connect(page, name);
+ if (width === 360) {
+  await page.getByRole('navigation', {name:'Mobile navigation', exact:true}).getByRole('button', {name:'More', exact:true}).click();
+  await page.getByRole('navigation', {name:'More pages', exact:true}).getByRole('button', {name:'Settings', exact:true}).click();
+ } else {
+  await page.getByRole('navigation', {name:'Main navigation', exact:true}).getByRole('button', {name:'Settings', exact:true}).click();
+ }
+ await page.getByRole('tab', {name:'MCP', exact:true}).click();
+ const call = async (tool:string, args:any) => {
+  const response = await page.request.post(endpoint, {headers:{Authorization:`Bearer ${token}`, Accept:'application/json, text/event-stream', 'MCP-Protocol-Version':'2025-11-25'}, data:{jsonrpc:'2.0', id:1, method:'tools/call', params:{name:tool, arguments:args}}});
+  expect(response.status()).toBe(200);
+  const body = await response.json(); expect(body.error).toBeUndefined();
+  return {error:!!body.result.isError, value:JSON.parse(body.result.content[0].text)};
+ };
+ const scope = {category_id:1, group_id:0};
+ expect((await call('get_budget_alert_preferences', scope)).error).toBe(true);
+ const access = page.locator('.mcp-access-row').filter({hasText:name});
+ await access.getByRole('button', {name:'Edit permissions', exact:true}).click();
+ const dialog = page.getByRole('dialog', {name:`Permissions for ${name}`});
+ await expect(dialog.getByLabel('Read your personal budget alert switches and thresholds', {exact:true})).not.toBeChecked();
+ await dialog.getByLabel('Permission level', {exact:true}).selectOption('custom');
+ await expect(dialog.getByLabel('Change your personal budget alert switches and thresholds', {exact:true})).not.toBeChecked();
+ await dialog.getByLabel('Change your personal budget alert switches and thresholds', {exact:true}).check();
+ await dialog.getByRole('button', {name:'Save permissions', exact:true}).click();
+ await expect(dialog.getByText('Allow personal budget alert reads before enabling alert changes.', {exact:true})).toBeVisible();
+ await dialog.getByLabel('Read your personal budget alert switches and thresholds', {exact:true}).check();
+ await dialog.getByLabel('Confirm permissions', {exact:true}).selectOption('confirmed');
+ await dialog.getByRole('button', {name:'Save permissions', exact:true}).click();
+ await expect(dialog).toHaveCount(0);
+ const current = await call('get_budget_alert_preferences', scope); expect(current.error).toBe(false);
+ const proposed = await call('prepare_change', {operation:'update_budget_alerts', budget_alerts:[{...scope, version:current.value.version, enabled:false, threshold:70}]});
+ expect(proposed.error).toBe(false); expect(proposed.value.status).toBe('pending');
+ await page.getByRole('button', {name:'Refresh proposals', exact:true}).click();
+ const article = page.locator('.mcp-proposal').filter({hasText:proposed.value.proposal_id.slice(0,8)});
+ await article.getByText('Inspect exact changes (amounts in cents)', {exact:true}).focus();
+ await page.keyboard.press('Enter');
+ await expect(article.getByText('Before · your personal budget alerts', {exact:true})).toBeVisible();
+ await expect(article.getByText('After · your personal budget alerts', {exact:true})).toBeVisible();
+ await expect(article).toContainText('No spending group');
+ await expect(article).toContainText('"threshold": 70');
+ await expect(article).toContainText('Saving will not send historical alerts');
+ expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+ await article.getByRole('button', {name:'Approve exact changes', exact:true}).click();
+ await expect(article).toContainText('approved');
+ expect((await call('apply_change', {proposal_id:proposed.value.proposal_id})).error).toBe(false);
+ const changed = (await call('get_budget_alert_preferences', scope)).value;
+ expect(changed.enabled).toBe(false); expect(changed.threshold).toBe(70);
+ const reset = await call('prepare_change', {operation:'update_budget_alerts', budget_alerts:[{...scope, version:changed.version, reset:true}]});
+ expect(reset.error).toBe(false);
+ await page.getByRole('button', {name:'Refresh proposals', exact:true}).click();
+ const resetArticle = page.locator('.mcp-proposal').filter({hasText:reset.value.proposal_id.slice(0,8)});
+ await resetArticle.getByRole('button', {name:'Approve exact changes', exact:true}).click();
+ await expect(resetArticle).toContainText('approved');
+ expect((await call('apply_change', {proposal_id:reset.value.proposal_id})).error).toBe(false);
+ const defaults = (await call('get_budget_alert_preferences', scope)).value;
+ expect(defaults.enabled).toBe(true); expect(defaults.threshold).toBeNull();
+ await access.getByRole('button', {name:'Revoke', exact:true}).click();
+ await expect(access).toHaveCount(0);
+});

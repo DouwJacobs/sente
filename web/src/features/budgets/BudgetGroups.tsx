@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Pencil, Plus } from "lucide-react";
 import { api, money } from "../../api";
 import { GroupDot } from "../../Choices";
 import { ListNavigation, ListStatus, PagedSelect, usePagedList } from "../../PagedList";
-import { ActionMenu, Button, Empty, Form, Modal } from "../../ui";
+import { ActionMenu, Button, Empty, Form, Modal, Reveal } from "../../ui";
 import { useTask } from "../../shared/useTask";
 import type { PageProps, Row } from "../../shared/types";
 import { CategoryBudgetModal } from "./CategoryBudgetModal";
@@ -27,10 +27,10 @@ export function BudgetGroups({ period, revision, notify, refresh }: Props) {
   return <div className="budget-groups-view" aria-label={"Category budgets for " + period.name}>
     <div className="section-head">
       <h3>Spending groups</h3>
-      <Button disabled={busy || list.loading || !!list.error} onClick={() => { setGroupID(""); setAdding(true); }}><Plus size={16} />Add group</Button>
+      {(list.loading || list.error || list.items.length > 0) && <Button disabled={busy || list.loading || !!list.error} onClick={() => { setGroupID(""); setAdding(true); }}><Plus size={16} />Add group</Button>}
     </div>
     <ListStatus list={list} />
-    {!list.loading && !list.error && !list.items.length && <Empty title="Start building your budget">Add a group, then choose its categories and amounts.</Empty>}
+    {!list.loading && !list.error && !list.items.length && <Empty kind="budget" title="Start building your budget"><p>Add a spending group, then choose the categories and limits for this period.</p><Button variant="primary" disabled={busy} onClick={() => { setGroupID(""); setAdding(true); }}>Add group</Button></Empty>}
     {list.items.map(group => <BudgetGroup key={group.id} group={group} period={period} revision={revision} notify={notify} refresh={refresh}
       onRemove={() => setRemoving(group)} />)}
     <ListNavigation list={list} />
@@ -69,9 +69,9 @@ function BudgetGroup({ group, period, revision, notify, refresh, onRemove }: Pro
         onClick={() => { setOpen(true); setEditing({}); }}><Plus size={18} aria-hidden="true" /></Button>
       <ActionMenu label={"Budget actions for " + group.name}><Button variant="quiet" onClick={onRemove}>Remove group</Button></ActionMenu>
     </div>
-    <div id={id} hidden={!open}>
-      {open && <BudgetCategories group={group} period={period} revision={revision} onEdit={category => setEditing({ category })} />}
-    </div>
+    <Reveal id={id} open={open}>
+      {<BudgetCategories group={group} period={period} revision={revision} onEdit={category => setEditing({ category })} />}
+    </Reveal>
     {editing && <CategoryBudgetModal category={editing.category} group={group} period={String(period.id)} periodName={period.name}
       notify={notify} onClose={() => setEditing(null)} onSaved={() => refresh()} />}
   </section>;

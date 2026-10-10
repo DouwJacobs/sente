@@ -26,7 +26,6 @@ for (const theme of ['light', 'dark']) {
     await noOverflow(page);
    }
    await navigate(page,'Budgets');
-   await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
    const group=page.getByRole('region',{name:groupName+' budget',exact:true});
    await group.locator('.budget-group-summary').click();
    await contained(page,group.getByRole('button',{name:'Edit budget for '+categoryName+' in '+groupName,exact:true}),'long category edit',true);

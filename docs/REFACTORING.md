@@ -73,3 +73,17 @@ Notification producers: `notification_budget_producers.go` uses `budget_notifica
 
 
 Issue #69: `notification_budget_preferences.go` owns personal category/group setting contracts, shared atomic save helpers and silent baselines; `notification_budget_preference_schema.go` owns immutable migrations 29/30. `CategoryBudgetAlert.tsx` owns the personal fields used by `features/budgets/CategoryBudgetModal.tsx` for dashboard and Budgets add/edit workflows; NotificationPreferences owns global type/channel choices. Producers continue using shared allocation arithmetic; internal delivery scope metadata permits push preference rechecks without adding inbox/MCP output fields.
+
+
+`mcp_budget_alerts.go` adapts explicit personal category/group alert reads and proposals to the shared `notification_budget_preferences.go` save/baseline services. Consent stays in `mcp_permissions.go`; exact preference evidence follows `mcp_changes.go` proposal/audit transactions. MCP Settings/OAuth reuse shared permission fields; `MCPProposalCard` owns before/after presentation.
+
+Application release awareness: `internal/releases` owns transport-independent public-release checking and SemVer comparison; `internal/app/build_info.go` adapts authenticated browser routes. `web/src/shared/applicationUpdate.ts` owns the public browser contract/shared request state; `features/settings/ApplicationUpdate.tsx` owns About status, manual check and backup guidance. WorkspaceShell only composes the quiet indicator.
+
+Dashboard flow ownership: `internal/app/dashboard_spending.go` aggregates the complete
+authorized group/category allocation snapshot for the browser. Frontend
+`features/dashboard/spendingFlow.ts` owns positive/net reconciliation and
+`SpendingSankey.tsx` owns the SVG and accessible breakdown.
+
+`features/dashboard/SpendingFlowPage.tsx` owns the dedicated Sankey page, its
+cancellable summary request and loading/error/back workflow. App owns navigation and
+preserves account/period scope; Dashboard owns the spending-card action menu.
