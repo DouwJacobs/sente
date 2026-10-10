@@ -7,7 +7,7 @@ for (const touch of [false, true]) {
     for (const theme of ["light", "dark"]) {
       test(`whole card hover clears while expanded in ${theme}`, async ({ page }) => {
         await start(page, { width: touch ? 390 : 1440, height: 900 }, theme, "synthetic group budgets");
-        await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+        await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
         await expect(page.getByRole("button", { name: "Edit budgets", exact: true })).toHaveCount(0);
         const card = page.locator(".budget-periods-panel>section.panel").first();
         const menu = card.locator(".budget-period-head .toolbar-actions>details>summary");

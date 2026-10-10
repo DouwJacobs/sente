@@ -308,3 +308,11 @@ context. Permission JSON remains schema version 1 with default-false optional
 flags; no database migration is needed.
 
 Application release awareness (#88) remains browser-only host information. GET/POST `/api/build/update` exposes selected public release metadata to signed-in users; no MCP tools, input schemas, output allowlists, grants/consent, proposal previews/audits or shared financial services change. MCP initialization continues to expose only the existing installed build version. No database migration is introduced.
+
+## Dashboard Sankey browser presentation — issue #94
+
+The browser dashboard adds a complete `spending_breakdown` aggregate for its Sankey
+chart and accessible table. This new field is intentionally absent from the MCP
+output allowlist; `get_budget_summary` retains its existing paged output. No new
+tools, input fields, output fields, account permissions, consent, proposal previews,
+audit behavior or financial write services are introduced.

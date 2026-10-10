@@ -173,6 +173,6 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 		}
 		balances = balances[start:end]
 	}
-	send(w, map[string]any{"period": p, "income_cents": income, "income_categories": incomeCategories, "income_category_total": incomeTotal, "spent_cents": spent, "pending_spend_cents": pendingSpend, "pending_count": len(pendingCount), "uncategorized_count": len(uncategorized), "budget_cents": limits, "remaining_cents": limits - spent, "has_targets": showTargets, "spending_groups": groups, "group_total": groupTotal, "categories": catRows, "category_total": categoryTotal, "balances": balances, "balance_total": balanceTotal, "unassigned_count": unassigned})
+	send(w, map[string]any{"period": p, "income_cents": income, "income_categories": incomeCategories, "income_category_total": incomeTotal, "spent_cents": spent, "pending_spend_cents": pendingSpend, "pending_count": len(pendingCount), "uncategorized_count": len(uncategorized), "budget_cents": limits, "remaining_cents": limits - spent, "has_targets": showTargets, "spending_breakdown": dashboardSpending(rows), "spending_groups": groups, "group_total": groupTotal, "categories": catRows, "category_total": categoryTotal, "balances": balances, "balance_total": balanceTotal, "unassigned_count": unassigned})
 	return nil
 }

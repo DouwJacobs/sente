@@ -28,6 +28,7 @@ const nav = [
 const descriptions: Record<string, string> = {
   Notifications: "Updates about your budgets, accounts and transactions.",
   Dashboard: "Income, spending, and review for your selected period.",
+  "Sankey graph": "See how spending flows through groups and categories for your selected period.",
   Transactions: "Import, categorize, and review your transactions.",
   Review: "Check the details before approving.",
   Imports: "Get bank transactions or upload a statement for review.",
@@ -120,6 +121,7 @@ export function WorkspaceShell({
       window.removeEventListener("resize", resize);
     };
   }, [more, setMore]);
+  const navigationPage = current === "Sankey graph" ? "Dashboard" : current;
   const visibleNav = nav.filter(
     (n) => user.budget_member || !["Dashboard", "Budgets"].includes(n.name),
   );
@@ -144,8 +146,8 @@ export function WorkspaceShell({
           {visibleNav.map((n) => (
             <button
               key={n.name}
-              className={current === n.name ? "nav-item active" : "nav-item"}
-              aria-current={current === n.name ? "page" : undefined}
+              className={navigationPage === n.name ? "nav-item active" : "nav-item"}
+              aria-current={navigationPage === n.name ? "page" : undefined}
               onClick={() => go(n.name)}
             >
               <n.icon size={19} />
@@ -237,9 +239,9 @@ export function WorkspaceShell({
           .map((n) => (
             <button
               key={n.name}
-              className={current === n.name && !reviewActive ? "active" : ""}
+              className={navigationPage === n.name && !reviewActive ? "active" : ""}
               onClick={() => go(n.name)}
-              aria-current={current === n.name && !reviewActive ? "page" : undefined}
+              aria-current={navigationPage === n.name && !reviewActive ? "page" : undefined}
             >
               <n.icon size={21} />
               <span>{n.name}</span>
@@ -255,7 +257,7 @@ export function WorkspaceShell({
         </button>
         <button ref={moreButtonRef} onClick={() => setMore(!more)} aria-expanded={more}
           aria-controls="mobile-more-pages"
-          className={!["Dashboard", "Transactions"].includes(current) ? "active" : ""}>
+          className={!["Dashboard", "Transactions"].includes(navigationPage) ? "active" : ""}>
           <Menu size={21} />
           <span>More</span>
         </button>
@@ -269,7 +271,7 @@ export function WorkspaceShell({
                   !["Dashboard", "Transactions"].includes(n.name),
               )
               .map((n) => (
-                <button key={n.name} aria-current={current === n.name ? "page" : undefined} onClick={() => go(n.name)}>
+                <button key={n.name} aria-current={navigationPage === n.name ? "page" : undefined} onClick={() => go(n.name)}>
                   <n.icon size={19} />
                   {n.name}
                   {n.name === "Settings" && updateAvailable && <small className="version-update-label">Update available</small>}

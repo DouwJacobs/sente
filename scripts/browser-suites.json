@@ -176,6 +176,9 @@
     ],
     "responsive-geometry.spec.ts": [
       0
+    ],
+    "dashboard-sankey.spec.ts": [
+      0
     ]
   }
 }

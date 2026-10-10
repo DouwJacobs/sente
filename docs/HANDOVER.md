@@ -205,3 +205,39 @@ seven synthetic About browser cases passed; see VERIFICATION.md. No production
 financial data, manual visual inspection, live update-provider certification or
 production deployment is claimed. The normal watched development preview will
 honestly report that release checks are unsupported for its dev build.
+
+## Dashboard spending Sankey — issue #94, 10 October 2026
+
+Implemented on `codex/dashboard-sankey` in the primary WSL source. The browser dashboard
+shows the complete authorized Total spending → Spending groups → Categories breakdown,
+independent of budget paging. Split allocations/refunds/uncategorised expenses share the
+existing dashboard scope; transfers are excluded. Negative and zero category amounts stay
+in the accessible table, with positive-flow/net-refund reconciliation stated explicitly.
+
+Owner feedback clarified that ribbon sizing was correct and labels were misaligned.
+Labels now sit immediately beside their actual node centre. The chart fits its card
+without internal scrollbars; natural height retains all categories. On narrow screens the
+total is in the header and the drawing uses group/category columns; the full breakdown
+table uses responsive rows. Uses existing light/dark tokens and request loading/error
+recovery. Verification is recorded in VERIFICATION.md; no production data/deployment or
+manual visual/physical-device inspection is claimed.
+
+MCP impact: `spending_breakdown` is browser-only and excluded by the existing output
+allowlist, with a summary non-disclosure regression assertion. Existing tools, schemas,
+permissions, consent, proposals/audits and financial write services remain unchanged.
+No migration. No chart dependency added.
+
+## Dashboard action menu and dedicated Sankey page — 10 October 2026
+
+Owner requested a quieter dashboard: removed the embedded chart and moved Edit budgets
+and Sankey graph into the Spending by group card's shared hamburger menu. SpendingFlowPage
+owns its cancellable aggregate request and loading/error/retry; App shares period/account
+selection across dashboard and chart. Back to dashboard preserves scope and focuses main
+content. Parent dashboard navigation remains selected on the chart page.
+
+Spending breakdown now has the shared 12px left inset/36px right reserve. Spending menu
+items are quiet and borderless at rest/hover, preserving focus and interaction feedback.
+UI guidance and the repository Sente experience skill record the accepted behavior.
+Tests use the real menu actions before existing budget workflows. This is browser
+presentation/navigation only: no server financial arithmetic, aggregate shape, MCP
+tools/schema/allowlist/consent, proposal/audit, permissions or migration changes.

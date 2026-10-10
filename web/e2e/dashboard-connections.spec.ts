@@ -35,7 +35,7 @@ for(const width of [1280,360])test(`dashboard budget connections and inline edit
  await branch.getByRole('button',{name:'Close',exact:true}).click();await exceptions.getByRole('button',{name:'Groceries transactions',exact:true}).click()
  await expect(page.getByRole('dialog',{name:'Groceries · Exceptions',exact:true}).locator('.dashboard-transaction')).toContainText('Corner restaurant')
  await expect(page.getByRole('dialog',{name:'Groceries · Exceptions',exact:true}).locator('.dashboard-transaction')).not.toContainText('Dashboard edited groceries')
- await page.getByRole('dialog',{name:'Groceries · Exceptions',exact:true}).getByRole('button',{name:'Close',exact:true}).click();await page.getByRole('button',{name:'Edit budgets',exact:true}).click();await expect(page.getByRole('heading',{name:'Budgets',exact:true})).toBeVisible()
+ await page.getByRole('dialog',{name:'Groceries · Exceptions',exact:true}).getByRole('button',{name:'Close',exact:true}).click();await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole('button',{name:'Edit budgets',exact:true}).click();await expect(page.getByRole('heading',{name:'Budgets',exact:true})).toBeVisible()
  await expect(page.getByText('Selected period',{exact:true}))[width<=760?'toBeHidden':'toBeVisible']();await page.locator('.budget-period-head .toolbar-actions>details>summary').first().click();await page.getByRole('button',{name:'View spending',exact:true}).click()
  await expect(page.getByLabel('Budget period',{exact:true})).toHaveValue('1')
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
