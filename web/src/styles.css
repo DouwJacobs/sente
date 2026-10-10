@@ -3250,3 +3250,30 @@ body:has(dialog[open]) { overflow:hidden; }
 .application-update .button { margin-top:8px; }
 .version-update-label { display:block; color:var(--accent); font-size:var(--type-xs); }
 @media(max-width:760px) { .application-update .button { width:100%; } }
+
+
+/* Complete period flows fit their card; node labels stay attached to their ribbons. */
+.spending-sankey { min-width: 0; margin-bottom: 24px; }
+.spending-sankey .section-head { flex-wrap: wrap; }
+.sankey-total { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sankey-chart { width: 100%; min-width: 0; }
+.sankey-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.sankey-band { fill: var(--accent); fill-opacity: .18; }
+.sankey-band:hover { fill-opacity: .4; }
+.sankey-node { fill: var(--accent); }
+.sankey-label { display: flex; flex-direction: column; justify-content: center; height: 42px; width: fit-content; max-width: 100%; padding: 2px 4px; border-radius: 4px; background: var(--surface); color: var(--text); font-size: 12px; line-height: 18px; }
+.sankey-label strong { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sankey-label span { font-variant-numeric: tabular-nums; font-size: 11px; white-space: nowrap; }
+.sankey-breakdown { margin-top: 16px; }
+.sankey-breakdown > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.sankey-breakdown table { width: 100%; table-layout: fixed; }
+.sankey-breakdown th, .sankey-breakdown td { padding: 12px; text-align: left; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .spending-sankey { margin-bottom: 16px; }
+  .sankey-breakdown table, .sankey-breakdown tbody, .sankey-breakdown tfoot { display: block; }
+  .sankey-breakdown thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .sankey-breakdown tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 12px; margin-bottom: 16px; }
+  .sankey-breakdown th, .sankey-breakdown td { display: block; padding: 0; min-width: 0; }
+  .sankey-breakdown th { grid-column: 1 / -1; }
+  .sankey-breakdown td::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); }
+}

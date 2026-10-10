@@ -202,3 +202,23 @@ The topbar search is an icon-only shared Button with a 44px target, transparent 
 MCP personal budget alert consent has separate read and change switches, excluded from finance presets. Explain household/all-account scope and that inbox/global channels/push devices are not shared. Exact proposal previews show personal scope before/after switches, nullable thresholds and versions; null means 75/90/100%, settings carry across periods, and saves do not send historical alerts. Existing shared forms, validation, confirmation reset and automatic approval controls apply.
 
 Application updates in About use the existing installation surface, a polite atomic status announcement, explicit newer version/release notes and a shared Check for updates button. Unavailable/unknown/unsupported never claim up to date; old release details explicitly say outdated. Inline persistent release-check status does not create transient toast noise. Show backup/migration guidance and the upgrade guide before manual upgrades. A text indicator on the desktop version entry and phone More → Settings announces confirmed availability without relying on color. Phone checks use full-width 44px shared buttons; preserve theme tokens and natural wrapping. Browser-worker updates stay in PWA.
+
+## Dashboard Sankey — issue #94, 10 October 2026
+
+Spending flow is a full-width dashboard card between the daily guide and group budgets.
+Ribbons and node heights use one proportional scale without minimum monetary node heights.
+Names and amounts sit immediately beside the centre of their actual node, on the shared
+surface background, so labels cannot be mistaken for a neighbouring flow. Keep full names
+in titles and the accessible Spending breakdown table. The chart fits the card width
+without internal horizontal or vertical scrolling and grows naturally with category count.
+Below 620px of available chart width, the header owns Total spending and the drawing shows
+groups → categories; desktop also draws the total node. Preserve every group/category,
+rather than dropping small amounts to fit. The breakdown has a keyboard-operable disclosure
+and responsive table rows on phones; it has no internal scrollbar.
+
+Use shared accent/surface/text tokens in both themes. No flow animations or automatic
+financial mutations. Scope refresh hides the old chart until the current response is
+ready; existing loading/failure/retry behavior owns request states. Explicitly explain
+positive flows versus net spending when category refunds are negative. Zero/negative
+categories have no ribbon but remain in the table; percentages reference net period
+spending and may exceed 100%, or are unavailable when the total is nonpositive.

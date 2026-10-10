@@ -699,3 +699,37 @@ client certification or production deployment is claimed.
 - `npm test`: all 17 frontend unit tests passed. `npm run build` passed; existing bundle-size advisory remains.
 - `python3 scripts/test-browser.py about.spec.ts`: seven synthetic cases passed. Existing About navigation/report privacy/recovery plus release indicators and available/unavailable-stale/current/unknown/unsupported states, release/upgrade links, inline failure with no toast noise, keyboard-triggered retry and overflow checks at 360px/1440px in light/dark. No computer-use or manual visual inspection was performed.
 - MCP impact: browser-only public release metadata; installed MCP initialization remains unchanged. No tools, input schemas, output allowlists, grants/consent, proposal previews/audits, financial services or database migrations change. All data/provider fixtures are synthetic; no production data, live-provider guarantee, Docker upgrade or production deployment.
+
+## Dashboard spending flow — issue #94, 10 October 2026
+
+Synthetic checks on `codex/dashboard-sankey` in the primary WSL source:
+
+- Frontend `npm test`: 20 tests passed, including positive/net/refund flow
+  reconciliation, same-category group identity and zero/negative percentages.
+- Production `npm run build`: passed. Vite retains its >500 kB main chunk advisory.
+- `dashboard-sankey.spec.ts`: 10 browser cases passed. Both themes at
+  360/390/800/1280px; labels centre on the corresponding node within 1px;
+  Debt R20,000 / Day-to-day R9,000 node-height ratio is 2.222222; no chart or
+  page horizontal overflow/internal chart scrolling. Complete names are available
+  in the responsive table. Account/period refresh, real API total reconciliation,
+  net refunds, zero/empty/loading/failure/retry workflows passed.
+- `dashboard-buckets.spec.ts`: all 7 existing browser cases passed, preserving
+  budget navigation, independent group/category limits and mobile workflows.
+- Final browser artifacts: `web/test-results/run-bywcz590` (ignored, synthetic).
+  Initial test-only failures were corrected by reopening the table after scope
+  remount and selecting the chart SVG separately from the empty-state icon.
+- `git diff --check`: passed.
+
+No production financial data, manual visual inspection, physical-device certification,
+new chart library or production deployment. The complete browser
+`spending_breakdown` is deliberately excluded by MCP's existing output allowlist;
+the budget-summary regression assertion checks non-disclosure. No tools, input
+schemas, permissions/consent, proposal/audit or shared write-service changes; no migration.
+
+Backend completion: `go test ./internal/app -run 'TestDashboard|TestMCPCoreReadCoverage'
+-count=1` passed (53.5s), and `go vet ./...` passed. This covers complete
+unpaged aggregates, split/refund/transfer/uncategorised reconciliation, custom inclusive
+period dates, private/hidden access and MCP non-disclosure. The extra broad
+`go test ./... -timeout=30m` run was stopped after 7.6 minutes once the affected
+checks passed; it is not a full-suite pass. Its completed classification, ledger,
+money, releases and statements packages passed.

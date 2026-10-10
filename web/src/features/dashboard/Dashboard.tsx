@@ -1,4 +1,5 @@
 import type { Row, PageProps } from "../../shared/types";
+import { SpendingSankey } from "./SpendingSankey";
 import { IncomeBucket } from "../../IncomeBucket";
 import { DailyGuide } from "../../CoreWorkflows";
 import { SpendingTransactions } from "../../DashboardTransactions";
@@ -141,6 +142,7 @@ export function Dashboard({
         hasTargets={d.has_targets && d.budget_cents > 0}
         account={account}
       />
+      {!loading && <SpendingSankey entries={d.spending_breakdown || []} total={d.spent_cents} />}
       <div className="dashboard-grid">
         <section
           className="panel spending-panel"
