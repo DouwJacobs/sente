@@ -1,5 +1,4 @@
 import type { Row, PageProps } from "../../shared/types";
-import { SpendingSankey } from "./SpendingSankey";
 import { IncomeBucket } from "../../IncomeBucket";
 import { DailyGuide } from "../../CoreWorkflows";
 import { SpendingTransactions } from "../../DashboardTransactions";
@@ -17,7 +16,7 @@ import {
   Target,
 } from "lucide-react";
 import { api, money } from "../../api";
-import { Button, Field, Empty, Loading, Pagination } from "../../ui";
+import { ActionMenu, Button, Field, Empty, Loading, Pagination } from "../../ui";
 export function Dashboard({
   data,
   period,
@@ -30,6 +29,7 @@ export function Dashboard({
   stagedCount,
   onAccounts,
   onBudgets,
+  onSpendingFlow,
   refresh,
 }: PageProps & {
   period: string;
@@ -40,6 +40,7 @@ export function Dashboard({
   stagedCount: number;
   onAccounts: () => void;
   onBudgets: (id: number) => void;
+  onSpendingFlow: () => void;
 }) {
   const { viewTransactions } = useTransactionAccess();
   const [budgetSort, setBudgetSort] = useState("alphabetical");
@@ -142,7 +143,6 @@ export function Dashboard({
         hasTargets={d.has_targets && d.budget_cents > 0}
         account={account}
       />
-      {!loading && <SpendingSankey entries={d.spending_breakdown || []} total={d.spent_cents} />}
       <div className="dashboard-grid">
         <section
           className="panel spending-panel"
@@ -168,11 +168,12 @@ export function Dashboard({
                   <option value="remaining">Remaining: lowest first</option>
                 </select>
               </Field>
-              {d.has_targets && d.spending_groups?.length > 0 && (
-                <Button onClick={() => onBudgets(d.period.id)}>
-                  Edit budgets
-                </Button>
-              )}
+              <ActionMenu label="Spending actions">
+                {d.has_targets && d.spending_groups?.length > 0 && (
+                  <Button variant="quiet" onClick={() => onBudgets(d.period.id)}>Edit budgets</Button>
+                )}
+                <Button variant="quiet" onClick={onSpendingFlow}>Sankey graph</Button>
+              </ActionMenu>
             </div>
           </div>
           {!d.spending_groups?.length ? (

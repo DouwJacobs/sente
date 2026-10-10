@@ -5,6 +5,19 @@ async function signIn(page: import("@playwright/test").Page) {
   await page.getByLabel("Username", { exact: true }).fill("demo");
   await page.getByLabel("Password", { exact: true }).fill("synthetic-browser-password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+  await expect(page.locator(".spending-sankey")).toHaveCount(0);
+  const menu = page.getByLabel("Spending actions", { exact: true });
+  await menu.click();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeFocused();
+  await page.keyboard.press("Enter");
+  const action = page.getByRole("button", { name: "Sankey graph", exact: true });
+  await expect(action).toHaveCSS("border-top-width", "0px");
+  await action.hover();
+  await expect(action).toHaveCSS("border-top-width", "0px");
+  await action.click();
+  await expect(page.getByRole("heading", { name: "Sankey graph", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Spending flow", exact: true })).toBeVisible();
 }
 
@@ -47,6 +60,7 @@ for (const theme of ["light", "dark"]) for (const width of [360, 390, 800, 1280]
     }
     expect(await chart.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
     expect(await chart.locator(".sankey-chart").evaluate(el => el.scrollWidth <= el.clientWidth + 1 && el.scrollHeight <= el.clientHeight + 1)).toBe(true);
+    await expect(chart.locator("summary")).toHaveCSS("padding-left", "12px");
     await chart.locator("summary").click();
     await expect(chart.getByRole("table")).toContainText("Groceries with a very long readable category name");
     await expect(chart.getByRole("table")).toContainText("20");
@@ -56,6 +70,13 @@ for (const theme of ["light", "dark"]) for (const width of [360, 390, 800, 1280]
     await expect(chart.locator(".sankey-total")).toContainText("50,00");
     await chart.locator("summary").click();
     await expect(chart.getByRole("table")).toContainText("Uncategorised");
+    await page.getByRole("button", { name: "Back to dashboard", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+    await expect(page.getByLabel("Accounts", { exact: true })).toHaveValue("3");
+    await expect(page.locator(".spending-sankey")).toHaveCount(0);
+    await expect(page.locator("#main-content")).toBeFocused();
+    await page.getByLabel("Spending actions", { exact: true }).click();
+    await expect(page.getByRole("button", { name: "Edit budgets", exact: true })).toHaveCount(0);
   });
 }
 
@@ -117,9 +138,9 @@ test("net refunds, zero flows, empty, loading and request failures", async ({ pa
   await expect(chart).toContainText("Net refunds");
   mode = "failure";
   await page.getByLabel("Accounts", { exact: true }).selectOption("");
-  await expect(page.getByText("Dashboard unavailable", { exact: true })).toBeVisible();
+  await expect(page.getByText("Spending flow unavailable", { exact: true })).toBeVisible();
   await expect(chart).toHaveCount(0);
   mode = "refund";
-  await page.getByRole("button", { name: "Retry dashboard", exact: true }).click();
+  await page.getByRole("button", { name: "Retry spending flow", exact: true }).click();
   await expect(chart).toContainText("Net refunds");
 });

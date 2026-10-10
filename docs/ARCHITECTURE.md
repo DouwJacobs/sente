@@ -134,5 +134,7 @@ the MCP output allowlist. No financial write service, schema migration or consen
 
 `features/dashboard/spendingFlow.ts` separates net totals from renderable positive
 flows; `SpendingSankey.tsx` owns proportional SVG geometry, node labels and the
-accessible responsive table. The containing card observes its own width, avoiding
+accessible responsive table. `SpendingFlowPage.tsx` owns the dedicated page's cancellable
+summary request, loading/error/retry and back action. App retains shared account/period
+selection and navigation; Dashboard routes the existing shared ActionMenu to the page. The containing card observes its own width, avoiding
 page-wide or internal scrolling, with the total in the header on narrow screens.

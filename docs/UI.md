@@ -205,7 +205,12 @@ Application updates in About use the existing installation surface, a polite ato
 
 ## Dashboard Sankey — issue #94, 10 October 2026
 
-Spending flow is a full-width dashboard card between the daily guide and group budgets.
+Spending flow is a dedicated Sankey graph page opened from the Spending by group card's
+Spending actions hamburger menu. The dashboard does not embed the chart. Edit budgets
+lives in the same menu under its existing scope/availability rules. Menu items use quiet
+borderless buttons, including on hover, while preserving shared focus and hover feedback.
+The page retains the selected period/account controls and has Back to dashboard, which
+preserves scope and returns keyboard focus to main content.
 Ribbons and node heights use one proportional scale without minimum monetary node heights.
 Names and amounts sit immediately beside the centre of their actual node, on the shared
 surface background, so labels cannot be mistaken for a neighbouring flow. Keep full names
@@ -214,7 +219,8 @@ without internal horizontal or vertical scrolling and grows naturally with categ
 Below 620px of available chart width, the header owns Total spending and the drawing shows
 groups → categories; desktop also draws the total node. Preserve every group/category,
 rather than dropping small amounts to fit. The breakdown has a keyboard-operable disclosure
-and responsive table rows on phones; it has no internal scrollbar.
+and responsive table rows on phones; it has no internal scrollbar. Its summary has
+12px of left padding and 36px of right space, retaining a 44px target.
 
 Use shared accent/surface/text tokens in both themes. No flow animations or automatic
 financial mutations. Scope refresh hides the old chart until the current response is

@@ -10,7 +10,7 @@ for(const theme of ['light','dark'])for(const width of [1280,360])test(`group/ca
  })
  await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Spending by group'})).toBeVisible()
- const sortBox=await page.getByLabel('Sort budgets',{exact:true}).boundingBox(),editBox=await page.getByRole('button',{name:'Edit budgets',exact:true}).boundingBox()
+ const sortBox=await page.getByLabel('Sort budgets',{exact:true}).boundingBox(),editBox=await page.getByLabel("Spending actions", { exact: true }).boundingBox()
  expect(Math.abs(sortBox!.y-editBox!.y)).toBeLessThan(2)
  expect(Math.abs(sortBox!.height-editBox!.height)).toBeLessThan(2)
  const buckets=page.getByRole('region',{name:'Spending by group',exact:true}).locator('.spending-bucket:not(.income-bucket)')
@@ -40,7 +40,7 @@ for(const theme of ['light','dark'])for(const width of [1280,360])test(`group/ca
   expect(Math.abs(summary!.x-child!.x)).toBeLessThan(2)
  }
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
- await page.getByRole('button',{name:'Edit budgets',exact:true}).click()
+ await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole('button',{name:'Edit budgets',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Budgets',exact:true})).toBeVisible()
  const group=page.getByRole('region',{name:'No spending group budget',exact:true})
  await group.locator('.budget-group-summary').click()
@@ -75,7 +75,7 @@ test('limits remain available before spending begins',async({page})=>{
 for(const width of [1280,360])test(`build independent category budgets and inherited group totals at ${width}`,async({page})=>{
  await page.setViewportSize({width,height:900})
  await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click()
- await page.getByRole('button',{name:'Edit budgets',exact:true}).click()
+ await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole('button',{name:'Edit budgets',exact:true}).click()
  for(const [id,name,amount] of [['1','Day-to-day','1000.00'],['4','Exceptions','300.00']]){
   const builder=page.locator('.budget-groups-view')
   await builder.getByRole('button',{name:'Add group',exact:true}).click()

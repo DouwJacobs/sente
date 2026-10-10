@@ -103,8 +103,10 @@ Application release awareness in Settings → About compares the installed publi
 
 ## Dashboard spending flow — issue #94
 
-The dashboard shows actual allocation spending as Total spending → Spending groups →
-Categories for its selected saved period/account scope. It shares dashboard authorization,
+The dashboard Spending by group card's hamburger menu opens a dedicated Sankey graph
+page showing actual allocation spending as Total spending → Spending groups →
+Categories for its selected saved period/account scope. Edit budgets lives in the same
+menu. Back to dashboard preserves the selected scope. It shares dashboard authorization,
 assigned household periods and inclusive private-account period dates. Splits count once
 through allocations; refunds reduce spending; transfers are excluded. Uncategorised
 expenses are explicit. The full group/category breakdown is independent of dashboard

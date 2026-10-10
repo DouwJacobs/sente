@@ -226,3 +226,18 @@ MCP impact: `spending_breakdown` is browser-only and excluded by the existing ou
 allowlist, with a summary non-disclosure regression assertion. Existing tools, schemas,
 permissions, consent, proposals/audits and financial write services remain unchanged.
 No migration. No chart dependency added.
+
+## Dashboard action menu and dedicated Sankey page — 10 October 2026
+
+Owner requested a quieter dashboard: removed the embedded chart and moved Edit budgets
+and Sankey graph into the Spending by group card's shared hamburger menu. SpendingFlowPage
+owns its cancellable aggregate request and loading/error/retry; App shares period/account
+selection across dashboard and chart. Back to dashboard preserves scope and focuses main
+content. Parent dashboard navigation remains selected on the chart page.
+
+Spending breakdown now has the shared 12px left inset/36px right reserve. Spending menu
+items are quiet and borderless at rest/hover, preserving focus and interaction feedback.
+UI guidance and the repository Sente experience skill record the accepted behavior.
+Tests use the real menu actions before existing budget workflows. This is browser
+presentation/navigation only: no server financial arithmetic, aggregate shape, MCP
+tools/schema/allowlist/consent, proposal/audit, permissions or migration changes.

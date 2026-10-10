@@ -115,3 +115,13 @@ Preserve keyboard focus rings independently of hover. Dialog Escape restores the
 Use synthetic data and the repository's disposable `scripts/test-browser.py` runner. Run production build and unit tests, then experience, polish, theme-states, global-search, budget-group-interaction, transaction-filters, mobile-core and toasts browser specs for shared-control changes. For filter/motion work also run filter-layout-motion. For density refinements select affected specs from density-refinements, editor-layout, core-improvements, ui-hierarchy, workspace-controls, settings, onboarding, rules and budget-category-editor. Local feature-only changes use focused affected checks; the full shared-control set applies when shared primitives or tokens change. Behavior checks must exercise the affected real callbacks and relevant invariants: filter clearing/review completion for those flows, error recovery, focus restoration, reduced motion for motion changes, and 44px mobile actions. Check both themes at 360/390px, an intermediate width and desktop. Keep full signed amounts and long names readable.
 
 Record actual passed checks and any limits in docs/VERIFICATION.md. Automated geometry does not constitute manual visual or physical-device verification. Keep docs/UI.md synchronized and update this skill when implemented decisions change. Presentation work does not expand MCP tools or financial access.
+
+## Dashboard spending menu and Sankey page
+
+Spending by group keeps Sort budgets visible and places Edit budgets and Sankey graph
+inside one shared ActionMenu labelled Spending actions. Use quiet borderless menu items,
+including hover; keep shared focus rings, neutral hover and 44px targets. Preserve the
+existing Edit budgets scope/availability. The chart belongs on its dedicated Sankey graph
+page, retaining account/period selectors and Back to dashboard without resetting scope.
+The Spending breakdown disclosure keeps 12px left padding and 36px right space.
+See docs/UI.md for node labels, proportional sizing and responsive/table behavior.

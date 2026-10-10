@@ -83,3 +83,7 @@ Dashboard flow ownership: `internal/app/dashboard_spending.go` aggregates the co
 authorized group/category allocation snapshot for the browser. Frontend
 `features/dashboard/spendingFlow.ts` owns positive/net reconciliation and
 `SpendingSankey.tsx` owns the SVG and accessible breakdown.
+
+`features/dashboard/SpendingFlowPage.tsx` owns the dedicated Sankey page, its
+cancellable summary request and loading/error/back workflow. App owns navigation and
+preserves account/period scope; Dashboard owns the spending-card action menu.

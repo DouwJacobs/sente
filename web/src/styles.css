@@ -3265,7 +3265,7 @@ body:has(dialog[open]) { overflow:hidden; }
 .sankey-label strong { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .sankey-label span { font-variant-numeric: tabular-nums; font-size: 11px; white-space: nowrap; }
 .sankey-breakdown { margin-top: 16px; }
-.sankey-breakdown > summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.sankey-breakdown > summary { min-height: 44px; padding: 12px 36px 12px 12px; cursor: pointer; }
 .sankey-breakdown table { width: 100%; table-layout: fixed; }
 .sankey-breakdown th, .sankey-breakdown td { padding: 12px; text-align: left; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 @media (max-width: 760px) {
@@ -3277,3 +3277,5 @@ body:has(dialog[open]) { overflow:hidden; }
   .sankey-breakdown th { grid-column: 1 / -1; }
   .sankey-breakdown td::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); }
 }
+
+.spending-controls .account-action-menu .button { border: 0; }

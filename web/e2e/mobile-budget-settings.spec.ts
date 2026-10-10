@@ -40,7 +40,7 @@ for(const {viewport,theme} of workflowCases) {
   const detail=page.getByRole('dialog');
   for(const value of await detail.locator('.budget-figure strong').all()) await moneyFits(page,value,'category modal amount');
   await detail.getByRole('button',{name:'Close',exact:true}).click();
-  await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
+  await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
   const section=page.getByRole('region',{name:groupName+' budget',exact:true});
   await section.locator('.budget-group-summary').click();
   await moneyFits(page,section.locator('.budget-group-amount'),'group total');

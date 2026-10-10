@@ -733,3 +733,26 @@ period dates, private/hidden access and MCP non-disclosure. The extra broad
 `go test ./... -timeout=30m` run was stopped after 7.6 minutes once the affected
 checks passed; it is not a full-suite pass. Its completed classification, ledger,
 money, releases and statements packages passed.
+
+## Spending action menu and dedicated Sankey page — 10 October 2026
+
+Frontend tests: all 20 passed. Production build passed (existing Vite main-chunk
+size advisory remains). All 47 synthetic browser cases passed:
+dashboard-sankey (10), dashboard-buckets (7), dashboard-connections (4),
+budget-category-editor (2), budget-group-interaction (4), mobile-budget-settings (20).
+Artifacts: `web/test-results/run-f1n0jopr` (ignored).
+
+New-page checks cover a chart-free dashboard; native hamburger keyboard opening,
+Escape/focus restoration; borderless menu items at rest and hover; menu-to-chart
+navigation; Back to dashboard preserving account scope and focusing main content;
+12px Spending breakdown inset; chart proportions/aligned labels/no internal scrolling
+in both themes at 360/390/800/1280px; authorized API reconciliation; empty, refund,
+zero, loading, failure and retry states. Existing budget editors, paged categories,
+hover/touch behavior, layouts, short landscape and settings workflows passed after
+routing their Edit budgets actions through the new menu.
+
+No manual visual/physical-device inspection, production financial data or deployment.
+No backend financial calculation or API shape changed in this follow-up; prior financial
+and MCP coverage remains applicable. This navigation/presentation change remains
+browser-only and does not change MCP tools, schemas, output allowlists, permissions,
+consent, proposals/audits, shared financial services or migrations.
