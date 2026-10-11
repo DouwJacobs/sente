@@ -786,3 +786,10 @@ the remaining merge gates. No manual visual inspection is claimed.
 This dependency/type/icon change remains browser-only: no MCP tools, input
 schemas, output allowlists, permissions, consent, proposals/audits, shared
 financial services or database migrations change.
+
+The upgraded browser run exposed a configuration geometry test race: its three
+bounds were measured across the asynchronous starter-source load. The test now
+waits for the starter heading and loading-status removal before measuring,
+retaining the original equal-spacing assertion. Both desktop and 360px import/
+coexistence/replacement/export cases passed; the unchanged dependency baseline
+also passed. No product layout change or relaxed geometry assertion is involved.

@@ -33,6 +33,8 @@ for (const width of [1440, 360])
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await login(page, width);
+    await expect(page.getByRole("heading", { name: "Sente starter configuration", exact: true })).toBeVisible();
+    await expect(page.getByText("Loading configuration sources", { exact: true })).toBeHidden();
     const portable = await page.getByRole("heading", { name: "Portable configuration", exact: true }).locator("..").locator("..").boundingBox();
     const forms = await page.locator(".configuration-source-forms").boundingBox();
     const sources = await page.getByRole("heading", { name: "Configuration sources", exact: true }).locator("..").boundingBox();
