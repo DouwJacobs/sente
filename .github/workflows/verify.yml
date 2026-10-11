@@ -104,13 +104,13 @@ jobs:
         run: python3 scripts/ci-evidence.py record
       - name: Store exact-source verification evidence
         if: steps.scope.outputs.source == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: source-verification
           path: work/test-audit/source-verification.json
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: verification-results-and-timings
