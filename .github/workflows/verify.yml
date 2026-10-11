@@ -84,7 +84,7 @@ jobs:
         run: node scripts/test-fnb-dom.mjs
       - name: Pull-request browser workflows
         if: github.event_name == 'pull_request' && !inputs.full && steps.scope.outputs.frontend == 'true'
-        timeout-minutes: 10
+        timeout-minutes: 20
         env:
           E2E_CHANGED_SPECS: ${{ steps.scope.outputs.browser_specs }}
         run: npm run test:pr

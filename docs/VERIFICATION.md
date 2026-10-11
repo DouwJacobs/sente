@@ -756,3 +756,16 @@ No backend financial calculation or API shape changed in this follow-up; prior f
 and MCP coverage remains applicable. This navigation/presentation change remains
 browser-only and does not change MCP tools, schemas, output allowlists, permissions,
 consent, proposals/audits, shared financial services or migrations.
+
+## Browser CI timeout — 11 October 2026
+
+Development → main PR #93 run 38063133034 completed all 40 selected browser
+specs without an assertion failure, but elapsed 605 seconds exceeded its
+10-minute step deadline. The pull-request browser deadline now matches the
+complete suite's 20 minutes; the job remains bounded to 30 minutes and every
+existing test/scope/evidence gate remains enabled.
+
+This is CI configuration only. No application behavior, financial calculation,
+MCP tool/schema/allowlist/permission/consent/proposal/audit/service or migration
+changes. CI regression scripts and diff checks are the local verification;
+GitHub checks must pass before merging.
