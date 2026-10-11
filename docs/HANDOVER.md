@@ -254,3 +254,20 @@ This is CI configuration only. No application behavior, financial calculation,
 MCP tool/schema/allowlist/permission/consent/proposal/audit/service or migration
 changes. CI regression scripts and diff checks are the local verification;
 GitHub checks must pass before merging.
+
+## Dependabot frontend compatibility - 11 October 2026
+
+The grouped frontend update keeps React plugin 6 with its Vite 8 peer and adds
+explicit vite/client and Node types for TypeScript 7. About uses the existing
+Lucide CodeXml icon for the source-repository link because Lucide 1 no longer
+exports the Github brand icon. Link text, URL, accessibility and layout remain.
+
+In the isolated /home/douw/finance-tracker-deps WSL worktree, npm ci reported
+zero vulnerabilities, all 20 frontend unit tests and the production build passed.
+All seven synthetic About/update-awareness cases passed across phone/desktop
+and light/dark themes. The configured PR browser suite and GitHub checks are
+the remaining merge gates. No manual visual inspection is claimed.
+
+This dependency/type/icon change remains browser-only: no MCP tools, input
+schemas, output allowlists, permissions, consent, proposals/audits, shared
+financial services or database migrations change.
