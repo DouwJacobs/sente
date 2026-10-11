@@ -793,3 +793,17 @@ waits for the starter heading and loading-status removal before measuring,
 retaining the original equal-spacing assertion. Both desktop and 360px import/
 coexistence/replacement/export cases passed; the unchanged dependency baseline
 also passed. No product layout change or relaxed geometry assertion is involved.
+
+## Dependabot Docker image gate - 11 October 2026
+
+The grouped Docker update targets development with pinned Node 26.10.0 and
+Alpine 3.24. Existing source CI does not build Dockerfile updates. A separate
+credential-free PR image workflow now builds the exact checked-out revision on
+linux/amd64 and runs the existing hardened image acceptance with disposable
+synthetic volumes, including onboarding, metadata, persistence, backup/restore
+and the frozen schema-22 upgrade. It never publishes or deploys an image.
+
+Local Docker Desktop startup failed, so no local image pass is claimed.
+GitHub image and source checks are required for this merge decision.
+No application financial behavior, database migration or MCP tools, schemas,
+output allowlists, permissions, consent, proposals/audits or services change.
