@@ -40,7 +40,7 @@ for(const {viewport,theme} of workflowCases) {
   const detail=page.getByRole('dialog');
   for(const value of await detail.locator('.budget-figure strong').all()) await moneyFits(page,value,'category modal amount');
   await detail.getByRole('button',{name:'Close',exact:true}).click();
-  await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
+  await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
   const section=page.getByRole('region',{name:groupName+' budget',exact:true});
   await section.locator('.budget-group-summary').click();
   await moneyFits(page,section.locator('.budget-group-amount'),'group total');
@@ -61,6 +61,7 @@ for(const {viewport,theme} of workflowCases) {
   await nested.getByRole('button',{name:'Save changes',exact:true}).click();
   await expect(nested.getByLabel('Category',{exact:true})).toHaveAttribute('aria-invalid','true');
   await page.keyboard.press('Escape');
+  await page.locator('.budget-period-head .toolbar-actions>details>summary').first().click();
   await page.getByRole('button',{name:'View spending',exact:true}).click();
   await page.getByLabel('Accounts',{exact:true}).selectOption('3');
   await expect(page.getByRole('button',{name:'Edit budgets',exact:true})).toHaveCount(0);
@@ -177,7 +178,7 @@ for(const width of [599,600,601,759,760,761,899,900,901,1024]) test(`responsive 
  const about=page.getByRole('tab',{name:'About',exact:true});await expect(about).toBeFocused();
  await expect.poll(async()=>{const a=(await about.boundingBox())!,b=(await tabs.boundingBox())!;return a.x>=b.x-1&&a.x+a.width<=b.x+b.width+1}).toBe(true);
  await noOverflow(page);
- await navigate(page,'Budgets');await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
+ await navigate(page,'Budgets');
  const group=page.getByRole('region',{name:'No spending group budget',exact:true});
  await group.locator('.budget-group-summary').click();
  await group.getByRole('button',{name:'Edit budget for Groceries in No spending group',exact:true}).click();
@@ -223,7 +224,6 @@ for(const {width,theme} of [{width:360,theme:'dark'},{width:1440,theme:'light'}]
  await navigate(page,'Budgets');
  for(const value of await page.locator('.budget-periods-panel .budget-total strong,.budget-periods-panel .line strong').all())await moneyFits(page,value,'budget list amount');
  await noOverflow(page);
- await page.getByRole('button',{name:'Edit budgets',exact:true}).click();
  const builder=page.locator('.budget-groups-view');
  await expect(builder.getByText('Start building your budget',{exact:true})).toBeVisible();
  await builder.getByRole('button',{name:'Add group',exact:true}).click();

@@ -117,3 +117,24 @@ Migrations 29/30 add personal category/group-combination preferences and interna
 
 
 Issue #71: `features/budgets/BudgetGroups.tsx` owns the paged on-page group/category hierarchy and group membership dialogs; `CategoryBudgetModal.tsx` owns the shared focused add/edit draft used by Budgets and SpendingBucket. Dashboard routes its general Edit budgets action to Budgets; category drill-down keeps its nested editor. Category-budget load failures block writes, and saves retain the displayed period version for concurrency checks. The existing browser budget endpoint commits amount/recurrence and optional personal alert changes together. No backend/schema or MCP contract change.
+
+
+Issue #75: `mcp_budget_alerts.go` owns typed single-scope personal alert reads and exact batch proposal adapters. Independent default-off read/change consent in `mcp_permissions.go` bounds household-wide preferences; adapters call `saveBudgetAlertPreferencesTx` and `baselineBudgetAlertPreferencesTx` in the existing serialized proposal transaction. Before/after scope preferences, optimistic versions, stored result and audits commit atomically. No schema migration, notification inbox or push credential exposure. Shared MCP consent fields and proposal cards present these settings in OAuth/Settings.
+
+## Application release awareness — issue #88
+
+`internal/releases` owns strict SemVer precedence, fixed public GitHub metadata retrieval, response/deadline/pagination bounds and a process-local serialized cache. `internal/app/build_info.go` exposes authenticated GET/CSRF-protected POST `/api/build/update`, with public selected metadata only. Six-hour success/five-minute failure caching, a one-minute manual cooldown and capped provider backoff bound traffic. `shared/applicationUpdate.ts` shares browser request/status state between WorkspaceShell and the About-owned ApplicationUpdate component. Stable and beta channels remain separate; no database/schema, financial service, credential, MCP contract or consent changes.
+
+## Dashboard spending flow
+
+`internal/app/dashboard_spending.go` derives the complete group/category spending
+breakdown from the dashboard's existing authorized allocation snapshot, before any
+browser pagination. The browser-only `spending_breakdown` field remains excluded by
+the MCP output allowlist. No financial write service, schema migration or consent changes.
+
+`features/dashboard/spendingFlow.ts` separates net totals from renderable positive
+flows; `SpendingSankey.tsx` owns proportional SVG geometry, node labels and the
+accessible responsive table. `SpendingFlowPage.tsx` owns the dedicated page's cancellable
+summary request, loading/error/retry and back action. App retains shared account/period
+selection and navigation; Dashboard routes the existing shared ActionMenu to the page. The containing card observes its own width, avoiding
+page-wide or internal scrolling, with the total in the header on narrow screens.

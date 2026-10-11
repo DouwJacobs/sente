@@ -6,6 +6,7 @@ import { SessionScreen } from "./features/auth/SessionScreen";
 import { useWorkspaceData } from "./features/workspace/useWorkspaceData";
 import { useAppearance } from "./shared/useAppearance";
 import { WorkspaceShell } from "./features/workspace/WorkspaceShell";
+import { SpendingFlowPage } from "./features/dashboard/SpendingFlowPage";
 import { Dashboard } from "./features/dashboard/Dashboard";
 import { type PageProps } from "./shared/types";
 import { useTask } from "./shared/useTask";
@@ -269,7 +270,7 @@ export default function App() {
     go(page);
   };
   const current =
-    !user.budget_member && view === "Dashboard" ? "Accounts" : view;
+    !user.budget_member && ["Dashboard", "Sankey graph"].includes(view) ? "Accounts" : view;
   return (
     <TransactionAccess {...props} viewTransactions={viewTransactions}>
       <PWAInstallInvitation />
@@ -343,8 +344,8 @@ export default function App() {
             }}
           />
         )}
-        {current === "Dashboard" && user.budget_member && (
-          <div className="context-bar dashboard-scope" aria-label="Dashboard scope">
+        {["Dashboard", "Sankey graph"].includes(current) && user.budget_member && (
+          <div className="context-bar dashboard-scope" aria-label={current === "Dashboard" ? "Dashboard scope" : "Spending flow scope"}>
             {user.budget_member && (
               <div className="context-filter">
                 <PagedSelect
@@ -363,9 +364,7 @@ export default function App() {
                   value={period}
                   onChange={setPeriod}
                   options={data.periods}
-                  empty={
-                    current === "Dashboard" ? "Current period" : "All periods"
-                  }
+                  empty="Current period"
                   revision={revision}
                 />
               </div>
@@ -378,11 +377,7 @@ export default function App() {
                 value={account}
                 onChange={setAccount}
                 options={data.accounts}
-                empty={
-                  current === "Dashboard"
-                    ? "Household accounts"
-                    : "All accessible accounts"
-                }
+                empty="Household accounts"
                 revision={revision}
               />
             </div>
@@ -450,6 +445,15 @@ export default function App() {
             stagedCount={workCounts.imports}
             onAccounts={() => go("Accounts")}
             onBudgets={(id) => { setPeriod(String(id)); setAccount(""); go("Budgets"); }}
+            onSpendingFlow={() => go("Sankey graph")}
+          />
+        )}
+        {current === "Sankey graph" && (
+          <SpendingFlowPage {...props} period={period} account={account}
+            onBack={() => {
+              go("Dashboard");
+              requestAnimationFrame(() => document.getElementById("main-content")?.focus());
+            }}
           />
         )}
         {current === "Transactions" && (

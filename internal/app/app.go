@@ -23,6 +23,7 @@ import (
 	"time"
 
 	problemerror "finance-tracker/internal/problem"
+	"finance-tracker/internal/releases"
 	webpush "github.com/SherClockHolmes/webpush-go"
 
 	"golang.org/x/crypto/bcrypt"
@@ -33,6 +34,7 @@ import (
 var schema string
 
 type App struct {
+	releaseChecker releases.Checker
 	RequestRestart func()
 
 	mcpCursorOnce          sync.Once
@@ -447,6 +449,8 @@ func (a *App) routes() http.Handler {
 	a.configurationRoutes(m)
 	a.notificationRoutes(m)
 	m.HandleFunc("GET /api/build", wrap(a.buildInfo))
+	m.HandleFunc("GET /api/build/update", wrap(a.applicationUpdate))
+	m.HandleFunc("POST /api/build/update", wrap(a.applicationUpdate))
 	m.HandleFunc("GET /api/mcp/context", wrap(a.personalMCPContext))
 	m.HandleFunc("PUT /api/mcp/context", wrap(a.updatePersonalMCPContext))
 	m.HandleFunc("GET /api/mcp/settings", wrap(a.mcpSettings))

@@ -120,7 +120,8 @@ test('first expense category can be created inside an empty budget',async({page}
  await page.getByRole('dialog').getByRole('button',{name:'Save period',exact:true}).click()
  await expect(page.getByRole('dialog')).not.toBeVisible()
  const periodCard=page.locator('.panel').filter({has:page.getByRole('button',{name:periodName,exact:true})})
- await periodCard.getByRole('button',{name:'Edit budgets',exact:true}).click()
+ await periodCard.locator('.budget-period-head .toolbar-actions>details>summary').click()
+ await periodCard.getByRole('button',{name:'Show spending groups',exact:true}).click()
  await expect(periodCard.getByText('Start building your budget',{exact:true})).toBeVisible()
  await periodCard.getByRole('button',{name:'Add group',exact:true}).click()
  const group=page.getByRole('dialog',{name:'Add budget group',exact:true})
@@ -140,7 +141,7 @@ test('first expense category can be created inside an empty budget',async({page}
  await expect(page.getByRole('dialog')).not.toBeVisible()
  // Saving refreshes/reorders the period list; reopen the same named period.
  await expect(periodCard.locator('.budget-total')).toContainText('89,12')
- await periodCard.getByRole('button',{name:'Edit budgets',exact:true}).click()
+
  await periodCard.getByRole('button',{name:'Edit budget for First synthetic expense in Day-to-day',exact:true}).click()
  await expect(page.getByLabel('Budget amount',{exact:true})).toHaveValue('89.12')
 })

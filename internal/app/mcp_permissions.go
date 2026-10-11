@@ -12,6 +12,7 @@ import (
 )
 
 type mcpCapabilities struct {
+	ManageBudgetAlerts  bool `json:"manage_budget_alerts"`
 	ManageMerchants     bool `json:"manage_merchants"`
 	ManageMerchantRules bool `json:"manage_merchant_rules"`
 	DeleteMerchantRule  bool `json:"delete_merchant_rule"`
@@ -33,13 +34,14 @@ type mcpConstraints struct {
 	ConstrainedRules bool    `json:"constrained_rules"`
 }
 type mcpPermissions struct {
-	ReadContext   bool            `json:"read_context"`
-	ReadMerchants bool            `json:"read_merchants"`
-	SchemaVersion int             `json:"schema_version"`
-	Preset        string          `json:"preset"`
-	Automatic     mcpCapabilities `json:"automatic_approval"`
-	Capabilities  mcpCapabilities `json:"capabilities"`
-	Constraints   mcpConstraints  `json:"constraints"`
+	ReadBudgetAlerts bool            `json:"read_budget_alerts"`
+	ReadContext      bool            `json:"read_context"`
+	ReadMerchants    bool            `json:"read_merchants"`
+	SchemaVersion    int             `json:"schema_version"`
+	Preset           string          `json:"preset"`
+	Automatic        mcpCapabilities `json:"automatic_approval"`
+	Capabilities     mcpCapabilities `json:"capabilities"`
+	Constraints      mcpConstraints  `json:"constraints"`
 }
 
 func legacyMCPPermissions(write bool) mcpPermissions {
@@ -91,6 +93,8 @@ func (a *App) authorizeMCPExact(q queryer, identity mcpIdentity, exact mcpExactC
 	switch b.Operation {
 	case "save_merchant", "save_merchant_rule", "assign_merchants", "delete_merchant_rule":
 		return a.authorizeMCPMerchant(q, identity, p, exact)
+	case "update_budget_alerts":
+		return authorizeMCPBudgetAlerts(q, identity, p, true)
 	case "set_seen":
 		if !c.ChangeSeen || len(exact.SeenStates) == 0 {
 			return denied
@@ -296,6 +300,12 @@ func (a *App) validateMCPPermissions(q queryer, u User, p mcpPermissions) (mcpPe
 	if len(p.Constraints.AccountIDs) > 0 && p.Capabilities.UpdateBudget {
 		return p, fail(400, "Shared budget editing requires all accessible accounts")
 	}
+	if (p.ReadBudgetAlerts || p.Capabilities.ManageBudgetAlerts) && (!u.Member || len(p.Constraints.AccountIDs) > 0) {
+		return p, fail(400, "Personal budget alerts require household membership and all accessible accounts")
+	}
+	if p.Capabilities.ManageBudgetAlerts && !p.ReadBudgetAlerts {
+		return p, fail(400, "Enable personal budget alert reads for alert changes")
+	}
 	if !p.ReadMerchants && (p.Capabilities.ManageMerchants || p.Capabilities.ManageMerchantRules || p.Capabilities.DeleteMerchantRule || p.Capabilities.AssignMerchants) {
 		return p, fail(400, "Enable merchant reads for merchant changes")
 	}
@@ -397,6 +407,8 @@ func mcpRequiredCapabilities(exact mcpExactChange) mcpCapabilities {
 		}
 	case "delete_rule":
 		needed.DeleteRule = true
+	case "update_budget_alerts":
+		needed.ManageBudgetAlerts = true
 	case "update_budget":
 		needed.UpdateBudget = true
 	case "edit_transactions":

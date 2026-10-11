@@ -31,6 +31,7 @@ type mcpAllocation struct {
 	Note       *string `json:"note,omitempty"`
 }
 type mcpChange struct {
+	BudgetAlerts    []mcpBudgetAlertInput   `json:"budget_alerts,omitempty"`
 	Merchant        *mcpMerchantInput       `json:"merchant,omitempty"`
 	MerchantRule    *merchantRuleInput      `json:"merchant_rule,omitempty"`
 	MerchantItems   []mcpMerchantAssignment `json:"merchant_items,omitempty"`
@@ -51,12 +52,14 @@ type mcpExactEdit struct {
 	After  transactionInput `json:"after"`
 }
 type mcpExactChange struct {
-	AutomaticApproval bool           `json:"automatic_approval,omitempty"`
-	Change            mcpChange      `json:"change"`
-	Transactions      []mcpExactEdit `json:"transactions,omitempty"`
-	SeenStates        []mcpSeenState `json:"seen_states,omitempty"`
-	Before            any            `json:"before,omitempty"`
-	BudgetAfter       any            `json:"budget_after,omitempty"`
+	AutomaticApproval bool                    `json:"automatic_approval,omitempty"`
+	Change            mcpChange               `json:"change"`
+	Transactions      []mcpExactEdit          `json:"transactions,omitempty"`
+	SeenStates        []mcpSeenState          `json:"seen_states,omitempty"`
+	Before            any                     `json:"before,omitempty"`
+	BudgetAlertBefore []budgetAlertPreference `json:"budget_alert_before,omitempty"`
+	BudgetAlertAfter  []budgetAlertPreference `json:"budget_alert_after,omitempty"`
+	BudgetAfter       any                     `json:"budget_after,omitempty"`
 }
 type mcpProposalID struct {
 	ProposalID string `json:"proposal_id"`
@@ -72,6 +75,9 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 	a.mu.Lock()
 	tx, err := a.DB.Begin()
 	if err == nil {
+		if in.Operation == "update_budget_alerts" {
+			exact.BudgetAlertBefore, err = prepareMCPBudgetAlerts(tx, identity, in)
+		}
 		if in.Operation == "save_merchant" {
 			exact.Before, err = data(tx, "SELECT id,account_id,name,version,logo_data FROM merchants WHERE id=?", in.ID)
 		}
@@ -187,6 +193,9 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 		}
 		if err == nil {
 			_, err = a.executeMCPChange(tx, identity, exact, "")
+			if err == nil && in.Operation == "update_budget_alerts" {
+				exact.BudgetAlertAfter, err = readMCPBudgetAlertSelection(tx, identity.User, in.BudgetAlerts)
+			}
 			if err == nil && in.Operation == "update_budget" {
 				exact.BudgetAfter, err = budgetEvidenceTx(tx, in.ID)
 			}
@@ -273,6 +282,11 @@ func (a *App) executeMCPChange(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	b := exact.Change
 	result := map[string]any{"ok": true}
 	switch b.Operation {
+	case "update_budget_alerts":
+		if err := a.applyMCPBudgetAlerts(tx, identity, exact); err != nil {
+			return nil, err
+		}
+		result["updated"] = len(b.BudgetAlerts)
 	case "save_merchant":
 		id, err := a.saveMCPMerchant(tx, u, b.ID, b.Merchant)
 		if err != nil {
@@ -625,6 +639,15 @@ func (a *App) mcpAuditEvidence(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	evidence := []map[string]any{}
 	b := exact.Change
 	switch b.Operation {
+	case "update_budget_alerts":
+		after, err := readMCPBudgetAlertSelection(tx, identity.User, b.BudgetAlerts)
+		if err != nil {
+			return nil, err
+		}
+		if !sameMCPBudgetAlerts(after, exact.BudgetAlertAfter) {
+			return nil, fail(409, "Budget alert effects changed; prepare the proposal again")
+		}
+		evidence = append(evidence, map[string]any{"entity": "personal_budget_alerts", "user_id": identity.User.ID, "before": exact.BudgetAlertBefore, "after": after})
 	case "save_merchant", "save_merchant_rule", "delete_merchant_rule":
 		table, entity := "merchants", "merchant"
 		if b.Operation == "save_merchant_rule" {

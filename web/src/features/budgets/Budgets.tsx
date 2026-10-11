@@ -11,6 +11,7 @@ import {
   Badge,
   Empty,
   Modal,
+  Reveal,
   validateFields,
   Tabs,
   Pagination,
@@ -86,26 +87,27 @@ export function Budgets({
           <p className="muted">
             Set limits for each spending group and category.
           </p>
-          <Button
+          {(periods.loading || periods.error || visiblePeriods.length > 0) && <Button
             variant="primary"
             onClick={() => startEdit({ ...data.next, version: 0 })}
           >
             <Plus size={17} />
             New period
-          </Button>
+          </Button>}
         </div>
         <ListStatus list={periods} />
-        {!periods.loading && !visiblePeriods.length ? (
+        {!periods.loading && !periods.error && !visiblePeriods.length ? (
           <section className="panel">
-            <Empty title="No budget periods">
-              Create your first period to start budgeting.
+            <Empty kind="budget" title="No budget periods">
+              <p>Choose your dates, then set spending limits. Your first period can follow a calendar month or your payday.</p>
+              <Button variant="primary" onClick={() => startEdit({ ...data.next, version: 0 })}>New period</Button>
             </Empty>
           </section>
         ) : (
           visiblePeriods.map((p) => (
             <section className="panel" key={p.id}>
-              <div className="section-head">
-                <div>
+              <div className="section-head budget-period-head">
+                <div className="budget-period-identity">
                   <h2>
                     <button
                       type="button"
@@ -115,20 +117,24 @@ export function Budgets({
                     >
                       {p.name}
                     </button>{" "}
-                    {String(p.id) === period && <Badge>Selected period</Badge>}
+                    {String(p.id) === period && <span className="budget-selected-period"><Badge>Selected period</Badge></span>}
                   </h2>
                   <p className="muted">
                     {p.start_date} — {p.end_date}
                   </p>
                 </div>
                 <div className="toolbar-actions">
-                  <Button variant="primary" aria-expanded={expandedPeriod === String(p.id)} aria-controls={"category-budgets-" + p.id} onClick={() => setExpandedPeriod(String(p.id))}>
-                    Edit budgets
-                  </Button>
-                  <Button variant="quiet" onClick={() => onDashboard(p.id)}>
-                    View spending
-                  </Button>
                   <ActionMenu label={"Actions for " + p.name}>
+                    <Button variant="quiet" onClick={() => onDashboard(p.id)}>
+                      View spending
+                    </Button>
+                    {expandedPeriod !== String(p.id) && <Button
+                      variant="quiet"
+                      aria-controls={"category-budgets-" + p.id}
+                      onClick={() => setExpandedPeriod(String(p.id))}
+                    >
+                      Show spending groups
+                    </Button>}
                     <Button variant="quiet" onClick={() => startEdit(p)}>
                       Edit dates
                     </Button>
@@ -142,9 +148,9 @@ export function Budgets({
                 <span>Total budget</span>
                 <strong>{money(p.target_total)}</strong>
               </div>
-              <div id={"category-budgets-" + p.id} hidden={expandedPeriod !== String(p.id)}>
-                {expandedPeriod === String(p.id) && <BudgetGroups period={p} revision={revision} notify={notify} refresh={refresh} />}
-              </div>
+              <Reveal id={"category-budgets-" + p.id} open={expandedPeriod === String(p.id)}>
+                {<BudgetGroups period={p} revision={revision} notify={notify} refresh={refresh} />}
+              </Reveal>
             </section>
           ))
         )}

@@ -13,12 +13,14 @@ export const capabilityLabels: Record<string, string> = {
   create_rule: "Create rules",
   update_rule: "Edit rules",
   delete_rule: "Delete rules",
+  manage_budget_alerts: "Change your personal budget alert switches and thresholds",
   update_budget: "Edit shared budget limits",
   change_seen: "Mark your transactions seen or unseen",
 };
 export const reviewPermissions = () => ({
   schema_version: 1,
   preset: "review",
+  read_budget_alerts: false,
   read_context: false,
   read_merchants: false,
   automatic_approval: {},
@@ -38,6 +40,7 @@ export function selectPreset(p: Row, preset: string): Row {
       k,
       (preset === "finance" &&
         ![
+          "manage_budget_alerts",
           "change_seen",
           "manage_merchants",
           "manage_merchant_rules",
@@ -106,6 +109,11 @@ export function PermissionSummary({
             ? "Merchant names, rules and requested logos can be read."
             : "Merchant names, rules and logos are not shared."}
         </li>
+        <li>
+          {value.read_budget_alerts
+            ? "Your personal budget alert switches and thresholds can be read."
+            : "Your personal budget alert settings are not shared."}
+        </li>
       </ul>
       {granted.length ? (
         <>
@@ -171,8 +179,9 @@ export function MCPPermissionFields({
             value.capabilities.create_rule &&
             !ids.length
           ? "Select at least one account for new rules."
-          : ids.length && value.capabilities.update_budget
-            ? "Shared budget editing requires all accessible accounts."
+          : (ids.length || value.constraints.selected_accounts) &&
+              (value.capabilities.update_budget || value.read_budget_alerts || value.capabilities.manage_budget_alerts)
+            ? "Shared budgets and personal budget alerts require all accessible accounts."
             : "";
   const merchantError =
     [
@@ -185,6 +194,9 @@ export function MCPPermissionFields({
       : "";
   const constraintError =
     merchantError ||
+    (value.capabilities.manage_budget_alerts && !value.read_budget_alerts
+      ? "Allow personal budget alert reads before enabling alert changes."
+      : "") ||
     (value.constraints.missing_categories_only &&
     (value.capabilities.financial_edit || value.capabilities.recategorize)
       ? "Missing-category-only access cannot include financial edits or recategorization."
@@ -251,6 +263,18 @@ export function MCPPermissionFields({
           />
           Read merchant names, naming rules and logos
         </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={!!value.read_budget_alerts}
+            onChange={(e) => onChange({ ...value, read_budget_alerts: e.target.checked })}
+          />
+          Read your personal budget alert switches and thresholds
+        </label>
+        <p className="footnote">
+          Requires household access and all accessible accounts. Does not share
+          notification messages, global channel preferences or push devices.
+        </p>
         <Field
           label="Account access"
           validate={() => scopeError}
@@ -328,7 +352,7 @@ export function MCPPermissionFields({
               ],
               [
                 "Rules and budgets",
-                ["create_rule", "update_rule", "delete_rule", "update_budget"],
+                ["create_rule", "update_rule", "delete_rule", "update_budget", "manage_budget_alerts"],
               ],
               ["Transaction details", ["financial_edit", "change_seen"]],
             ].map(([title, keys]) => (

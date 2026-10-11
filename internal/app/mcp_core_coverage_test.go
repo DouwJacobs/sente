@@ -26,7 +26,7 @@ func TestMCPCoreReadCoverage(t *testing.T) {
 		t.Fatal(limits)
 	}
 	summary, failed := mcpCall(t, e, token, "get_budget_summary", map[string]any{"filters": map[string]string{"period": "1"}})
-	if failed || summary["spending_groups"] == nil || summary["group_total"] == nil {
+	if failed || summary["spending_groups"] == nil || summary["group_total"] == nil || summary["spending_breakdown"] != nil {
 		t.Fatal(summary)
 	}
 	trends, failed := mcpCall(t, e, token, "get_budget_trends", map[string]any{"filters": map[string]string{"period": "1", "count": "1"}})

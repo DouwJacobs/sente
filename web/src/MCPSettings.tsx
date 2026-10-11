@@ -109,7 +109,7 @@ export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
           the agent and removes its pending proposals.
         </p>
         {state && !state.connections.length && (
-          <Empty title="No connected agents">
+          <Empty kind="connection" title="No connected agents">
             Connect using the endpoint above, then approve the browser request.
           </Empty>
         )}
@@ -153,7 +153,7 @@ export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
           change types you enabled for that agent.
         </p>
         {state && !state.proposals.length && (
-          <Empty title="No change proposals">
+          <Empty kind="complete" title="No change proposals">
             Ask your agent to prepare a change, then refresh this list. Approved
             proposals remain here until applied or expired.
           </Empty>

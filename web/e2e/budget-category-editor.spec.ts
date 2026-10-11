@@ -5,7 +5,7 @@ test("Budgets adds and edits independent group categories with one atomic save",
   await start(page, { width: 1440, height: 900 }, "light", "saved group budgets and personal alerts");
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Budgets", exact: true })).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const groups = page.locator(".budget-groups-view");
@@ -123,7 +123,7 @@ test("Budgets loads and edits categories beyond the first page and blocks failed
   }
   const period = (await (await page.request.get("/api/periods?id=1")).json()).items[0];
   expect((await page.request.put("/api/periods/1/budget", { headers, data: { version: period.version, groups: [{ group_id: groupID, targets: rows }] } })).ok()).toBe(true);
-  await page.reload(); await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
+  await page.reload(); await page.getByLabel("Spending actions", { exact: true }).click(); await page.getByRole("button", { name: "Edit budgets", exact: true }).click();
   const current = page.getByRole("region", { name: "Paged budget group budget", exact: true });
   await current.locator(".budget-group-summary").click();
   await expect(current.locator(".budget-category-row")).toHaveCount(20);

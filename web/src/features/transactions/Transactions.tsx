@@ -40,7 +40,12 @@ export function Transactions({
   account: string;
   unassigned: boolean;
 }) {
-  const { openTransaction } = useTransactionAccess();
+  const { openTransaction, viewTransactions } = useTransactionAccess();
+  const emptyFilters = new URLSearchParams(filterQuery);
+  const defaultReview = review && emptyFilters.get('acceptance') === 'needs_category' && !period && !account && !unassigned && !importIds.length &&
+    Array.from(emptyFilters.entries()).every(([key,value]) => !value || (key === 'acceptance' && value === 'needs_category'));
+  const restricted = !!(filterQuery || period || account || unassigned || importIds.length);
+  const emptyKind = stagedCount ? 'start' : defaultReview ? 'complete' : restricted ? 'filtered' : 'start';
   const [bulk, setBulk] = useState(false);
   const [mobile, setMobile] = useState(() => window.matchMedia("(max-width:760px)").matches);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -166,10 +171,8 @@ export function Transactions({
           <span className="sr-only" role="status">{selected.length > 0 ? `${selected.length} transactions selected. Seen status applies only to you.` : ""}</span>
         </span>
         <div className="toolbar-actions">
-          {onImport && items.length > 0 && (
-            <Button onClick={onImport}>Import transactions</Button>
-          )}
           <ActionMenu label="Transaction actions">
+            {onImport && <Button variant="quiet" onClick={onImport}>Import transactions</Button>}
             {mobile && selectionMode && (
               <Button variant="quiet" disabled={busy || loading} onClick={() => { setSelectionMode(false); setSelectedRows({}); }}>Cancel selection</Button>
             )}
@@ -258,23 +261,20 @@ export function Transactions({
       )}
       {!items.length && !loading && !listError ? (
         <section className="panel transaction-panel">
-          <Empty title={"No transactions found"}>
+          <Empty kind={emptyKind} title={stagedCount ? "Your imports need attention" : defaultReview ? "You're all caught up" : restricted ? "No transactions found" : "Your transactions start here"}>
             {stagedCount > 0
               ? stagedCount +
                 (stagedCount === 1 ? " import needs" : " imports need") +
                 " attention. Resolve possible duplicates or invalid data in Import activity."
-              : review
-                ? "There is nothing to review for these accounts and dates. Clear filters to check other transactions."
-                : "Clear filters or import transactions to get started."}
-            {(filterQuery ||
-              period ||
-              account ||
-              unassigned ||
-              importIds.length > 0) && (
-              <Button onClick={onClearFilters}>Clear filters</Button>
+              : review && emptyFilters.get('acceptance') === 'needs_category'
+                ? defaultReview ? "Every transaction in your review queue has a category. New transactions that need a category will appear here." : "No transactions need a category in this view. Clear filters to check the full queue."
+                : restricted ? "No transactions match this view. Clear filters to widen your search." : "Import a bank statement to see your income and spending in one place."}
+            {restricted && !defaultReview && onClearFilters && (
+              <Button variant={stagedCount ? 'secondary' : 'primary'} onClick={onClearFilters}>Clear filters</Button>
             )}
+            {defaultReview && <Button variant="primary" onClick={() => viewTransactions({})}>View all transactions</Button>}
             {onImport && (
-              <Button onClick={onImport}>
+              <Button variant={stagedCount || (!restricted && !defaultReview) ? "primary" : "quiet"} onClick={onImport}>
                 {stagedCount ? "Resolve import issues" : "Import transactions"}
               </Button>
             )}

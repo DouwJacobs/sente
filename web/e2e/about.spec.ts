@@ -59,3 +59,63 @@ test("About retries a failed metadata request without losing the report link", a
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(page.locator(".about-build")).toBeVisible();
 });
+
+for (const { width, theme } of [{width:360,theme:"light"},{width:360,theme:"dark"},{width:1440,theme:"light"},{width:1440,theme:"dark"}]) {
+  test(`Application releases, retry and backup guidance at ${width}px in ${theme}`, async ({ page }) => {
+    let state = "available";
+    let attempts = 0;
+    await page.setViewportSize({ width, height: 900 });
+    await page.addInitScript(value => localStorage.setItem("finance-theme", value), theme);
+    await page.route("**/api/build/update", route => {
+      attempts++;
+      return route.fulfill({ json: {
+        state, channel: "beta", available_version: state === "current" ? undefined : "1.0.0-beta.10",
+        release_url: state === "current" ? undefined : "https://github.com/DouwJacobs/sente/releases/tag/v1.0.0-beta.10",
+        checked_at: "2026-10-09T00:00:00Z", stale: state === "unavailable",
+        message: state === "unavailable" ? "Release check unavailable. Try again shortly." : undefined,
+      } });
+    });
+    await page.goto("/");
+    await page.getByLabel("Username", { exact: true }).fill("demo");
+    await page.getByLabel("Password", { exact: true }).fill("synthetic-browser-password");
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
+    if (width === 1440) {
+      await page.getByRole("button", { name: "About Sente, update available: 1.0.0-beta.10", exact: true }).click();
+    } else {
+      await page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("button", { name: "More", exact: true }).click();
+      const settings = page.getByRole("navigation", { name: "More pages" }).getByRole("button", { name: "Settings Update available", exact: true });
+      await expect(settings).toBeVisible();
+      await settings.click();
+      await page.getByRole("tab", { name: "About", exact: true }).click();
+    }
+    const updates = page.getByRole("region", { name: "Application updates", exact: true });
+    await expect(updates.getByRole("status")).toContainText("Update available: 1.0.0-beta.10");
+    await expect(updates.getByRole("link", { name: "Release notes: 1.0.0-beta.10" })).toHaveAttribute("href", /releases\/tag\/v1.0.0-beta.10$/);
+    await expect(updates.getByRole("link", { name: "Upgrade and backup guide" })).toHaveAttribute("href", /#upgrade-with-a-pre-upgrade-backup$/);
+    await expect(updates).toContainText("take a backup with the installed image");
+    const check = updates.getByRole("button", { name: "Check for updates", exact: true });
+    const checkBounds = await check.boundingBox();
+    expect(checkBounds!.height).toBeGreaterThanOrEqual(44);
+    await check.focus();
+    state = "unavailable";
+    await page.keyboard.press("Enter");
+    await expect(updates.getByRole("status")).toContainText("Release check unavailable");
+    await expect(updates).toContainText("Last successful check (outdated)");
+    await expect(updates.getByRole("link", { name: "Previously found release: 1.0.0-beta.10" })).toBeVisible();
+    expect(await page.getByRole("alert").count()).toBe(0);
+    state = "current";
+    await check.click();
+    await expect(updates.getByRole("status")).toContainText("Up to date for this release channel");
+    await expect(updates.getByRole("link", { name: /Release notes|Previously found release/ })).toHaveCount(0);
+    state = "unknown";
+    await check.click();
+    await expect(updates.getByRole("status")).toContainText("Update status unknown");
+    state = "unsupported";
+    await check.click();
+    await expect(updates.getByRole("status")).toContainText("Release checks unsupported for this build");
+    await expect(check).toHaveCount(0);
+    expect(attempts).toBe(5);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  });
+}

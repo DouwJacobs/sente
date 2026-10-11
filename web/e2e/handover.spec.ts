@@ -43,7 +43,6 @@ test('branding validation, stale edits, persistence and long names',async({page,
 })
 test('budget category creation preserves other saved limits and chosen period',async({page})=>{
  await login(page);await navigate(page,'Budgets')
- await page.getByRole('button',{name:'Edit budgets',exact:true}).first().click()
  const group=page.getByRole('region',{name:'No spending group budget',exact:true})
  await group.locator('.budget-group-summary').click()
  await group.getByRole('button',{name:'Edit budget for Groceries in No spending group',exact:true}).click()
@@ -70,7 +69,6 @@ test('budget category creation preserves other saved limits and chosen period',a
  await add.getByLabel('Budget amount').fill('75.29')
  await add.getByRole('button',{name:'Save changes',exact:true}).click();await expect(add).toHaveCount(0)
  await page.reload();await navigate(page,'Budgets')
- await page.getByRole('button',{name:'Edit budgets',exact:true}).first().click()
  await group.locator('.budget-group-summary').click()
  await group.getByRole('button',{name:'Edit budget for '+name+' in No spending group',exact:true}).click()
  await expect(page.getByLabel('Budget amount',{exact:true})).toHaveValue('75.29');await page.keyboard.press('Escape')

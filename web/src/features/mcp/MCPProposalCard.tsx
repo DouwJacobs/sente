@@ -112,6 +112,19 @@ export function MCPProposalCard({
                 <span>Proposed merchant logo</span>
               </div>
             )}
+            {p.payload.budget_alert_before && (
+              <>
+                <strong>Before · your personal budget alerts</strong>
+                <pre className="mcp-code">{JSON.stringify(p.payload.budget_alert_before, null, 2)}</pre>
+                <strong>After · your personal budget alerts</strong>
+                <pre className="mcp-code">{JSON.stringify(p.payload.budget_alert_after, null, 2)}</pre>
+                <p className="footnote">
+                  A null threshold uses 75%, 90% and 100%. These settings carry
+                  across budget periods. Saving will not send historical alerts;
+                  global notification preferences still apply.
+                </p>
+              </>
+            )}
             {p.payload.budget_after && (
               <>
                 <strong>After · exact group budgets and carry-forward</strong>

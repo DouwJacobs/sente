@@ -28,6 +28,7 @@ for(const {width,theme} of desktopPhoneCases)test(`classification filters across
  await page.getByLabel('Search transactions',{exact:true}).fill('Synthetic long description')
  await expect(rows).toHaveCount(1)
  // Changing filters clears the personal seen selection.
+ await expect(page.getByText('Loading transactions',{exact:true})).toBeHidden()
  if(width===360){await rows.first().press('Space');await page.getByLabel('Transaction actions',{exact:true}).click()}else await page.getByRole('checkbox',{name:/^Select Synthetic long description/}).check()
  await expect(page.getByRole('button',{name:'Mark seen (1)',exact:true})).toBeVisible()
  await page.getByLabel('Filter by category',{exact:true}).selectOption('1')

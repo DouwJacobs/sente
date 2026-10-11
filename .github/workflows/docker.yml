@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 # Serialize all channels so version allocation and aliases cannot race.
 concurrency:
   group: sente-publication

@@ -2,12 +2,34 @@
 
 ## Branches and versions
 
-`development` is the beta channel; `main` is the stable channel. Each push runs
-full source verification for that exact commit, builds one linux/amd64 OCI image
+`development` is the beta channel; `main` is the stable channel. Each push requires
+full source coverage for that exact source tree, builds one linux/amd64 OCI image
 with SBOM/provenance, and exercises that image using disposable synthetic volumes.
 Only a successful candidate may be published. Branch pushes use the source verification
 job inside the publication workflow; the separate CI entry point handles PRs/manual
 checks, avoiding a duplicate full source suite for each branch push. A PR never receives registry secrets.
+
+Successful verification records a 30-day source-tree receipt. Publication searches
+up to 100 recent receipts and the latest 15 successful runs of each
+verification/publication workflow within a bounded lookup and reuses
+race/vet, regression, worker/demo and frontend unit/DOM checks only when the entire
+Git tree matches. PR receipts record the browser specs actually covered; publication
+runs the remaining specs. A subsequent stable release of the same beta source can
+reuse complete source coverage. Merge/squash commit IDs may differ while their
+contents match. Changed trees, missing/expired receipts, fork PRs or unavailable
+Actions evidence run checks normally. Manual publication also uses this evidence;
+manual CI verification remains a way to rerun all source checks.
+Production images are always built and accepted with their channel-specific version
+metadata. Source reuse never substitutes for image acceptance.
+
+Documentation-only PRs keep the required verification job but skip toolchains and
+source suites. Routine Dependabot updates are grouped per ecosystem/directory,
+limited to one open version PR per configuration, and checked weekly on Monday
+at 06:00 Africa/Johannesburg against development. Separate default-branch entries
+disable routine version PRs and group security updates; security fixes are alert-driven
+and are not delayed until the weekly version schedule. Dependabot reads this configuration from the default branch; changes merged only
+to development take effect after promotion to main. Every dependency PR still
+receives normal scope-based verification and matching-source reuse after merge.
 
 | Source | Git tag | Immutable image version | Mutable aliases |
 | --- | --- | --- | --- |
@@ -204,3 +226,11 @@ SBOM/provenance. Release source archives contain the exact source/build scripts 
 lockfiles; package managers retrieve the pinned third-party dependencies. Redistributors
 must fulfill applicable corresponding-source and dependency-notice obligations.
 GPL permits commercial use, selling and forks; no extra no-sale/no-fork terms apply.
+
+## Frontend release checks
+
+Settings → About shows installed build details, stable/beta update status, a newer version’s release notes and this upgrade guide. The version entry point (Settings in phone More) quietly indicates confirmed updates. A deliberate Check for updates action retries without toast noise. Local/dev, modified and unrecognized versions are unsupported. No install, download, restart or data changes occur.
+
+The server anonymously requests only the fixed public GitHub releases endpoint; no version, financial/user/household/connection context or credentials are sent. It compares strict SemVer precedence, including numeric beta identifiers, and never recommends a downgrade or a different channel. Requests have a six-second total deadline, at most three 100-release pages and a 4 MiB limit per page. Incomplete listings, malformed metadata, rate limits and connection failures produce unavailable/unknown rather than up to date. Last successful metadata is labelled outdated after failure. Successes are cached for six hours, failures for five minutes; explicit retries share a one-minute cooldown and honor provider backoff capped at one hour. Browser responses remain authenticated and non-cacheable.
+
+This checks application/container releases independently of Settings → PWA’s already-deployed browser asset refresh. Before manually upgrading, follow the pre-upgrade snapshot procedure above; image rollback does not reverse migrations.

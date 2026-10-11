@@ -12,7 +12,7 @@ export function OAuthConsent({notify,onSignOut}:Pick<PageProps,'notify'>&{onSign
  useEffect(()=>{let alive=true;api('/mcp/authorization/'+encodeURIComponent(id)).then(v=>alive&&setState(v)).catch(e=>{if(alive){setError(e.message);notify(e.message,true)}});return()=>{alive=false}},[id])
  const decide=(allow:boolean)=>run(async()=>{const result=await api('/mcp/authorization/'+encodeURIComponent(id),'POST',{allow,permissions:allow?permissions:undefined});window.location.assign(result.redirect)})
  return <main className="login"><section className="login-panel"><h1>Approve agent connection</h1>
- {error?<Empty title="Connection unavailable">{error}</Empty>:!state?<Loading>Loading connection request</Loading>:<>
+ {error?<Empty kind="error" title="Connection unavailable">{error}</Empty>:!state?<Loading>Loading connection request</Loading>:<>
  <p><strong>{state.client_name}</strong> wants to connect to Sente.</p><p className="muted">Signed in as <strong>{state.username}</strong>. The agent name is supplied by its client. Check that you started this connection.</p>
  <p className="footnote">Approval returns to {state.redirect_origin}. This request expires at {new Date(state.expires_at*1000).toLocaleTimeString('en-ZA')}.</p>
  <Form onSubmit={()=>decide(true)}><p>The agent can read the transactions and accounts you can access, plus your permitted categories, rules and budget. Bank identifiers, credentials, notes and import source details are excluded. Personal text in merchant descriptions may remain.</p>

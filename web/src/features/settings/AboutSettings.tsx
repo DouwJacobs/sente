@@ -1,3 +1,4 @@
+import { ApplicationUpdateStatus } from "./ApplicationUpdate";
 import { useEffect } from "react";
 import { ArrowUpRight, BookOpen, Github, MessagesSquare } from "lucide-react";
 import type { PageProps } from "../../shared/types";
@@ -65,6 +66,7 @@ export function AboutSettings({ notify }: { notify: PageProps["notify"] }) {
               <Button variant="secondary" onClick={retry}>Retry</Button>
             </div>
           ) : <Loading>Loading build information</Loading>}
+          <ApplicationUpdateStatus />
           <p className="footnote about-licence">Licence: <a href={`${repositoryURL}/blob/${info?.commit || "main"}/LICENSE`} target="_blank" rel="noopener noreferrer">GNU GPL v3</a>. No warranty. <a href={`${repositoryURL}/tree/${info?.commit || "main"}`} target="_blank" rel="noopener noreferrer">Source code</a>.</p>
         </section>
       </div>
