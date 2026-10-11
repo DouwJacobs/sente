@@ -40,7 +40,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - if: (steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true') || (steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true')
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.21.1
           cache: npm
