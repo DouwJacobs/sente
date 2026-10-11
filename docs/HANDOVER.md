@@ -255,6 +255,30 @@ MCP tool/schema/allowlist/permission/consent/proposal/audit/service or migration
 changes. CI regression scripts and diff checks are the local verification;
 GitHub checks must pass before merging.
 
+## Dependabot frontend compatibility - 11 October 2026
+
+The grouped frontend update keeps React plugin 6 with its Vite 8 peer and adds
+explicit vite/client and Node types for TypeScript 7. About uses the existing
+Lucide CodeXml icon for the source-repository link because Lucide 1 no longer
+exports the Github brand icon. Link text, URL, accessibility and layout remain.
+
+In the isolated /home/douw/finance-tracker-deps WSL worktree, npm ci reported
+zero vulnerabilities, all 20 frontend unit tests and the production build passed.
+All seven synthetic About/update-awareness cases passed across phone/desktop
+and light/dark themes. The configured PR browser suite and GitHub checks are
+the remaining merge gates. No manual visual inspection is claimed.
+
+This dependency/type/icon change remains browser-only: no MCP tools, input
+schemas, output allowlists, permissions, consent, proposals/audits, shared
+financial services or database migrations change.
+
+The upgraded browser run exposed a configuration geometry test race: its three
+bounds were measured across the asynchronous starter-source load. The test now
+waits for the starter heading and loading-status removal before measuring,
+retaining the original equal-spacing assertion. Both desktop and 360px import/
+coexistence/replacement/export cases passed; the unchanged dependency baseline
+also passed. No product layout change or relaxed geometry assertion is involved.
+
 ## Dependabot Docker image gate - 11 October 2026
 
 The grouped Docker update targets development with pinned Node 26.10.0 and
