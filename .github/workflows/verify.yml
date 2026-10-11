@@ -19,7 +19,7 @@ jobs:
       GO: go
       CI: "true"
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
           ref: ${{ inputs.ref }}
@@ -35,12 +35,12 @@ jobs:
         env:
           SENTE_FULL_VERIFICATION: ${{ inputs.full }}
       - if: (steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true') || (steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true')
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
         with:
           go-version-file: go.mod
           cache: true
       - if: (steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true') || (steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true')
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 22.21.1
           cache: npm
@@ -104,13 +104,13 @@ jobs:
         run: python3 scripts/ci-evidence.py record
       - name: Store exact-source verification evidence
         if: steps.scope.outputs.source == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: source-verification
           path: work/test-audit/source-verification.json
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
           name: verification-results-and-timings
