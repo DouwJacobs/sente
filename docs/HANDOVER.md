@@ -241,3 +241,16 @@ UI guidance and the repository Sente experience skill record the accepted behavi
 Tests use the real menu actions before existing budget workflows. This is browser
 presentation/navigation only: no server financial arithmetic, aggregate shape, MCP
 tools/schema/allowlist/consent, proposal/audit, permissions or migration changes.
+
+## Browser CI timeout — 11 October 2026
+
+Development → main PR #93 run 38063133034 completed all 40 selected browser
+specs without an assertion failure, but elapsed 605 seconds exceeded its
+10-minute step deadline. The pull-request browser deadline now matches the
+complete suite's 20 minutes; the job remains bounded to 30 minutes and every
+existing test/scope/evidence gate remains enabled.
+
+This is CI configuration only. No application behavior, financial calculation,
+MCP tool/schema/allowlist/permission/consent/proposal/audit/service or migration
+changes. CI regression scripts and diff checks are the local verification;
+GitHub checks must pass before merging.
