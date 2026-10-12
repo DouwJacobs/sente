@@ -54,8 +54,8 @@ The first command writes the file as Sente's user with private permissions and
 refuses to overwrite an existing key. It requires a missing destination key and a
 writable config directory. The second checks readability and length without
 showing the key. If you copy the file using a container manager instead, ensure it
-is owned by the runtime user (UID/GID `10001:10001` in the standard image). Keep the directory private (`0700`) and accessible to the runtime user;
-Sente rejects symlink/nonregular key files and any group or other permissions.
+is owned by the runtime user (UID/GID `10001:10001` in the standard image). Keep the directory private (`0700`) and owned by the runtime user; group or other writable directories are rejected.
+Sente rejects symlink/nonregular key files, files owned by another user and any group or other file permissions.
 
 Never overwrite a working key. A new key cannot decrypt previously stored
 credentials. If Sente reports "FNB encryption key unavailable. Restore the key
@@ -69,3 +69,13 @@ encryption cannot exclude a privileged host operator.
 ## Cancellation and profile cleanup
 
 The worker receives credential JSON on the first stdin line and cancellation-only frames afterward. Parent-pipe loss or Linux signals request abort. Go waits up to 30 seconds for logout/browser/profile cleanup, then terminates the relevant Linux process tree or Windows worker tree through WSL. Go owns/removes each generated temporary profile and rejects cancelled or cleanup-failed results. Manual-run persistence rechecks the initiating browser session as well as current owner/account access. Synthetic process tests cover Linux and WSL/Windows Node without bank pages. Live MFA/layout/logout/overlap compatibility remains owner-run; OFX identifiers still need another overlapping export. This does not change the standard image's exclusion of the connector runtime/browser.
+
+## Credential security and password recovery
+
+See [the credential security audit](FNB-SECURITY-AUDIT.md) for verified protections
+and limits. Administrator/offline Sente password recovery disconnects the affected
+user's FNB connection and cancels its active banking run after recovery commits.
+The user must enter their bank credentials again. Accounts, transaction history
+and discovery preferences remain; self-service password changes keep FNB.
+Keys and database snapshots still require separate private backups. Encryption
+does not protect against host/runtime or client-browser compromise.

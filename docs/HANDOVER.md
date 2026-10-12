@@ -314,3 +314,27 @@ validation passed. See VERIFICATION.md for exact coverage. No production
 deployment or real bank data/credentials were used. Deployment storage only:
 no MCP contract, permission, consent, proposal/audit, shared financial service
 or migration changes.
+
+## FNB security audit and approved recovery isolation - 12 October 2026
+
+The same PR branch now includes key/build exclusion and filesystem hardening,
+POST/submitter/origin checks before bank credential entry, patched Go/Alpine
+runtime dependencies and disabled core dumps. Owner approved FNB disconnection
+for administrator/offline password recovery. Delete only that user's connection
+atomically with recovery; after commit cancel its active provider. Provider
+financial persistence rechecks the exact credential record. Self-service retains
+FNB; accounts/history/preferences and other users' connections remain.
+
+[The full audit](FNB-SECURITY-AUDIT.md) records all findings, evidence and trust
+limits; VERIFICATION.md records final checks. Recovery race tests, API/MCP/
+persistence checks, worker/frontend tests, phone/desktop recovery workflows,
+production build and image/key/recovery acceptance passed. Patched Go/npm scans
+have no called/imported or active npm advisories. Offline image scan has no Alpine
+vulnerabilities or detected secrets; only unused x/crypto OpenPGP inventory warning.
+
+Keep the PR draft: required CI/image checks and owner deployment verification
+remain. The WSL/Windows blank-Chrome startup cancellation fixture failed twice;
+do not claim Windows browser certification. No live banking, real credentials,
+production data/deployment or manual UI inspection. Host/runtime/client compromise
+can still expose plaintext during login; a zero-compromise guarantee is impossible.
+No MCP contract/consent/output/permission expansion or database migration.

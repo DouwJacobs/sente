@@ -61,7 +61,7 @@ docker compose run --rm -T finance restore /app/backups/finance-SNAPSHOT.sqlite
 docker compose up -d
 ```
 
-Restore validates integrity/schema, preserves the previous database and invalidates sessions. For password recovery, stop the service and pipe a new password from standard input to `docker compose run --rm -T finance reset-password USERNAME`. Restart afterwards. Connector encryption keys require a separate private backup; database snapshots do not contain them.
+Restore validates integrity/schema, preserves the previous database and invalidates sessions. For password recovery, stop the service and pipe a new password from standard input to `docker compose run --rm -T finance reset-password USERNAME`. Restart afterwards. Administrator/offline password recovery also disconnects that user's FNB connection; they must enter their bank credentials again. Accounts and transaction history remain. Connector encryption keys require a separate private backup; database snapshots do not contain them.
 
 
 See [the release runbook](RELEASES.md) for compatibility policy, pinned upgrades and rehearsed rollback.

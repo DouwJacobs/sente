@@ -843,3 +843,40 @@ as the runtime user with umask 077 and overwrite refusal. The final recheck pass
 MCP impact: deployment storage only; no tools, input schemas, output allowlists,
 permissions, consent, proposals/audits, shared financial services or migrations
 change. Live bank compatibility remains owner-run.
+
+## FNB credential security audit and recovery isolation - 12 October 2026
+
+See [the complete audit](FNB-SECURITY-AUDIT.md) for threats, corrected findings,
+scans, attack-test coverage and explicit remaining limits. Fixed key/recovery-copy
+Git/build exclusions; directory ownership/writability, no-follow descriptor-based
+key access and bounded reads; worker POST/formaction/formmethod/origin validation;
+Go 1.27.2 runtime security updates; Alpine zlib update; and disabled core dumps.
+
+Owner approved disconnecting FNB after administrator/offline password recovery.
+Credential deletion shares the password/session/agent/audit transaction; only
+after commit is the recovered owner's active provider cancelled. Actual provider
+persistence binds the encrypted credential record as well as owner/session/grants.
+Accounts/history/preferences and other owners remain; self-service retains FNB.
+
+Verification: broad race run had 45 top-level passes and one Windows/WSL
+blank-Chrome startup failure (259.727s), also failing on isolated recheck.
+Final adversarial key/API/HTTP tests passed (13.934s); recovery/password/scheduling
+race batch passed 14 top-level tests (118.404s); six final API/MCP/persistence tests
+passed (69.030s). All 48 worker tests, 20 frontend tests, production build and four
+isolated 360px/1440px recovery workflows passed. No manual UI inspection.
+
+Patched Go call-aware scan has zero called/imported-package advisories; npm audits
+have zero active web/worker advisories. Local offline Trivy scan of the final
+image found zero Alpine vulnerabilities and zero embedded secrets; its sole
+remaining inventory warning is unused x/crypto OpenPGP (not imported/called).
+Docker context exclusions and actual disposable Compose core limits passed.
+Complete final image acceptance includes recovery disconnection/reconnect.
+
+No production data, banking credentials, profiles or deployment were used.
+Windows/WSL browser acceptance and real HTTPS/bank compatibility remain
+uncertified; host/runtime/browser compromise remains outside at-rest protection.
+Docker Scout was rejected by automatic approval review for metadata egress; local
+Trivy analysis used disabled networking/telemetry after a public DB-only download.
+MCP contracts/permissions/consent/outputs/proposals/shared financial services do
+not expand; password recovery still uses its existing agent revocation.
+No schema migration. No required GitHub checks or release publication are claimed.

@@ -43,6 +43,9 @@ type App struct {
 	mcpOnce                sync.Once
 	mcpHTTP                http.Handler
 	fnbMu                  sync.Mutex
+	fnbCancelMu            sync.Mutex
+	fnbCancelOwner         int64
+	fnbCancel              context.CancelFunc
 	fnbRefreshAccount      atomic.Int64
 	fnbRefreshTransactions atomic.Bool
 	fnbWG                  sync.WaitGroup
@@ -72,13 +75,14 @@ type App struct {
 	lock                   *os.File
 }
 type User struct {
-	browserSession string
-	browserCSRF    string
-	MCPAccounts    []int64 `json:"-"`
-	ID             int64   `json:"id"`
-	Username       string  `json:"username"`
-	Admin          bool    `json:"admin"`
-	Member         bool    `json:"budget_member"`
+	browserSession    string
+	fnbCredentialHash string
+	browserCSRF       string
+	MCPAccounts       []int64 `json:"-"`
+	ID                int64   `json:"id"`
+	Username          string  `json:"username"`
+	Admin             bool    `json:"admin"`
+	Member            bool    `json:"budget_member"`
 }
 type authContext struct {
 	User User
@@ -181,16 +185,20 @@ func (a *App) ResetPassword(username, password string) error {
 	if err != nil {
 		return err
 	}
-	return a.write(func(tx *sql.Tx) error {
-		var id int64
+	var id int64
+	err = a.write(func(tx *sql.Tx) error {
 		if err := tx.QueryRow("SELECT id FROM users WHERE username=? AND deleted_at IS NULL", username).Scan(&id); err != nil {
 			return errors.New("User not found")
 		}
 		if err := setUserPasswordTx(tx, id, string(digest), ""); err != nil {
 			return err
 		}
-		return audit(tx, User{ID: id, Username: username}, nil, "user", id, "password_recovered", map[string]any{"method": "offline", "all_sessions_revoked": true})
+		return audit(tx, User{ID: id, Username: username}, nil, "user", id, "password_recovered", map[string]any{"method": "offline", "all_sessions_revoked": true, "fnb_disconnected": true})
 	})
+	if err == nil {
+		a.cancelFNBRun(id)
+	}
+	return err
 }
 func (a *App) write(fn func(*sql.Tx) error) error {
 	if err := a.writeQuiet(fn); err != nil {

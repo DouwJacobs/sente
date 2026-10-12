@@ -2,6 +2,8 @@ module finance-tracker
 
 go 1.26.0
 
+toolchain go1.27.2
+
 require (
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0

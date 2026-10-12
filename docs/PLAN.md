@@ -6,7 +6,7 @@ Sente is a self-hosted household finance tracker for a few invited users. It use
 
 Administrators manage users, accounts and grants. Household accounts are explicitly shared with household members as editors. Private accounts require viewer/editor grants, including for administrators, and stay outside shared budgeting. Every read, write, import, export and aggregate checks current access. Hidden accounts retain their history and grants but are excluded from normal views and syncing.
 
-First-run setup creates the initial administrator, household membership and session together. Disabled administrators do not reopen setup. There is no public registration or email dependency. Users change their own passwords; administrators can recover them offline. Passwords are 12–72 UTF-8 bytes. Cookie sessions expire after seven days; writes require CSRF tokens and an allowed origin.
+First-run setup creates the initial administrator, household membership and session together. Disabled administrators do not reopen setup. There is no public registration or email dependency. Users change their own passwords; administrators can recover them offline. Administrator and offline password recovery disconnect the affected user's FNB connection and cancel its active run, while retaining accounts/history/discovery preferences. Self-service password changes retain FNB. Passwords are 12–72 UTF-8 bytes. Cookie sessions expire after seven days; writes require CSRF tokens and an allowed origin.
 
 ## Imports and FNB
 

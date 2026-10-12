@@ -38,7 +38,7 @@ class Smoke:
             docker('volume','create',volume)
 
     def options(self):
-        return ['--read-only','--cap-drop=ALL','--security-opt=no-new-privileges',
+        return ['--read-only','--ulimit','core=0:0','--cap-drop=ALL','--security-opt=no-new-privileges',
                 '--tmpfs','/tmp:size=128m,mode=1777','-v',self.data+':/app/data',
                 '-v',self.backups+':/app/backups','-v',self.keys+':/config/fnb',
                 '-e','FNB_KEY_FILE=/config/fnb/fnb.key','-e','PUBLIC_URL='+self.url]
@@ -179,7 +179,7 @@ def fnb_key(smoke):
     status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
     assert status==200, result
     docker('exec',smoke.name,'sh','-c',
-           'test "$(stat -c %a /config/fnb)" = 700 && test "$(stat -c %u:%g /config/fnb)" = 10001:10001 && '
+           'test "$(ulimit -c)" = 0 && test "$(stat -c %a /config/fnb)" = 700 && test "$(stat -c %u:%g /config/fnb)" = 10001:10001 && '
            'test "$(stat -c %a /config/fnb/fnb.key)" = 600 && test "$(wc -c < /config/fnb/fnb.key)" -eq 32')
     fingerprint=docker('exec',smoke.name,'sha256sum','/config/fnb/fnb.key')
     key_backup=smoke.work/'fnb.key.backup'
@@ -207,7 +207,21 @@ def fnb_key(smoke):
     assert docker('exec',smoke.name,'sha256sum','/config/fnb/fnb.key')==fingerprint
     status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
     assert status==200, 'Restored original key not usable'
-    print('PASS FNB key: automatic creation, private permissions, container replacement persistence, missing-key refusal and separate key backup/restore')
+    smoke.stop()
+    subprocess.run(['docker','run','--rm','-i',*smoke.options(),smoke.image,'reset-password','key-demo'],
+                   input=b'synthetic-recovered-password\n',capture_output=True,check=True)
+    smoke.restart()
+    assert smoke.request('/api/me')[0]==401
+    status,result,_=smoke.request('/api/login',{'username':'key-demo','password':'synthetic-recovered-password'})
+    assert status==200, result
+    smoke.csrf=result['csrf']
+    status,result,_=smoke.request('/api/fnb')
+    assert status==200 and result['connection'] is None, 'Password recovery retained bank credentials'
+    assert docker('exec',smoke.name,'sha256sum','/config/fnb/fnb.key')==fingerprint
+    credentials['version']=0
+    status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
+    assert status==200, 'User could not reconnect after password recovery'
+    print('PASS FNB key: automatic creation, permissions, container replacement, missing-key refusal, key backup/restore and recovery disconnection/reconnect')
 
 def upgrade(smoke):
     # Frozen real v22 schema; no downgrade of a current schema is used.

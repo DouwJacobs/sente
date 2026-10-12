@@ -30,7 +30,7 @@ __pycache__/
 fnb-accounts*.json
 
 # Runtime connector encryption keys must stay outside source.
-fnb.key
+fnb.key*
 
 # Personal configuration and ruleset exports
 *-config-export.json

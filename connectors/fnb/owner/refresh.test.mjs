@@ -1,6 +1,6 @@
 import {test} from 'node:test'
 import assert from 'node:assert/strict'
-import {exactBalance,workerFailure,normalizeSnapshot,readBalanceDOM,loginAndAccounts,logoutBankSession,clickLogoutDOM,balanceFieldCountsDOM,previousSessionDOM,signedOutDOM,finishBankSession} from './refresh.mjs'
+import {exactBalance,loginFormDOM,workerFailure,normalizeSnapshot,readBalanceDOM,loginAndAccounts,logoutBankSession,clickLogoutDOM,balanceFieldCountsDOM,previousSessionDOM,signedOutDOM,finishBankSession} from './refresh.mjs'
 import vm from 'node:vm'
 test('uses exact signed ZAR decimals and rejects ambiguous money or reward units',()=>{
  for(const [text,expected] of [['R 1,234.56','1234.56'],['-0.01','-0.01'],['R -9 876.54','-9876.54'],['0.00','0.00'],['R 0','0.00'],['R +12.3','12.30'],['R −1.23','-1.23']])assert.equal(exactBalance(text),expected)
@@ -195,4 +195,32 @@ test('worker failures distinguish startup and timeout without exposing exception
  assert.equal(workerFailure(secret,5).error,'REFRESH_FAILED')
  assert.equal(workerFailure(secret,5,true).error,'CONNECTOR_TIMEOUT')
  assert.ok(!JSON.stringify(workerFailure(secret,5,true)).includes(secret.message))
+})
+
+test('credential forms require bank HTTPS POST and reject unsafe submit overrides',()=>{
+ const evaluate=(options={})=>{
+  let clicked=0
+  const button={disabled:false,getAttribute:name=>name==='formaction'?options.buttonAction??null:name==='formmethod'?options.buttonMethod??null:null,click:()=>{clicked++}}
+  const form={method:options.method??'post',action:options.action??'https://www.fnb.co.za/login',querySelector:()=>button}
+  const user={form},pass={form:options.separateForm?{}:form,type:'password'}
+  const document={querySelector:selector=>selector==='#user'?user:pass}
+  const accepted=vm.runInNewContext('('+loginFormDOM.toString()+')(true)',{document,URL,location:{href:options.origin??'https://www.fnb.co.za/'}})
+  return {accepted,clicked}
+ }
+ assert.deepEqual(evaluate(),{accepted:true,clicked:1})
+ for(const options of [
+  {method:'get'},{buttonMethod:'get'},{separateForm:true},
+  {action:'https://attacker.invalid/login'},
+  {buttonAction:'https://attacker.invalid/login'},
+  {origin:'https://fnb.co.za.attacker.invalid/'},
+  {origin:'http://www.fnb.co.za/'},
+  {origin:'https://www.fnb.co.za:8443/'},
+  {action:'https://user:password@www.fnb.co.za/login'},
+ ])assert.deepEqual(evaluate(options),{accepted:false,clicked:0})
+})
+test('redirect between username and password entry stops before password typing',async()=>{
+ let url='https://www.fnb.co.za/',typed=[]
+ const page={goto:async()=>{},url:()=>url,waitForSelector:async()=>{},evaluate:async()=>true,type:async selector=>{typed.push(selector);url='https://attacker.invalid/'}}
+ await assert.rejects(()=>loginAndAccounts(page,{username:'synthetic',password:'synthetic-secret'}),{code:'LOGIN_LAYOUT_CHANGED'})
+ assert.deepEqual(typed,['#user'])
 })

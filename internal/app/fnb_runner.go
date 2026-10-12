@@ -66,6 +66,7 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 	if err := a.DB.QueryRow("SELECT secret,interval_hours,state,debug_browser FROM fnb_connections WHERE user_id=?", owner).Scan(&secret, &interval, &state, &debug); err != nil {
 		return nil, fail(404, "Connect FNB first")
 	}
+	u.fnbCredentialHash = hash(string(secret))
 	if !manual && state != "ready" {
 		return nil, nil
 	}
@@ -121,6 +122,25 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 	}
 	runID := credentials.RunID
 	now := time.Now().UTC().Format(time.RFC3339)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	a.fnbCancelMu.Lock()
+	a.fnbCancelOwner, a.fnbCancel = owner, cancel
+	a.fnbCancelMu.Unlock()
+	defer func() {
+		cancel()
+		a.fnbCancelMu.Lock()
+		a.fnbCancelOwner, a.fnbCancel = 0, nil
+		a.fnbCancelMu.Unlock()
+	}()
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		select {
+		case <-a.stop:
+			cancel()
+		case <-done:
+		}
+	}()
 	if err := a.fnbWrite(u, func(tx *sql.Tx, actor User) error {
 		if selected > 0 && !ruleAccess(tx, a, actor, selected) {
 			return fail(403, "Account editor access required")
@@ -135,17 +155,6 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 	}); err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
-	defer cancel()
-	done := make(chan struct{})
-	defer close(done)
-	go func() {
-		select {
-		case <-a.stop:
-			cancel()
-		case <-done:
-		}
-	}()
 	provider := a.fnbProvider
 	if provider == nil {
 		provider = runFNBProvider

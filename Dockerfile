@@ -7,7 +7,7 @@ COPY scripts/dependency-notices.py /src/scripts/dependency-notices.py
 RUN npm run build
 RUN apk add --no-cache python3 && python3 /src/scripts/dependency-notices.py web /licenses/web
 
-FROM golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414 AS backend
+FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS backend
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -32,7 +32,7 @@ LABEL org.opencontainers.image.version="$SENTE_VERSION" \
       org.opencontainers.image.title="Sente" \
       org.opencontainers.image.description="Self-hosted household finance and budgeting" \
       org.opencontainers.image.source="https://github.com/DouwJacobs/sente"
-RUN apk add --no-cache ca-certificates tzdata git && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
 WORKDIR /app
 COPY --from=backend /finance /usr/local/bin/finance
 COPY --from=web /src/web/dist /app/web/dist

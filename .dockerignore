@@ -17,3 +17,7 @@ web/playwright-report
 
 # Separate connector prototype/reference is not part of the Go app image.
 connectors/
+
+# Never send FNB runtime keys or recovery copies to a build server.
+fnb.key*
+**/fnb.key*
