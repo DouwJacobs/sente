@@ -37,6 +37,7 @@ for (const width of [1440, 360]) {
     await page.getByLabel(`Actions for user ${username}`, { exact: true }).click();
     await page.getByRole('button', { name: 'Reset password', exact: true }).click();
     const reset = page.getByRole('dialog', { name: 'Reset password', exact: true });
+    await expect(reset.getByText(/their FNB connection will be disconnected/i)).toBeVisible();
     const password = reset.getByLabel('New password', { exact: true });
     const confirmation = reset.getByLabel('Confirm new password', { exact: true });
     await expect(password).toBeFocused();

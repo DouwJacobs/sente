@@ -36,7 +36,14 @@ func setUserPasswordTx(tx *sql.Tx, id int64, digest, keepSession string) error {
 	if err := revokeUserAgentsTx(tx, id); err != nil {
 		return err
 	}
-	_, err = tx.Exec("DELETE FROM sessions WHERE user_id=? AND token!=?", id, keepSession)
+	if _, err = tx.Exec("DELETE FROM sessions WHERE user_id=? AND token!=?", id, keepSession); err != nil {
+		return err
+	}
+	// Administrator/offline recovery cannot inherit the user's saved bank login.
+	// A self-service password change retains the verified initiating session.
+	if keepSession == "" {
+		_, err = tx.Exec("DELETE FROM fnb_connections WHERE user_id=?", id)
+	}
 	return err
 }
 
@@ -110,11 +117,12 @@ func (a *App) adminPassword(w http.ResponseWriter, r *http.Request) error {
 		if err := setUserPasswordTx(tx, id, digest, ""); err != nil {
 			return err
 		}
-		return audit(tx, u, nil, "user", id, "password_reset", map[string]any{"all_sessions_revoked": true, "agents_revoked": true})
+		return audit(tx, u, nil, "user", id, "password_reset", map[string]any{"all_sessions_revoked": true, "agents_revoked": true, "fnb_disconnected": true})
 	})
 	if err != nil {
 		return err
 	}
+	a.cancelFNBRun(id)
 	success(w)
 	return nil
 }

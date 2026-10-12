@@ -164,26 +164,37 @@ export async function finishBankSession(context,result){
   return {accounts:[],skipped:0,error:'LOGOUT_REQUIRED',diagnostics}
  }
 }
-function bankPage(page){try{const u=new URL(page.url());return u.protocol==='https:'&&(u.hostname==='fnb.co.za'||u.hostname.endsWith('.fnb.co.za'))}catch{return false}}
+function bankPage(page){try{const u=new URL(page.url());return u.protocol==='https:'&&!u.username&&!u.password&&(!u.port||u.port==='443')&&(u.hostname==='fnb.co.za'||u.hostname.endsWith('.fnb.co.za'))}catch{return false}}
+// Evaluated in the actual document immediately before each credential entry and
+// submission. GET forms and submit-button overrides must never leak passwords.
+export function loginFormDOM(submit=false){
+ const approved=value=>{
+  try{const u=new URL(value,location.href);return u.protocol==='https:'&&!u.username&&!u.password&&(!u.port||u.port==='443')&&(u.hostname==='fnb.co.za'||u.hostname.endsWith('.fnb.co.za'))}catch{return false}
+ }
+ if(!approved(location.href))return false
+ const user=document.querySelector('#user'),pass=document.querySelector('#pass')
+ if(!user||!pass||pass.type!=='password'||!user.form||user.form!==pass.form)return false
+ const form=user.form,button=form.querySelector('input[type="submit"],button[type="submit"],button:not([type])')
+ if(!button||button.disabled)return false
+ if((form.method||'get').toLowerCase()!=='post'||!approved(form.action||location.href))return false
+ if((button.getAttribute('formmethod')||form.method).toLowerCase()!=='post')return false
+ if(!approved(button.getAttribute('formaction')||form.action||location.href))return false
+ if(submit)button.click()
+ return true
+}
 export async function loginAndAccounts(page,credentials,signal){
  await page.goto('https://www.fnb.co.za/',{waitUntil:'domcontentloaded',timeout:45000})
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
  try{await page.waitForSelector('#user',{visible:true,timeout:10000});await page.waitForSelector('#pass',{visible:true,timeout:10000})}catch{throw new ProbeError('LOGIN_LAYOUT_CHANGED')}
  // Never send credentials to an unapproved origin or unrelated form.
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
- const valid=await page.evaluate(()=>{
-  const user=document.querySelector('#user'),pass=document.querySelector('#pass')
-  if(!user||!pass||pass.type!=='password'||!user.form||user.form!==pass.form)return false
-  const target=new URL(user.form.action||location.href,location.href)
-  return target.protocol==='https:'&&(target.hostname==='fnb.co.za'||target.hostname.endsWith('.fnb.co.za'))
- })
+ const valid=await page.evaluate(loginFormDOM)
  if(!valid)throw new ProbeError('LOGIN_LAYOUT_CHANGED')
- await page.type('#user',credentials.username);await page.type('#pass',credentials.password)
- const submitted=await page.evaluate(()=>{
-  const form=document.querySelector('#user').form
-  const button=form.querySelector('input[type="submit"],button[type="submit"]')
-  if(!button)return false;button.click();return true
- })
+ await page.type('#user',credentials.username)
+ if(!bankPage(page)||!await page.evaluate(loginFormDOM))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ await page.type('#pass',credentials.password)
+ if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ const submitted=await page.evaluate(loginFormDOM,true)
  if(!submitted)throw new ProbeError('LOGIN_LAYOUT_CHANGED')
  // One login attempt only. Owner can complete approval in visible manual runs.
  const deadline=Date.now()+110000
@@ -262,7 +273,7 @@ export function readWorkerInput(stream,abort){
 }
 
 export async function main(){
- let browser,context,profile,control;let result,phase=1
+ let browser,context,profile,control,credentials;let result,phase=1
  process.stderr.write(`FNB_WORKER_PID ${process.pid}\n`)
  const abort=new AbortController()
  const cancel=()=>abort.abort()
@@ -270,7 +281,7 @@ export async function main(){
  const timeout=setTimeout(cancel,205000)
  try{
   const input=await readWorkerInput(process.stdin,abort)
-  const credentials=input.credentials;control=input.control
+  credentials=input.credentials;control=input.control
   if(typeof credentials.username!=='string'||typeof credentials.password!=='string'||!credentials.username||!credentials.password||!Array.isArray(credentials.hidden||[]))throw new ProbeError('REFRESH_FAILED')
   phase=2
   const {default:puppeteer}=await import('puppeteer-core')
@@ -297,6 +308,7 @@ export async function main(){
  }catch(err){
   result=workerFailure(err,phase,abort.signal.aborted)
  }finally{
+  if(credentials){credentials.username='';credentials.password=''}
   if(context)result=await finishBankSession(context,result)
   clearTimeout(timeout)
   try{await context?.close()}catch{};try{await browser?.close()}catch{}

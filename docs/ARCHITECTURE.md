@@ -52,7 +52,7 @@ The API client centralizes credentials, CSRF, session expiry and JSON errors. Sh
 
 ## FNB worker
 
-Owner-admin connection routes manage encrypted credentials, schedule/debug state, discoveries and visibility. AES-256-GCM uses owner-bound associated data and an external 0600 key; existing ciphertext without its key fails without generating a replacement. Credentials have no read endpoint or audit payload. See [FNB-RUNTIME.md](FNB-RUNTIME.md).
+Owner-admin connection routes manage encrypted credentials, schedule/debug state, discoveries and visibility. AES-256-GCM uses owner-bound associated data and an external 0600 key in a runtime-owned directory that is not group/other writable; existing ciphertext without its key fails without generating a replacement. The standard Docker image prepares /config/fnb with private runtime ownership; Compose persists it in finance_fnb_key and sets FNB_KEY_FILE. A fresh installation generates its key only when the first credentials are saved. Key files are opened relative to a pinned directory with no-follow/descriptor checks and a 33-byte read bound. Credentials have no read endpoint or audit payload. See [FNB-RUNTIME.md](FNB-RUNTIME.md).
 
 Go launches `connectors/fnb/owner/refresh.mjs` with credentials and target identities on stdin. Strict bounded JSON stdout is accepted; stderr is discarded. WSL uses Windows Node/Chrome with a probed live interop socket; native Linux/Windows runtimes remain configurable. No credentials enter arguments/environment. Runs share one connector lock and recheck owner/account/visibility at persistence. JSON is bounded to 16 MiB; transaction work has a four-minute Go timeout and bounded worker abort/cleanup.
 
@@ -138,3 +138,15 @@ accessible responsive table. `SpendingFlowPage.tsx` owns the dedicated page's ca
 summary request, loading/error/retry and back action. App retains shared account/period
 selection and navigation; Dashboard routes the existing shared ActionMenu to the page. The containing card observes its own width, avoiding
 page-wide or internal scrolling, with the total in the header on narrow screens.
+
+
+## Password recovery and FNB isolation
+
+Administrator/offline password recovery deletes the affected user's FNB connection
+inside the password/session/agent/audit transaction, preserving accounts/history
+and discovery preferences. After commit it cancels that owner's active provider
+without waiting for the connector lock. Actual provider runs retain a fingerprint
+of their encrypted credential record; FNB persistence rechecks that exact record
+as well as owner/session/grants, preventing a recovered/deleted/replaced connection
+from authorizing an old run. Cancellation uses the existing logout/cleanup path.
+Self-service password changes keep the authenticated initiating session and FNB.

@@ -42,7 +42,7 @@ Compose passes PUBLIC_URL and TRUSTED_PROXIES from `.env`, binds the host port t
 
 For a proxy on another machine, set BIND_ADDRESS to the tracker's private interface, restrict the port to that proxy host, and set TRUSTED_PROXIES to its address. Native Go can bind a private interface using LISTEN_ADDRESS. Existing native behavior remains listening on all interfaces when LISTEN_ADDRESS is unset.
 
-The current Docker image still needs separate Node/browser/key provisioning for FNB automation; reverse proxy support does not add that runtime.
+The current Docker setup provides persistent FNB key storage and creates the key on first credential save. It still needs separate Node/browser provisioning for FNB automation; reverse proxy support does not add that runtime. Never enable request-body capture for Banking endpoints in proxy logs, tracing, analytics or error reporting.
 
 ## Verify
 

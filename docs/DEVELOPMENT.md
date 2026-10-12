@@ -2,7 +2,7 @@
 
 Read [AGENTS.md](../AGENTS.md), [accepted plan](PLAN.md) and [architecture](ARCHITECTURE.md). UI work uses [UI.md](UI.md) and the project UI skill.
 
-Install Go 1.27.1, Linux Node 22.21+ and Python 3. `make build` produces `bin/finance` and the frontend. `make dev` runs Vite hot reload and a watched Go backend at http://127.0.0.1:5173 using `data/dev/finance.sqlite` and `backups/dev`. A fresh dev database uses browser onboarding. Never copy production data to it.
+Install Go 1.27.2 or a newer supported security patch, Linux Node 22.21+ and Python 3. `make build` produces `bin/finance` and the frontend. `make dev` runs Vite hot reload and a watched Go backend at http://127.0.0.1:5173 using `data/dev/finance.sqlite` and `backups/dev`. A fresh dev database uses browser onboarding. Never copy production data to it.
 
 Repository pulls need Git on the Sente host; the Docker runtime includes it. Worktrees may reuse a local `web/node_modules` symlink, which is ignored like ordinary installed dependencies.
 

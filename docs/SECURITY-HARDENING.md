@@ -39,3 +39,12 @@ Live MFA/layout/logout compatibility and overlapping history remain owner-run ch
 ## MCP impact
 
 No tools, input schemas, financial output allowlists, capability/consent grants or proposal contracts expand. Browser user/password administration and connector lifecycle controls remain browser/offline workflows. MCP uses the existing shared financial services and credential-reuse detection; expiry maintenance removes only invalid credentials and expired connections. The internal worker transport change is not a public browser API or MCP protocol change.
+
+## FNB credential review - 12 October 2026
+
+FNB key storage uses runtime-owned private directories, no-follow descriptor
+checks and bounded reads. The worker validates HTTPS bank origins, POST forms
+and submit-button overrides before credential entry. Administrator/offline
+password recovery disconnects FNB and cancels active work after commit.
+[VERIFICATION.md](VERIFICATION.md) records synthetic coverage and remaining
+host/administrator/Windows verification limits.

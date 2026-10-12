@@ -25,6 +25,7 @@ class Smoke:
         self.image, self.work = image, work
         self.prefix = 'sente-release-' + uuid.uuid4().hex[:12]
         self.data, self.backups = self.prefix+'-data', self.prefix+'-backups'
+        self.keys = self.prefix+'-fnb-key'
         self.name = self.prefix+'-server'
         with socket.socket() as sock:
             sock.bind(('127.0.0.1',0))
@@ -33,13 +34,14 @@ class Smoke:
         self.cookies = http.cookiejar.CookieJar()
         self.http = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.cookies))
         self.csrf = ''
-        for volume in (self.data, self.backups):
+        for volume in (self.data, self.backups, self.keys):
             docker('volume','create',volume)
 
     def options(self):
-        return ['--read-only','--cap-drop=ALL','--security-opt=no-new-privileges',
+        return ['--read-only','--ulimit','core=0:0','--cap-drop=ALL','--security-opt=no-new-privileges',
                 '--tmpfs','/tmp:size=128m,mode=1777','-v',self.data+':/app/data',
-                '-v',self.backups+':/app/backups','-e','PUBLIC_URL='+self.url]
+                '-v',self.backups+':/app/backups','-v',self.keys+':/config/fnb',
+                '-e','FNB_KEY_FILE=/config/fnb/fnb.key','-e','PUBLIC_URL='+self.url]
 
     def start(self):
         docker('run','-d','--name',self.name,*self.options(),'-p',f'127.0.0.1:{self.port}:8080',self.image)
@@ -55,10 +57,10 @@ class Smoke:
             time.sleep(0.25)
         raise RuntimeError('Image did not become healthy within 30 seconds')
 
-    def request(self,path,body=None,headers=None,opener=None):
+    def request(self,path,body=None,headers=None,opener=None,method=None):
         data = json.dumps(body).encode() if body is not None else None
         req = urllib.request.Request(self.url+path,data=data,headers={
-            'Content-Type':'application/json','Origin':self.url,'X-CSRF-Token':self.csrf,**(headers or {})})
+            'Content-Type':'application/json','Origin':self.url,'X-CSRF-Token':self.csrf,**(headers or {})},method=method)
         try:
             response = (opener or self.http).open(req,timeout=10)
         except urllib.error.HTTPError as error:
@@ -92,7 +94,7 @@ class Smoke:
 
     def cleanup(self):
         subprocess.run(['docker','rm','-f',self.name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        for volume in (self.data,self.backups):
+        for volume in (self.data,self.backups,self.keys):
             subprocess.run(['docker','volume','rm',volume],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 
 MCP_TOKEN = 'synthetic-release-agent-token'
@@ -165,6 +167,62 @@ def fresh(smoke,version,commit):
         assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
     print('PASS fresh image: hardened onboarding, metadata/MCP, restart persistence, backup/restore, browser/agent invalidation')
 
+def fnb_key(smoke):
+    smoke.start()
+    status,setup,_=smoke.request('/api/setup')
+    assert status==200 and setup['required']
+    smoke.csrf=setup['csrf']
+    status,result,_=smoke.request('/api/setup',{'username':'key-demo','password':'synthetic-key-password'})
+    assert status==200, result
+    smoke.csrf=result['csrf']
+    credentials={'username':'synthetic-bank-user','password':'synthetic-bank-password','version':0}
+    status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
+    assert status==200, result
+    docker('exec',smoke.name,'sh','-c',
+           'test "$(ulimit -c)" = 0 && test "$(stat -c %a /config/fnb)" = 700 && test "$(stat -c %u:%g /config/fnb)" = 10001:10001 && '
+           'test "$(stat -c %a /config/fnb/fnb.key)" = 600 && test "$(wc -c < /config/fnb/fnb.key)" -eq 32')
+    fingerprint=docker('exec',smoke.name,'sha256sum','/config/fnb/fnb.key')
+    key_backup=smoke.work/'fnb.key.backup'
+    docker('cp',smoke.name+':/config/fnb/fnb.key',key_backup)
+    key_backup.chmod(0o600)
+    assert len(key_backup.read_bytes())==32 and key_backup.stat().st_mode & 0o777==0o600
+    smoke.stop()
+    docker('rm',smoke.name)
+    smoke.start()
+    assert docker('exec',smoke.name,'sha256sum','/config/fnb/fnb.key')==fingerprint
+    status,result,_=smoke.request('/api/fnb')
+    assert status==200 and result['connection'], result
+    credentials['version']=result['connection']['version']
+    status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
+    assert status==200, 'Persisted key not usable after container replacement'
+    docker('exec',smoke.name,'rm','/config/fnb/fnb.key')
+    status,result,_=smoke.request('/api/fnb')
+    credentials['version']=result['connection']['version']
+    status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
+    assert status==503, 'Missing key silently replaced for stored credentials'
+    docker('exec',smoke.name,'sh','-c','test ! -e /config/fnb/fnb.key')
+    subprocess.run(['docker','exec','-i',smoke.name,'sh','-c',
+                    'umask 077; set -C; cat > "$FNB_KEY_FILE"'],
+                   input=key_backup.read_bytes(),check=True)
+    assert docker('exec',smoke.name,'sha256sum','/config/fnb/fnb.key')==fingerprint
+    status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
+    assert status==200, 'Restored original key not usable'
+    smoke.stop()
+    subprocess.run(['docker','run','--rm','-i',*smoke.options(),smoke.image,'reset-password','key-demo'],
+                   input=b'synthetic-recovered-password\n',capture_output=True,check=True)
+    smoke.restart()
+    assert smoke.request('/api/me')[0]==401
+    status,result,_=smoke.request('/api/login',{'username':'key-demo','password':'synthetic-recovered-password'})
+    assert status==200, result
+    smoke.csrf=result['csrf']
+    status,result,_=smoke.request('/api/fnb')
+    assert status==200 and result['connection'] is None, 'Password recovery retained bank credentials'
+    assert docker('exec',smoke.name,'sha256sum','/config/fnb/fnb.key')==fingerprint
+    credentials['version']=0
+    status,result,_=smoke.request('/api/fnb',credentials,method='PUT')
+    assert status==200, 'User could not reconnect after password recovery'
+    print('PASS FNB key: automatic creation, permissions, container replacement, missing-key refusal, key backup/restore and recovery disconnection/reconnect')
+
 def upgrade(smoke):
     # Frozen real v22 schema; no downgrade of a current schema is used.
     path=smoke.work/'v22.sqlite'
@@ -225,7 +283,7 @@ def main():
            'test "$(id -u)" = 10001 && test -s /usr/share/licenses/sente/LICENSE && test -s /usr/share/licenses/sente/NOTICE && ! touch /app/root-write-test')
     with tempfile.TemporaryDirectory(prefix='sente-image-smoke-') as temp:
         work=Path(temp)
-        for check in (lambda s:fresh(s,args.version,args.commit),upgrade):
+        for check in (lambda s:fresh(s,args.version,args.commit),upgrade,fnb_key):
             smoke=Smoke(args.image,work)
             try:
                 check(smoke)

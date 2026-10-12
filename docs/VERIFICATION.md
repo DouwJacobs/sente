@@ -807,3 +807,76 @@ Local Docker Desktop startup failed, so no local image pass is claimed.
 GitHub image and source checks are required for this merge decision.
 No application financial behavior, database migration or MCP tools, schemas,
 output allowlists, permissions, consent, proposals/audits or services change.
+
+## Automatic production FNB Docker key setup - 12 October 2026
+
+The standard Dockerfile prepares /config/fnb with runtime UID/GID 10001:10001
+and mode 0700. Compose adds finance_fnb_key at that path and sets FNB_KEY_FILE
+to /config/fnb/fnb.key. Existing credential-save behavior generates a private
+32-byte raw key only when no connection records exist. README now makes normal
+first-time setup automatic; FNB-RUNTIME retains custom storage/manual generation
+and recovery instructions. SETUP and ARCHITECTURE reflect the storage default.
+
+Verification passed:
+- Docker production build for linux/amd64, including frontend production build.
+- Full production-image acceptance: hardened onboarding, build metadata/MCP,
+  restart persistence, backup/restore, session/agent invalidation, frozen v22
+  migration preservation/integrity/once-only restart.
+- New synthetic FNB image acceptance: automatic key generation, 32-byte length,
+  0700 directory/0600 file permissions, UID/GID ownership, container replacement
+  with the identical usable key, and refusal to regenerate a missing key when
+  encrypted connections exist.
+- Final focused image recheck added separate key backup and restoration as the
+  normal non-root runtime user; the restored original key remained usable.
+- Three existing backend credential/missing-key/restart tests passed (18.233s).
+- Compose configuration preserves existing data/backup mounts, read-only root
+  and dropped capabilities; Python test syntax and git diff checks passed.
+
+All container data, bank credentials and keys were synthetic and disposable.
+No production configuration, key, database, bank runtime or deployment changed.
+Image metadata used dev and the prior committed revision 647a143 for local checks;
+the unpublished locally built image is not claimed as a release.
+The initial restore helper with root plus CHOWN could not traverse the private
+directory under dropped capabilities; it was replaced by writing the missing key
+as the runtime user with umask 077 and overwrite refusal. The final recheck passed.
+
+MCP impact: deployment storage only; no tools, input schemas, output allowlists,
+permissions, consent, proposals/audits, shared financial services or migrations
+change. Live bank compatibility remains owner-run.
+
+## FNB credential security audit and recovery isolation - 12 October 2026
+
+Reviewed storage, API/SQL/CSRF, browser-worker and deployment boundaries.
+Fixed key/recovery-copy
+Git/build exclusions; directory ownership/writability, no-follow descriptor-based
+key access and bounded reads; worker POST/formaction/formmethod/origin validation;
+Go 1.27.2 runtime security updates; Alpine zlib update; and disabled core dumps.
+
+Owner approved disconnecting FNB after administrator/offline password recovery.
+Credential deletion shares the password/session/agent/audit transaction; only
+after commit is the recovered owner's active provider cancelled. Actual provider
+persistence binds the encrypted credential record as well as owner/session/grants.
+Accounts/history/preferences and other owners remain; self-service retains FNB.
+
+Verification: broad race run had 45 top-level passes and one Windows/WSL
+blank-Chrome startup failure (259.727s), also failing on isolated recheck.
+Final adversarial key/API/HTTP tests passed (13.934s); recovery/password/scheduling
+race batch passed 14 top-level tests (118.404s); six final API/MCP/persistence tests
+passed (69.030s). All 48 worker tests, 20 frontend tests, production build and four
+isolated 360px/1440px recovery workflows passed. No manual UI inspection.
+
+Patched Go call-aware scan has zero called/imported-package advisories; npm audits
+have zero active web/worker advisories. Local offline Trivy scan of the final
+image found zero Alpine vulnerabilities and zero embedded secrets; its sole
+remaining inventory warning is unused x/crypto OpenPGP (not imported/called).
+Docker context exclusions and actual disposable Compose core limits passed.
+Complete final image acceptance includes recovery disconnection/reconnect.
+
+No production data, banking credentials, profiles or deployment were used.
+Windows/WSL browser acceptance and real HTTPS/bank compatibility remain
+uncertified; host/runtime/browser compromise remains outside at-rest protection.
+Docker Scout was rejected by automatic approval review for metadata egress; local
+Trivy analysis used disabled networking/telemetry after a public DB-only download.
+MCP contracts/permissions/consent/outputs/proposals/shared financial services do
+not expand; password recovery still uses its existing agent revocation.
+No schema migration. No required GitHub checks or release publication are claimed.

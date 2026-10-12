@@ -292,3 +292,48 @@ Local Docker Desktop startup failed, so no local image pass is claimed.
 GitHub image and source checks are required for this merge decision.
 No application financial behavior, database migration or MCP tools, schemas,
 output allowlists, permissions, consent, proposals/audits or services change.
+
+## Automatic production FNB Docker key setup - 12 October 2026
+
+On codex/fnb-docker-key-docs, Dockerfile prepares private runtime-owned /config/fnb
+and Compose mounts finance_fnb_key with FNB_KEY_FILE=/config/fnb/fnb.key. Fresh
+installations generate their key automatically on first credential save; existing
+connections still require their exact original key. Keep the key volume across
+upgrades and back it up separately from database snapshots. Older published
+images do not prepare this directory; use an image containing this change.
+
+README describes automatic setup and private key backup; FNB-RUNTIME covers custom
+config volumes, manual raw-key generation and non-root restoration without
+overwriting an existing key. SETUP and ARCHITECTURE match. Browser runtime setup
+remains a separate prerequisite.
+
+Production build, complete synthetic image acceptance, new FNB key
+creation/permissions/container replacement/missing-key refusal checks, final
+separate key backup/restoration recheck, three focused backend tests and Compose
+validation passed. See VERIFICATION.md for exact coverage. No production
+deployment or real bank data/credentials were used. Deployment storage only:
+no MCP contract, permission, consent, proposal/audit, shared financial service
+or migration changes.
+
+## FNB security audit and approved recovery isolation - 12 October 2026
+
+The same PR branch now includes key/build exclusion and filesystem hardening,
+POST/submitter/origin checks before bank credential entry, patched Go/Alpine
+runtime dependencies and disabled core dumps. Owner approved FNB disconnection
+for administrator/offline password recovery. Delete only that user's connection
+atomically with recovery; after commit cancel its active provider. Provider
+financial persistence rechecks the exact credential record. Self-service retains
+FNB; accounts/history/preferences and other users' connections remain.
+
+VERIFICATION.md records final checks and remaining trust/verification limits. Recovery race tests, API/MCP/
+persistence checks, worker/frontend tests, phone/desktop recovery workflows,
+production build and image/key/recovery acceptance passed. Patched Go/npm scans
+have no called/imported or active npm advisories. Offline image scan has no Alpine
+vulnerabilities or detected secrets; only unused x/crypto OpenPGP inventory warning.
+
+Keep the PR draft: required CI/image checks and owner deployment verification
+remain. The WSL/Windows blank-Chrome startup cancellation fixture failed twice;
+do not claim Windows browser certification. No live banking, real credentials,
+production data/deployment or manual UI inspection. Host/runtime/client compromise
+can still expose plaintext during login; a zero-compromise guarantee is impossible.
+No MCP contract/consent/output/permission expansion or database migration.

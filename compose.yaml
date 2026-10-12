@@ -19,9 +19,11 @@ services:
       LISTEN_ADDRESS: 0.0.0.0
       DATABASE_PATH: /app/data/finance.sqlite
       BACKUP_DIR: /app/backups
+      FNB_KEY_FILE: /config/fnb/fnb.key
     volumes:
       - finance_data:/app/data
       - finance_backups:/app/backups
+      - finance_fnb_key:/config/fnb
     read_only: true
     tmpfs:
       - /tmp:size=128m,mode=1777
@@ -29,7 +31,12 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    ulimits:
+      core:
+        soft: 0
+        hard: 0
     stop_grace_period: 15s
 volumes:
   finance_data:
   finance_backups:
+  finance_fnb_key:

@@ -69,6 +69,41 @@ For local use, open [http://localhost:8080](http://localhost:8080) and create yo
 
 The [setup guide](docs/SETUP.md) covers configuration, image channels, importing, backups and recovery. For access beyond your own computer, follow the [HTTPS reverse proxy guide](docs/REVERSE-PROXY.md).
 
+### FNB encryption key for production Docker
+
+For a **new installation**, the included Docker configuration handles key storage
+for you. Start Sente normally, then save your FNB credentials in **Settings >
+Banking**. Sente creates the encryption key automatically; you do not need to
+generate or copy a key.
+
+Docker keeps the key in the separate `finance_fnb_key` volume across container
+replacements. Keep this volume when upgrading. **`docker compose down -v` deletes
+the key volume as well as your database and backups.**
+
+**Back up the key separately.** Database snapshots do not include it. After saving
+your first FNB connection, copy it to a private backup location:
+
+```bash
+(umask 077; docker compose cp finance:/config/fnb/fnb.key ./fnb.key.backup)
+chmod 0600 ./fnb.key.backup
+```
+
+Move that backup into private, encrypted off-host storage, then remove the local
+copy. Never commit it to Git or share it. Keep the exact key with your database
+recovery procedure.
+
+**Already have saved FNB credentials?** Restore their original key before using
+this storage configuration. Sente refuses to generate a replacement while FNB
+connection records exist. **Losing the key makes stored credentials undecryptable;
+a new key cannot recover them.** If the key cannot be recovered, disconnect all
+affected FNB connections in Settings > Banking, then save credentials again.
+Disconnecting retains accounts and transaction history.
+
+For an existing config volume, manually generated keys, or restoring a key, see
+[custom key storage and recovery](docs/FNB-RUNTIME.md#custom-key-storage-and-recovery).
+Live connections also need the separate [FNB browser runtime](docs/FNB-RUNTIME.md);
+statement uploads work without it.
+
 ## Connect and explore
 
 Compatible AI assistants can connect through MCP with permissions you choose. Read-only access is the default; proposed changes can be reviewed in Sente. See [MCP setup and permissions](docs/MCP.md).

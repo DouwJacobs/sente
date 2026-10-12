@@ -24,7 +24,7 @@ export function UserSecurityDialog({ user, action, busy, run, refresh, onClose }
       <p className="muted">
         {deleting
           ? "Permanently remove this user’s access, sessions, agent connections and saved banking credentials. Transactions, rules, imports and historical attribution remain. Their username stays reserved."
-          : "Set a new password for this user. All their sessions and agent connections will be revoked. Their disabled status stays unchanged."}
+          : "Set a new password for this user. All their sessions and agent connections will be revoked, and their FNB connection will be disconnected. Accounts and transaction history remain. Their disabled status stays unchanged."}
       </p>
       <Form onSubmit={async (event) => {
         event.preventDefault();
