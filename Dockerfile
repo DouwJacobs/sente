@@ -32,7 +32,7 @@ LABEL org.opencontainers.image.version="$SENTE_VERSION" \
       org.opencontainers.image.title="Sente" \
       org.opencontainers.image.description="Self-hosted household finance and budgeting" \
       org.opencontainers.image.source="https://github.com/DouwJacobs/sente"
-RUN apk add --no-cache ca-certificates tzdata git && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app
+RUN apk add --no-cache ca-certificates tzdata git && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
 WORKDIR /app
 COPY --from=backend /finance /usr/local/bin/finance
 COPY --from=web /src/web/dist /app/web/dist
@@ -40,7 +40,7 @@ COPY LICENSE NOTICE /usr/share/licenses/sente/
 COPY --from=backend /licenses/ /usr/share/licenses/sente/dependencies/
 COPY --from=web /licenses/ /usr/share/licenses/sente/dependencies/
 USER finance
-ENV PORT=8080 DATABASE_PATH=/app/data/finance.sqlite BACKUP_DIR=/app/backups STATIC_DIR=/app/web/dist
+ENV PORT=8080 DATABASE_PATH=/app/data/finance.sqlite BACKUP_DIR=/app/backups STATIC_DIR=/app/web/dist FNB_KEY_FILE=/config/fnb/fnb.key
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget -q -O /dev/null http://127.0.0.1:8080/api/health || exit 1
 ENTRYPOINT ["finance"]

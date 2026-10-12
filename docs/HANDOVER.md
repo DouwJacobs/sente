@@ -293,15 +293,24 @@ GitHub image and source checks are required for this merge decision.
 No application financial behavior, database migration or MCP tools, schemas,
 output allowlists, permissions, consent, proposals/audits or services change.
 
-## Production FNB Docker key documentation - 12 October 2026
+## Automatic production FNB Docker key setup - 12 October 2026
 
-On codex/fnb-docker-key-docs, README adds the production FNB_KEY_FILE procedure:
-new raw 32-byte key, persistent /srv/sente-secrets/fnb bind mount at /config/fnb,
-standard image ownership 10001:10001, private permissions, separate encrypted
-off-host backups and exact-key recovery. FNB-RUNTIME links to it. New keys cannot
-decrypt existing credentials; disconnect affected connections before replacing
-an unrecoverable key. Browser runtime setup remains a separate prerequisite.
+On codex/fnb-docker-key-docs, Dockerfile prepares private runtime-owned /config/fnb
+and Compose mounts finance_fnb_key with FNB_KEY_FILE=/config/fnb/fnb.key. Fresh
+installations generate their key automatically on first credential save; existing
+connections still require their exact original key. Keep the key volume across
+upgrades and back it up separately from database snapshots. Older published
+images do not prepare this directory; use an image containing this change.
 
-Disposable key and Compose configuration checks passed; see VERIFICATION.md
-for coverage and runtime limits. Documentation only, with no MCP contract,
-permission, consent, proposal/audit, shared financial service or migration impact.
+README describes automatic setup and private key backup; FNB-RUNTIME covers custom
+config volumes, manual raw-key generation and non-root restoration without
+overwriting an existing key. SETUP and ARCHITECTURE match. Browser runtime setup
+remains a separate prerequisite.
+
+Production build, complete synthetic image acceptance, new FNB key
+creation/permissions/container replacement/missing-key refusal checks, final
+separate key backup/restoration recheck, three focused backend tests and Compose
+validation passed. See VERIFICATION.md for exact coverage. No production
+deployment or real bank data/credentials were used. Deployment storage only:
+no MCP contract, permission, consent, proposal/audit, shared financial service
+or migration changes.

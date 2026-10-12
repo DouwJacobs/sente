@@ -808,19 +808,38 @@ GitHub image and source checks are required for this merge decision.
 No application financial behavior, database migration or MCP tools, schemas,
 output allowlists, permissions, consent, proposals/audits or services change.
 
-## Production FNB Docker key documentation - 12 October 2026
+## Automatic production FNB Docker key setup - 12 October 2026
 
-README now documents raw 32-byte key provisioning, persistent host storage,
-UID/GID 10001 ownership, 0700/0600 permissions, a Compose override, private
-off-host key backups and recovery when the original key is lost. FNB-RUNTIME
-links to the procedure. Validation used a disposable synthetic key outside the
-repository: generation produced 32 raw bytes with mode 0600; a second attempt
-failed without changing the key; the documented readability/length check passed.
-Docker Compose config validated the override and retained the data/backup mounts,
-read-only root and explicit key path. git diff --check passed.
+The standard Dockerfile prepares /config/fnb with runtime UID/GID 10001:10001
+and mode 0700. Compose adds finance_fnb_key at that path and sets FNB_KEY_FILE
+to /config/fnb/fnb.key. Existing credential-save behavior generates a private
+32-byte raw key only when no connection records exist. README now makes normal
+first-time setup automatic; FNB-RUNTIME retains custom storage/manual generation
+and recovery instructions. SETUP and ARCHITECTURE reflect the storage default.
 
-Host sudo/chown to UID 10001 and a running container mount were not exercised;
-the generation check substituted the current test user. No production key,
-credentials, database, container or live bank connection was changed. This is
-documentation only: no application/MCP tools, input schemas, output allowlists,
-permissions, consent, proposals/audits, shared services or migrations change.
+Verification passed:
+- Docker production build for linux/amd64, including frontend production build.
+- Full production-image acceptance: hardened onboarding, build metadata/MCP,
+  restart persistence, backup/restore, session/agent invalidation, frozen v22
+  migration preservation/integrity/once-only restart.
+- New synthetic FNB image acceptance: automatic key generation, 32-byte length,
+  0700 directory/0600 file permissions, UID/GID ownership, container replacement
+  with the identical usable key, and refusal to regenerate a missing key when
+  encrypted connections exist.
+- Final focused image recheck added separate key backup and restoration as the
+  normal non-root runtime user; the restored original key remained usable.
+- Three existing backend credential/missing-key/restart tests passed (18.233s).
+- Compose configuration preserves existing data/backup mounts, read-only root
+  and dropped capabilities; Python test syntax and git diff checks passed.
+
+All container data, bank credentials and keys were synthetic and disposable.
+No production configuration, key, database, bank runtime or deployment changed.
+Image metadata used dev and the prior committed revision 647a143 for local checks;
+the unpublished locally built image is not claimed as a release.
+The initial restore helper with root plus CHOWN could not traverse the private
+directory under dropped capabilities; it was replaced by writing the missing key
+as the runtime user with umask 077 and overwrite refusal. The final recheck passed.
+
+MCP impact: deployment storage only; no tools, input schemas, output allowlists,
+permissions, consent, proposals/audits, shared financial services or migrations
+change. Live bank compatibility remains owner-run.

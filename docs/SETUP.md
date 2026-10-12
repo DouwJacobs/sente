@@ -37,7 +37,7 @@ schema migrations.
 
 Use an HTTPS reverse proxy for remote access. [Reverse proxy setup](REVERSE-PROXY.md) covers Nginx/Caddy, trusted addresses and refresh timeouts. Settings → Network can save URL/proxy overrides; they take effect after restart.
 
-The Compose service uses a non-root user, a read-only root filesystem and persistent `finance_data` / `finance_backups` volumes. Keep those volume names when upgrading an existing installation. `docker compose down -v` deletes them.
+The Compose service uses a non-root user, a read-only root filesystem and persistent `finance_data`, `finance_backups` and `finance_fnb_key` volumes. Keep those volume names when upgrading an existing installation. `docker compose down -v` deletes them.
 
 Fresh installations start without categories or rules. In Settings → Configuration, import the optional [Sente starter](https://github.com/DouwJacobs/sente-config), add public Git sources or upload JSON files. Several sources can coexist; updates are manual and replacements require a preview and confirmation. Export your categories, spending groups, merchants and rules to a portable JSON file. See [portable configuration](RULESETS.md) for the format and account mapping.
 
@@ -47,7 +47,7 @@ Add an account, then upload statements in Transactions → Import activity. Choo
 
 Complete categorized transactions are accepted automatically. Missing categories and rule conflicts stay in Needs review. Seen/unseen is personal and separate from acceptance. Rules match descriptions; categories and spending groups stay independent. Explicit transfers are excluded from income/spending, refunds reduce expense spending, and splits preserve the original total.
 
-Settings → Banking supports FNB discovery, balance refresh and recent posted transaction fetching. Scheduling starts off. Live compatibility depends on the bank's current layout and requires owner verification. The standard Docker image does not bundle the connector browser/runtime: see [FNB runtime setup](FNB-RUNTIME.md) before enabling this feature. Statement uploads work independently.
+Settings → Banking supports FNB discovery, balance refresh and recent posted transaction fetching. Scheduling starts off. Live compatibility depends on the bank's current layout and requires owner verification. The standard Docker image does not bundle the connector browser/runtime: see [FNB runtime setup](FNB-RUNTIME.md) before enabling this feature. The included Docker setup creates and persists the encryption key automatically when the first FNB credentials are saved. Existing connections require their original key. See the [key backup and recovery instructions](../README.md#fnb-encryption-key-for-production-docker). Statement uploads work independently.
 
 ## Backups and recovery
 

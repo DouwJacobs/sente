@@ -71,78 +71,38 @@ The [setup guide](docs/SETUP.md) covers configuration, image channels, importing
 
 ### FNB encryption key for production Docker
 
-Before saving live FNB credentials, configure persistent key storage. The key must
-contain exactly **32 raw bytes** (not hexadecimal or Base64 text). `FNB_KEY_FILE`
-must be an absolute container path outside the app workspace (`/app`) and database
-backup directory (`/app/backups`).
+For a **new installation**, the included Docker configuration handles key storage
+for you. Start Sente normally, then save your FNB credentials in **Settings >
+Banking**. Sente creates the encryption key automatically; you do not need to
+generate or copy a key.
 
-**For a new installation with no stored FNB credentials**, run these commands on
-the Linux Docker host. The standard Sente image runs as UID/GID `10001:10001`;
-adjust ownership if your custom runtime uses a different user.
+Docker keeps the key in the separate `finance_fnb_key` volume across container
+replacements. Keep this volume when upgrading. **`docker compose down -v` deletes
+the key volume as well as your database and backups.**
 
-```bash
-sudo install -d -m 0700 -o 10001 -g 10001 /srv/sente-secrets/fnb
-sudo sh -c '
-  set -eu
-  umask 077
-  set -C
-  openssl rand 32 > /srv/sente-secrets/fnb/fnb.key
-  chown 10001:10001 /srv/sente-secrets/fnb/fnb.key
-  chmod 0600 /srv/sente-secrets/fnb/fnb.key
-'
-sudo wc -c /srv/sente-secrets/fnb/fnb.key
-```
-
-The last command must report `32` bytes. The creation command refuses to overwrite
-an existing file. Keep the directory private (`0700`) and the key owner-only
-(`0600`); Sente rejects key files with group or other permissions. Never print
-the key or commit it to Git.
-
-Create `compose.override.yaml` beside `compose.yaml` with:
-
-```yaml
-services:
-  finance:
-    environment:
-      FNB_KEY_FILE: /config/fnb/fnb.key
-    volumes:
-      - type: bind
-        source: /srv/sente-secrets/fnb
-        target: /config/fnb
-        bind:
-          create_host_path: false
-```
-
-Compose automatically merges this override with the existing configuration,
-keeping the database and backup volumes. Recreate the service to apply it:
+**Back up the key separately.** Database snapshots do not include it. After saving
+your first FNB connection, copy it to a private backup location:
 
 ```bash
-docker compose up -d
-docker compose exec finance sh -c 'test -r "$FNB_KEY_FILE" && test "$(wc -c < "$FNB_KEY_FILE")" -eq 32'
+(umask 077; docker compose cp finance:/config/fnb/fnb.key ./fnb.key.backup)
+chmod 0600 ./fnb.key.backup
 ```
 
-The check verifies readability and length without exposing the key. The bind
-mount persists across container replacement and provides writable key storage
-despite the read-only container root filesystem. Setting `FNB_KEY_FILE` only in
-`.env` is insufficient unless your Compose configuration passes it into the
-service, as this override does.
+Move that backup into private, encrypted off-host storage, then remove the local
+copy. Never commit it to Git or share it. Keep the exact key with your database
+recovery procedure.
 
-Back up the **exact key file separately** in private, encrypted off-host storage,
-and retain it alongside the database recovery procedure. Database snapshots do
-not include the key. On migration or restore, restore the matching key with the
-same restrictive permissions and runtime ownership before using FNB.
-
-**Losing the key makes stored FNB credentials undecryptable. Generating a new key
-does not recover them.** If Sente reports "FNB encryption key unavailable. Restore
-the key before saving credentials.", restore the original key first. Sente will
-not automatically generate a replacement while FNB connection records exist.
-If the original key cannot be recovered, disconnect all affected FNB connections
-in Settings > Banking, then provision a new key and enter credentials again.
+**Already have saved FNB credentials?** Restore their original key before using
+this storage configuration. Sente refuses to generate a replacement while FNB
+connection records exist. **Losing the key makes stored credentials undecryptable;
+a new key cannot recover them.** If the key cannot be recovered, disconnect all
+affected FNB connections in Settings > Banking, then save credentials again.
 Disconnecting retains accounts and transaction history.
 
-This key setup does not install the browser worker. Follow
-[FNB runtime setup](docs/FNB-RUNTIME.md) for the separate Node/browser requirements;
-statement uploads do not need this key.
+For an existing config volume, manually generated keys, or restoring a key, see
+[custom key storage and recovery](docs/FNB-RUNTIME.md#custom-key-storage-and-recovery).
+Live connections also need the separate [FNB browser runtime](docs/FNB-RUNTIME.md);
+statement uploads work without it.
 
 ## Connect and explore
 
