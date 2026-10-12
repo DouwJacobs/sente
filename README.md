@@ -69,6 +69,81 @@ For local use, open [http://localhost:8080](http://localhost:8080) and create yo
 
 The [setup guide](docs/SETUP.md) covers configuration, image channels, importing, backups and recovery. For access beyond your own computer, follow the [HTTPS reverse proxy guide](docs/REVERSE-PROXY.md).
 
+### FNB encryption key for production Docker
+
+Before saving live FNB credentials, configure persistent key storage. The key must
+contain exactly **32 raw bytes** (not hexadecimal or Base64 text). `FNB_KEY_FILE`
+must be an absolute container path outside the app workspace (`/app`) and database
+backup directory (`/app/backups`).
+
+**For a new installation with no stored FNB credentials**, run these commands on
+the Linux Docker host. The standard Sente image runs as UID/GID `10001:10001`;
+adjust ownership if your custom runtime uses a different user.
+
+```bash
+sudo install -d -m 0700 -o 10001 -g 10001 /srv/sente-secrets/fnb
+sudo sh -c '
+  set -eu
+  umask 077
+  set -C
+  openssl rand 32 > /srv/sente-secrets/fnb/fnb.key
+  chown 10001:10001 /srv/sente-secrets/fnb/fnb.key
+  chmod 0600 /srv/sente-secrets/fnb/fnb.key
+'
+sudo wc -c /srv/sente-secrets/fnb/fnb.key
+```
+
+The last command must report `32` bytes. The creation command refuses to overwrite
+an existing file. Keep the directory private (`0700`) and the key owner-only
+(`0600`); Sente rejects key files with group or other permissions. Never print
+the key or commit it to Git.
+
+Create `compose.override.yaml` beside `compose.yaml` with:
+
+```yaml
+services:
+  finance:
+    environment:
+      FNB_KEY_FILE: /config/fnb/fnb.key
+    volumes:
+      - type: bind
+        source: /srv/sente-secrets/fnb
+        target: /config/fnb
+        bind:
+          create_host_path: false
+```
+
+Compose automatically merges this override with the existing configuration,
+keeping the database and backup volumes. Recreate the service to apply it:
+
+```bash
+docker compose up -d
+docker compose exec finance sh -c 'test -r "$FNB_KEY_FILE" && test "$(wc -c < "$FNB_KEY_FILE")" -eq 32'
+```
+
+The check verifies readability and length without exposing the key. The bind
+mount persists across container replacement and provides writable key storage
+despite the read-only container root filesystem. Setting `FNB_KEY_FILE` only in
+`.env` is insufficient unless your Compose configuration passes it into the
+service, as this override does.
+
+Back up the **exact key file separately** in private, encrypted off-host storage,
+and retain it alongside the database recovery procedure. Database snapshots do
+not include the key. On migration or restore, restore the matching key with the
+same restrictive permissions and runtime ownership before using FNB.
+
+**Losing the key makes stored FNB credentials undecryptable. Generating a new key
+does not recover them.** If Sente reports "FNB encryption key unavailable. Restore
+the key before saving credentials.", restore the original key first. Sente will
+not automatically generate a replacement while FNB connection records exist.
+If the original key cannot be recovered, disconnect all affected FNB connections
+in Settings > Banking, then provision a new key and enter credentials again.
+Disconnecting retains accounts and transaction history.
+
+This key setup does not install the browser worker. Follow
+[FNB runtime setup](docs/FNB-RUNTIME.md) for the separate Node/browser requirements;
+statement uploads do not need this key.
+
 ## Connect and explore
 
 Compatible AI assistants can connect through MCP with permissions you choose. Read-only access is the default; proposed changes can be reviewed in Sente. See [MCP setup and permissions](docs/MCP.md).

@@ -292,3 +292,16 @@ Local Docker Desktop startup failed, so no local image pass is claimed.
 GitHub image and source checks are required for this merge decision.
 No application financial behavior, database migration or MCP tools, schemas,
 output allowlists, permissions, consent, proposals/audits or services change.
+
+## Production FNB Docker key documentation - 12 October 2026
+
+On codex/fnb-docker-key-docs, README adds the production FNB_KEY_FILE procedure:
+new raw 32-byte key, persistent /srv/sente-secrets/fnb bind mount at /config/fnb,
+standard image ownership 10001:10001, private permissions, separate encrypted
+off-host backups and exact-key recovery. FNB-RUNTIME links to it. New keys cannot
+decrypt existing credentials; disconnect affected connections before replacing
+an unrecoverable key. Browser runtime setup remains a separate prerequisite.
+
+Disposable key and Compose configuration checks passed; see VERIFICATION.md
+for coverage and runtime limits. Documentation only, with no MCP contract,
+permission, consent, proposal/audit, shared financial service or migration impact.

@@ -807,3 +807,20 @@ Local Docker Desktop startup failed, so no local image pass is claimed.
 GitHub image and source checks are required for this merge decision.
 No application financial behavior, database migration or MCP tools, schemas,
 output allowlists, permissions, consent, proposals/audits or services change.
+
+## Production FNB Docker key documentation - 12 October 2026
+
+README now documents raw 32-byte key provisioning, persistent host storage,
+UID/GID 10001 ownership, 0700/0600 permissions, a Compose override, private
+off-host key backups and recovery when the original key is lost. FNB-RUNTIME
+links to the procedure. Validation used a disposable synthetic key outside the
+repository: generation produced 32 raw bytes with mode 0600; a second attempt
+failed without changing the key; the documented readability/length check passed.
+Docker Compose config validated the override and retained the data/backup mounts,
+read-only root and explicit key path. git diff --check passed.
+
+Host sudo/chown to UID 10001 and a running container mount were not exercised;
+the generation check substituted the current test user. No production key,
+credentials, database, container or live bank connection was changed. This is
+documentation only: no application/MCP tools, input schemas, output allowlists,
+permissions, consent, proposals/audits, shared services or migrations change.

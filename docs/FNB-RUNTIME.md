@@ -8,6 +8,20 @@ Credentials entered in Settings → Banking are encrypted using owner-bound AES-
 
 Debug mode can show the browser for owner interaction. Never publish bank screenshots, credentials, page dumps, exports or runtime keys. Layout diagnostics contain fixed error codes and counts. Live compatibility remains owner-verified; synthetic fixtures do not establish it.
 
+## Production Docker key storage
+
+Follow the [README production Docker key procedure](../README.md#fnb-encryption-key-for-production-docker)
+to generate a new 32-byte raw key, configure `FNB_KEY_FILE`, mount persistent private
+storage, set runtime ownership and permissions, and back up the key separately.
+The standard image runs as UID/GID `10001:10001`; its default Compose configuration
+does not pass `FNB_KEY_FILE` or mount key storage. A Compose override is required.
+
+A new key is appropriate only when no credentials depend on an older key. Losing
+the original key makes stored credentials undecryptable; a replacement cannot
+decrypt them. Restore the exact original key, or disconnect all affected FNB
+connections before provisioning a replacement and entering credentials again.
+Accounts and transaction history remain after disconnecting.
+
 ## Cancellation and profile cleanup
 
 The worker receives credential JSON on the first stdin line and cancellation-only frames afterward. Parent-pipe loss or Linux signals request abort. Go waits up to 30 seconds for logout/browser/profile cleanup, then terminates the relevant Linux process tree or Windows worker tree through WSL. Go owns/removes each generated temporary profile and rejects cancelled or cleanup-failed results. Manual-run persistence rechecks the initiating browser session as well as current owner/account access. Synthetic process tests cover Linux and WSL/Windows Node without bank pages. Live MFA/layout/logout/overlap compatibility remains owner-run; OFX identifiers still need another overlapping export. This does not change the standard image's exclusion of the connector runtime/browser.
