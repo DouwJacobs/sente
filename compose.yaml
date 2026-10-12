@@ -7,6 +7,8 @@ services:
         SENTE_VERSION: ${SENTE_VERSION:-dev}
         SENTE_COMMIT: ${SENTE_COMMIT:-}
         SENTE_BUILD_TIME: ${SENTE_BUILD_TIME:-}
+    init: true
+    shm_size: 256m
     restart: unless-stopped
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-8080}:8080"
@@ -29,6 +31,7 @@ services:
       - /tmp:size=128m,mode=1777
     security_opt:
       - no-new-privileges:true
+      - seccomp=./docker/chromium-seccomp.json
     cap_drop:
       - ALL
     ulimits:

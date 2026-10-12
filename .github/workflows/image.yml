@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - Dockerfile
+      - compose.yaml
+      - docker/**
+      - connectors/fnb/owner/**
+      - scripts/dependency-notices.py
+      - .dockerignore
       - scripts/test-release-image.py
       - internal/app/testdata/migrations/v22.sql
       - .github/workflows/image.yml

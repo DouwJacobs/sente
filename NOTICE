@@ -8,8 +8,12 @@ The reference connectors/fnb/upstream is fnb-api 1.0.11 by bitshiftza:
 https://github.com/bitshiftza/fnb-api
 It retains its own GPL-3.0 license and attribution. Sente's active owner worker
 adapts the bank navigation/selector concepts; upstream notices remain included
-in source distributions. The reference and active browser worker are excluded
-from the standard application image.
+in source distributions. The active browser worker and the reference license are included in the
+application image; the old reference implementation is not executed.
+
+The Chromium Docker seccomp profile is from Microsoft Playwright, commit
+d9f2fd3e2232ace8e317a84eda6cb86e25bcf49c, under Apache-2.0. Its original license
+is included in docker/PLAYWRIGHT-LICENSE and in the image dependency notices.
 
 Third-party dependencies retain their respective licenses. Image builds include
 dependency license texts under /usr/share/licenses/sente and an SBOM. Release

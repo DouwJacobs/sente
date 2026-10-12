@@ -87,3 +87,9 @@ authorized group/category allocation snapshot for the browser. Frontend
 `features/dashboard/SpendingFlowPage.tsx` owns the dedicated Sankey page, its
 cancellable summary request and loading/error/back workflow. App owns navigation and
 preserves account/period scope; Dashboard owns the spending-card action menu.
+
+
+FNB container startup is owned by `connectors/fnb/owner/browser-runtime.mjs`;
+`runtime-check.mjs` exercises that same launch code and the configured worker
+without bank credentials. Docker sandbox policy lives in
+`docker/chromium-seccomp.json`; production image acceptance owns its execution.

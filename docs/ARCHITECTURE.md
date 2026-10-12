@@ -150,3 +150,23 @@ of their encrypted credential record; FNB persistence rechecks that exact record
 as well as owner/session/grants, preventing a recovered/deleted/replaced connection
 from authorizing an old run. Cancellation uses the existing logout/cleanup path.
 Self-service password changes keep the authenticated initiating session and FNB.
+
+
+## Single-container FNB runtime
+
+The Dockerfile installs Chromium and copies pinned Node, the active worker and its
+production-only dependencies into `/opt/sente/fnb`. The Go backend invokes the
+explicit image defaults using the existing private stdin/stdout contract; there
+is no remote connector API. `browser-runtime.mjs` shares executable selection
+and private temporary browser environment between refresh and the offline image
+check. Browser CDP uses an anonymous pipe, not a network listener. Profile/cache
+and crash metadata stay under the generated private temporary profile.
+
+Compose supplies init, private 256 MiB shared memory and the bundled default-deny
+seccomp profile adapted from Playwright, permitting namespace operations and
+Chromium's internal namespace chroot without granting container capabilities.
+Read-only root, no-new-privileges, non-root user and zero core dumps remain.
+`runtime-check.mjs` validates the configured worker with credential-free invalid
+input, a synthetic page and Chromium's namespace/seccomp status; publication
+acceptance runs it with network disabled. Headless Docker has no browser viewer.
+No schema, financial behavior, MCP tools, inputs, outputs or consent changes.

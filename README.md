@@ -69,7 +69,24 @@ For local use, open [http://localhost:8080](http://localhost:8080) and create yo
 
 The [setup guide](docs/SETUP.md) covers configuration, image channels, importing, backups and recovery. For access beyond your own computer, follow the [HTTPS reverse proxy guide](docs/REVERSE-PROXY.md).
 
-### FNB encryption key for production Docker
+### FNB runtime in Docker
+
+The Sente image includes the web UI, backend, Node FNB worker and Chromium in one
+container. Use the supplied Compose configuration and keep
+`docker/chromium-seccomp.json` beside it: the profile lets Chromium start its
+sandbox while Sente remains non-root with a read-only root filesystem, dropped
+capabilities and no-new-privileges. Compose also supplies an init process and
+private shared memory. No separate connector container or browser port is needed.
+
+Existing custom Compose deployments need `init: true`, `shm_size: 256m`,
+`seccomp=./docker/chromium-seccomp.json` under `security_opt`, and the persistent
+key volume below. See [runtime setup and offline startup check](docs/FNB-RUNTIME.md)
+for the full upgrade procedure and host requirements. Keep **Show Chrome** off in
+Docker; it has no graphical desktop. Live login, MFA and bank layout compatibility
+still require owner verification. GitHub verifies browser startup using synthetic
+content and no network access before publishing the image.
+
+## FNB encryption key for production Docker
 
 For a **new installation**, the included Docker configuration handles key storage
 for you. Start Sente normally, then save your FNB credentials in **Settings >

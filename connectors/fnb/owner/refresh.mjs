@@ -1,8 +1,9 @@
 // GPL-3.0; selectors adapted from ../upstream at the pinned commit.
 // Automatic account/balance and opt-in transaction-preview worker. Never run live from agent tools.
-import {mkdtemp,rm,access} from 'node:fs/promises'
-import {tmpdir,homedir} from 'node:os'
+import {mkdtemp,rm} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
 import {join} from 'node:path'
+import {launchBrowser} from './browser-runtime.mjs'
 import {createInterface} from 'node:readline'
 import {normalizeAccounts,ProbeError} from './accounts.mjs'
 import {fetchTransactions,resolveMaskedCreditAccounts} from './transactions.mjs'
@@ -241,14 +242,6 @@ export async function loginAndAccounts(page,credentials,signal){
  }
  throw new ProbeError('APPROVAL_REQUIRED')
 }
-async function executable(){
- const candidates=process.platform==='win32'?[
- join(process.env.ProgramFiles||'C:/Program Files','Google/Chrome/Application/chrome.exe'),
- join(process.env['ProgramFiles(x86)']||'C:/Program Files (x86)','Microsoft/Edge/Application/msedge.exe'),
- join(process.env.LOCALAPPDATA||join(homedir(),'AppData/Local'),'Google/Chrome/Application/chrome.exe')]:['/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser']
- for(const file of candidates){try{await access(file);return file}catch{}}
- throw new ProbeError('BROWSER_NOT_FOUND')
-}
 export function workerFailure(err,phase,aborted=false){
  const allowed=['SESSION_CONFLICT','LOGIN_LAYOUT_CHANGED','APPROVAL_REQUIRED','ACCOUNT_LAYOUT_CHANGED','BALANCE_LAYOUT_CHANGED','BROWSER_NOT_FOUND','TRANSACTION_LAYOUT_CHANGED','TRANSACTION_ACCOUNT_MISMATCH','TRANSACTION_FEE_REVIEW_REQUIRED','TRANSACTION_ACCOUNT_UNSUPPORTED']
  const error=err instanceof ProbeError&&allowed.includes(err.code)?err.code:aborted?'CONNECTOR_TIMEOUT':phase<=4?'CONNECTOR_START_FAILED':'REFRESH_FAILED'
@@ -288,9 +281,8 @@ export async function main(){
   phase=3
   if(abort.signal.aborted)throw new ProbeError('REFRESH_FAILED')
   profile=credentials.profile_directory||await mkdtemp(join(tmpdir(),'finance-fnb-refresh-'))
-  const env={};for(const key of ['PATH','Path','SYSTEMROOT','SystemRoot','WINDIR','TEMP','TMP','HOME','USERPROFILE','LOCALAPPDATA','APPDATA','DISPLAY','WAYLAND_DISPLAY','XDG_RUNTIME_DIR'])if(process.env[key])env[key]=process.env[key]
   phase=4
-  browser=await puppeteer.launch({executablePath:await executable(),headless:!credentials.visible,pipe:true,userDataDir:profile,env,timeout:30000})
+  browser=await launchBrowser(puppeteer,{profile,visible:credentials.visible})
   const browserPID=browser.process()?.pid;if(browserPID)process.stderr.write(`FNB_BROWSER_PID ${browserPID}\n`)
   if(abort.signal.aborted)throw new ProbeError('REFRESH_FAILED')
   context=await browser.createBrowserContext();const page=await context.newPage();if(credentials.visible)await page.bringToFront()

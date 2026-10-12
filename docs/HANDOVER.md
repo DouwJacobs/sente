@@ -337,3 +337,26 @@ do not claim Windows browser certification. No live banking, real credentials,
 production data/deployment or manual UI inspection. Host/runtime/client compromise
 can still expose plaintext during login; a zero-compromise guarantee is impossible.
 No MCP contract/consent/output/permission expansion or database migration.
+
+
+## Single-container FNB runtime — 12 October 2026
+
+`codex/fnb-container-runtime` packages Node, the active FNB worker and Chromium
+in the standard Sente image. Worker and offline startup check share
+`browser-runtime.mjs`; packaged executable/path defaults use the existing local
+private pipe contract. No second container, remote connector API or browser port.
+Compose adds init, 256 MiB private shared memory and the bundled default-deny
+Chromium seccomp profile (Playwright origin plus namespace chroot). Retain
+non-root, dropped capabilities, no-new-privileges, read-only root and core=0.
+Custom deployments need the profile file beside Compose and a new published
+image; `0.1.3-beta.34` does not contain this runtime. Preserve the existing data,
+backup and FNB key volumes and original keys. Docker has no graphical desktop;
+keep Show Chrome off. Owner-only live/MFA verification is outstanding.
+
+48 worker tests, 28 release/CI regression tests and final full synthetic image
+acceptance passed locally, including real offline sandbox startup and configured
+worker invocation. npm worker audit has zero advisories; offline Trivy scan has
+zero new runtime-package vulnerabilities or secret findings, with the unchanged
+unused OpenPGP inventory warning documented in VERIFICATION.md. No schema or MCP
+contract/consent changes: this is runtime packaging for the existing browser-only
+banking workflow. No homelab changes or live banking were performed.
