@@ -72,8 +72,7 @@ The worker receives credential JSON on the first stdin line and cancellation-onl
 
 ## Credential security and password recovery
 
-See [the credential security audit](FNB-SECURITY-AUDIT.md) for verified protections
-and limits. Administrator/offline Sente password recovery disconnects the affected
+Administrator/offline Sente password recovery disconnects the affected
 user's FNB connection and cancels its active banking run after recovery commits.
 The user must enter their bank credentials again. Accounts, transaction history
 and discovery preferences remain; self-service password changes keep FNB.

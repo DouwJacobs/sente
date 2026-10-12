@@ -846,8 +846,8 @@ change. Live bank compatibility remains owner-run.
 
 ## FNB credential security audit and recovery isolation - 12 October 2026
 
-See [the complete audit](FNB-SECURITY-AUDIT.md) for threats, corrected findings,
-scans, attack-test coverage and explicit remaining limits. Fixed key/recovery-copy
+Reviewed storage, API/SQL/CSRF, browser-worker and deployment boundaries.
+Fixed key/recovery-copy
 Git/build exclusions; directory ownership/writability, no-follow descriptor-based
 key access and bounded reads; worker POST/formaction/formmethod/origin validation;
 Go 1.27.2 runtime security updates; Alpine zlib update; and disabled core dumps.

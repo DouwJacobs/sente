@@ -42,6 +42,9 @@ No tools, input schemas, financial output allowlists, capability/consent grants 
 
 ## FNB credential review - 12 October 2026
 
-See [the FNB credential security audit](FNB-SECURITY-AUDIT.md) for the storage,
-API/SQL/CSRF, browser-worker, Docker and dependency review, corrections, synthetic
-coverage and explicit host/administrator/Windows verification limits.
+FNB key storage uses runtime-owned private directories, no-follow descriptor
+checks and bounded reads. The worker validates HTTPS bank origins, POST forms
+and submit-button overrides before credential entry. Administrator/offline
+password recovery disconnects FNB and cancels active work after commit.
+[VERIFICATION.md](VERIFICATION.md) records synthetic coverage and remaining
+host/administrator/Windows verification limits.

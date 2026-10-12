@@ -325,8 +325,7 @@ atomically with recovery; after commit cancel its active provider. Provider
 financial persistence rechecks the exact credential record. Self-service retains
 FNB; accounts/history/preferences and other users' connections remain.
 
-[The full audit](FNB-SECURITY-AUDIT.md) records all findings, evidence and trust
-limits; VERIFICATION.md records final checks. Recovery race tests, API/MCP/
+VERIFICATION.md records final checks and remaining trust/verification limits. Recovery race tests, API/MCP/
 persistence checks, worker/frontend tests, phone/desktop recovery workflows,
 production build and image/key/recovery acceptance passed. Patched Go/npm scans
 have no called/imported or active npm advisories. Offline image scan has no Alpine
