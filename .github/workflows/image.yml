@@ -1,0 +1,31 @@
+name: Verify production image
+on:
+  pull_request:
+    paths:
+      - Dockerfile
+      - scripts/test-release-image.py
+      - internal/app/testdata/migrations/v22.sql
+      - .github/workflows/image.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: image-verification-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Build exact-source candidate
+        timeout-minutes: 20
+        env:
+          SENTE_COMMIT: ${{ github.sha }}
+        run: |
+          docker build --platform linux/amd64 --tag sente:pr-verify --build-arg SENTE_VERSION=dev --build-arg SENTE_COMMIT="$SENTE_COMMIT" .
+      - name: Accept production image with synthetic data
+        timeout-minutes: 5
+        env:
+          SENTE_COMMIT: ${{ github.sha }}
+        run: python3 scripts/test-release-image.py sente:pr-verify --version dev --commit "$SENTE_COMMIT"

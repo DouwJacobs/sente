@@ -1,6 +1,6 @@
 import { ApplicationUpdateStatus } from "./ApplicationUpdate";
 import { useEffect } from "react";
-import { ArrowUpRight, BookOpen, Github, MessagesSquare } from "lucide-react";
+import { ArrowUpRight, BookOpen, CodeXml, MessagesSquare } from "lucide-react";
 import type { PageProps } from "../../shared/types";
 import { Button, Loading } from "../../ui";
 import { PixelMark } from "../../PixelScene";
@@ -8,7 +8,7 @@ import { issueReportURL, repositoryURL, useBuildInfo } from "../../shared/buildI
 
 const resources = [
   { label: "Documentation", description: "Setup, guides and everyday workflows", href: `${repositoryURL}/blob/main/docs/README.md`, icon: BookOpen },
-  { label: "GitHub repository", description: "Source code and project development", href: repositoryURL, icon: Github },
+  { label: "GitHub repository", description: "Source code and project development", href: repositoryURL, icon: CodeXml },
   { label: "Issue tracker", description: "Known issues and planned improvements", href: `${repositoryURL}/issues`, icon: MessagesSquare },
 ];
 
