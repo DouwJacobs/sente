@@ -15,8 +15,11 @@ web/playwright-report
 .env
 .env.*
 
-# Separate connector prototype/reference is not part of the Go app image.
-connectors/
+# Only the active worker is packaged; exclude local dependencies and experiments.
+connectors/fnb/upstream/**
+!connectors/fnb/upstream/LICENSE
+connectors/fnb/service/
+connectors/fnb/owner/node_modules/
 
 # Never send FNB runtime keys or recovery copies to a build server.
 fnb.key*

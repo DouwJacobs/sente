@@ -2,7 +2,55 @@
 
 Sente supports administrator-owned FNB discovery, balances and recent posted transaction imports. Manual and scheduled runs use visible, mapped editable accounts. Scheduling starts disabled; provider/MFA/layout failures need owner attention. Bank snapshots do not prove complete history, and capped recent-history pages may omit older activity.
 
-The standard Docker image contains the Go app and web frontend, not the browser worker. Configure a compatible Node runtime, the dependencies in `connectors/fnb/owner`, a supported Chrome/Edge browser and the worker path before enabling live connections. `FNB_NODE_EXECUTABLE` and `FNB_RUNNER_PATH` override the local bridge defaults. WSL defaults to Windows Node at `/mnt/c/Program Files/nodejs/node.exe` and an installed Windows browser. See [connector details](../connectors/fnb/README.md).
+The standard Docker image includes the Go app, web frontend, Node, the active
+FNB worker and Chromium. One container serves the UI and performs refreshes;
+there is no separate connector service, API endpoint or browser port to configure.
+The image sets `FNB_NODE_EXECUTABLE=/usr/local/bin/node` and
+`FNB_RUNNER_PATH=/opt/sente/fnb/refresh.mjs`. GitHub tests and publishes this same
+image, including an offline sandboxed-browser startup check.
+
+Use the current Compose file and `docker/chromium-seccomp.json` beside it.
+Compose provides a non-root, read-only runtime, init process, private shared memory,
+zero core dumps and a default-deny seccomp profile permitting Chromium's namespace
+sandbox. Keep these settings; do not use privileged mode, host IPC or
+`--no-sandbox`. See [sandbox configuration](../docker/README.md).
+Hosts must permit unprivileged user namespaces; incompatible host policies stop
+browser startup rather than silently disabling the sandbox.
+
+For an existing deployment, preserve the Compose project name and named volumes,
+add the key mount and sandbox/init/shared-memory settings from the new Compose
+file, and pull a release containing the runtime. Download the profile from the
+same release tag as the image. The profile is a Docker-host file, not a secret:
+
+```bash
+mkdir -p docker
+curl --fail --location https://raw.githubusercontent.com/DouwJacobs/sente/<release-tag>/docker/chromium-seccomp.json -o docker/chromium-seccomp.json
+```
+
+Replace `<release-tag>` with the published Git tag (for example `v<image-version>`),
+not an older release that predates this runtime. Restart with
+`docker compose pull finance` and `docker compose up -d finance`.
+The previous `0.1.3-beta.34` image does not contain the browser runtime.
+No manual key generation is needed for a first connection.
+
+Check startup without banking credentials or contacting FNB:
+
+```bash
+docker compose run --rm --no-deps --entrypoint node finance /opt/sente/fnb/runtime-check.mjs
+```
+
+The check only opens a synthetic page and Chromium's internal sandbox page;
+release CI additionally disables container networking. It prints fixed PASS text,
+never bank data. FNB refresh remains owner initiated and owner verified.
+Docker runs headless: leave **Show Chrome** disabled. Complete phone-based bank
+approvals yourself if requested. No graphical desktop or remote browser viewer is
+exposed; approvals requiring direct browser interaction are not supported by this
+headless deployment and must stop with owner attention.
+
+Outside Docker, install Node 22.12+, the pinned `connectors/fnb/owner` dependencies
+and Chrome/Edge. Executable/worker overrides remain available; WSL defaults to
+Windows Node at `/mnt/c/Program Files/nodejs/node.exe`. See
+[connector details](../connectors/fnb/README.md).
 
 Credentials entered in Settings → Banking are encrypted using owner-bound AES-256-GCM. Outside Docker, the generated key normally lives at `~/.config/finance-tracker/fnb.key`, outside the source tree and database backups. Existing key paths and configuration identifiers are retained for compatibility with installed systems. `FNB_KEY_FILE` may select another absolute path outside workspace/backups. Provide persistent, private writable key storage for a container runtime. Back up the key separately; losing it requires recovery or disconnecting and entering credentials again. Same-host encryption cannot exclude a privileged host operator.
 
@@ -68,7 +116,7 @@ encryption cannot exclude a privileged host operator.
 
 ## Cancellation and profile cleanup
 
-The worker receives credential JSON on the first stdin line and cancellation-only frames afterward. Parent-pipe loss or Linux signals request abort. Go waits up to 30 seconds for logout/browser/profile cleanup, then terminates the relevant Linux process tree or Windows worker tree through WSL. Go owns/removes each generated temporary profile and rejects cancelled or cleanup-failed results. Manual-run persistence rechecks the initiating browser session as well as current owner/account access. Synthetic process tests cover Linux and WSL/Windows Node without bank pages. Live MFA/layout/logout/overlap compatibility remains owner-run; OFX identifiers still need another overlapping export. This does not change the standard image's exclusion of the connector runtime/browser.
+The worker receives credential JSON on the first stdin line and cancellation-only frames afterward. Parent-pipe loss or Linux signals request abort. Go waits up to 30 seconds for logout/browser/profile cleanup, then terminates the relevant Linux process tree or Windows worker tree through WSL. Go owns/removes each generated temporary profile and rejects cancelled or cleanup-failed results. Manual-run persistence rechecks the initiating browser session as well as current owner/account access. Synthetic process tests cover Linux and WSL/Windows Node without bank pages. Live MFA/layout/logout/overlap compatibility remains owner-run; OFX identifiers still need another overlapping export. The packaged container uses the same lifecycle and temporary-profile cleanup.
 
 ## Credential security and password recovery
 

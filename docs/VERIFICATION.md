@@ -1,5 +1,42 @@
 # Verification
 
+## Single-container FNB runtime — 12 October 2026
+
+Branch `codex/fnb-container-runtime` starts at development `d6b1c44`.
+The production image now contains Node 26.10.0, Chromium 152.0.7977.82,
+the pinned active worker and production-only npm dependencies. Earlier entries
+recording the image's exclusion of the connector describe the earlier image.
+
+Passed locally:
+- All 48 synthetic active worker tests.
+- Final production Docker build and full disposable image acceptance: configured
+  worker startup with invalid credential-free input, network-disabled Chromium
+  synthetic DOM and namespace/seccomp sandbox, non-root/read-only runtime,
+  temporary-profile cleanup, onboarding, metadata/MCP, restart, backups/restore,
+  schema-22 upgrade, key generation/private permissions, replacement persistence,
+  missing-key refusal, separate key recovery and offline password-recovery
+  disconnection/reconnect.
+- CI evidence (7), CI scope (10), release metadata (6) and publication (5)
+  regression tests; Compose config, Python compilation and diff whitespace checks.
+- npm worker production audit: zero advisories. Local Trivy 0.75.0 scan with
+  cached vulnerability database and networking disabled: zero Alpine/package
+  vulnerabilities and secret findings; unchanged Go module inventory still
+  reports GO-2026-5932 for unused OpenPGP code in x/crypto. The preceding
+  callable-code audit found it neither imported nor called.
+
+The Chromium sandbox required allowing chroot inside its unprivileged user
+namespace in addition to the Playwright profile's clone/setns/unshare allowance.
+No container capabilities were added, and no sandbox was disabled. CI and
+publication run the same offline browser check before publishing.
+
+No live banking, financial data, credentials, MFA, current bank layouts or
+homelab deployment were accessed. Headless Docker has no browser viewer;
+phone approvals remain owner operated and browser-interaction approvals are not
+provided. Host policies must permit unprivileged user namespaces. GitHub CI
+is a separate gate; local image acceptance does not imply remote publication.
+No financial/schema or MCP tool/schema/output/permission/consent changes.
+
+
 ## Release browser prerequisite and budget regressions - 9 October 2026
 
 Development run 37904586295 stopped at four outdated Rules prerequisite

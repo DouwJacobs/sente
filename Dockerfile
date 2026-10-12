@@ -7,6 +7,14 @@ COPY scripts/dependency-notices.py /src/scripts/dependency-notices.py
 RUN npm run build
 RUN apk add --no-cache python3 && python3 /src/scripts/dependency-notices.py web /licenses/web
 
+FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS fnb
+WORKDIR /opt/sente/fnb
+COPY connectors/fnb/owner/package*.json ./
+RUN npm ci --omit=dev --ignore-scripts
+COPY connectors/fnb/owner/refresh.mjs connectors/fnb/owner/accounts.mjs connectors/fnb/owner/transactions.mjs connectors/fnb/owner/browser-runtime.mjs connectors/fnb/owner/runtime-check.mjs ./
+COPY scripts/dependency-notices.py /src/scripts/dependency-notices.py
+RUN apk add --no-cache python3 && python3 /src/scripts/dependency-notices.py web /licenses/fnb
+
 FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS backend
 WORKDIR /src
 COPY go.mod go.sum ./
@@ -32,15 +40,20 @@ LABEL org.opencontainers.image.version="$SENTE_VERSION" \
       org.opencontainers.image.title="Sente" \
       org.opencontainers.image.description="Self-hosted household finance and budgeting" \
       org.opencontainers.image.source="https://github.com/DouwJacobs/sente"
-RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git chromium && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
 WORKDIR /app
+COPY --from=fnb /usr/local/bin/node /usr/local/bin/node
+COPY --from=fnb /opt/sente/fnb /opt/sente/fnb
+COPY --from=fnb /licenses/ /usr/share/licenses/sente/dependencies/
 COPY --from=backend /finance /usr/local/bin/finance
 COPY --from=web /src/web/dist /app/web/dist
 COPY LICENSE NOTICE /usr/share/licenses/sente/
+COPY connectors/fnb/upstream/LICENSE /usr/share/licenses/sente/fnb-reference/LICENSE
+COPY docker/PLAYWRIGHT-LICENSE /usr/share/licenses/sente/chromium-seccomp/LICENSE
 COPY --from=backend /licenses/ /usr/share/licenses/sente/dependencies/
 COPY --from=web /licenses/ /usr/share/licenses/sente/dependencies/
 USER finance
-ENV PORT=8080 DATABASE_PATH=/app/data/finance.sqlite BACKUP_DIR=/app/backups STATIC_DIR=/app/web/dist FNB_KEY_FILE=/config/fnb/fnb.key
+ENV PORT=8080 DATABASE_PATH=/app/data/finance.sqlite BACKUP_DIR=/app/backups STATIC_DIR=/app/web/dist FNB_KEY_FILE=/config/fnb/fnb.key FNB_NODE_EXECUTABLE=/usr/local/bin/node FNB_RUNNER_PATH=/opt/sente/fnb/refresh.mjs
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget -q -O /dev/null http://127.0.0.1:8080/api/health || exit 1
 ENTRYPOINT ["finance"]

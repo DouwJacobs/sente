@@ -38,7 +38,7 @@ class Smoke:
             docker('volume','create',volume)
 
     def options(self):
-        return ['--read-only','--ulimit','core=0:0','--cap-drop=ALL','--security-opt=no-new-privileges',
+        return ['--init','--shm-size=256m','--security-opt','seccomp='+str(ROOT/'docker/chromium-seccomp.json'),'--read-only','--ulimit','core=0:0','--cap-drop=ALL','--security-opt=no-new-privileges',
                 '--tmpfs','/tmp:size=128m,mode=1777','-v',self.data+':/app/data',
                 '-v',self.backups+':/app/backups','-v',self.keys+':/config/fnb',
                 '-e','FNB_KEY_FILE=/config/fnb/fnb.key','-e','PUBLIC_URL='+self.url]
@@ -281,6 +281,11 @@ def main():
     docker('run','--rm','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges',
            '--entrypoint','sh',args.image,'-c',
            'test "$(id -u)" = 10001 && test -s /usr/share/licenses/sente/LICENSE && test -s /usr/share/licenses/sente/NOTICE && ! touch /app/root-write-test')
+    docker('run','--rm','--network=none','--init','--read-only','--ulimit','core=0:0',
+           '--shm-size=256m','--cap-drop=ALL','--security-opt=no-new-privileges',
+           '--security-opt','seccomp='+str(ROOT/'docker/chromium-seccomp.json'),
+           '--tmpfs','/tmp:size=128m,mode=1777','--entrypoint','node',args.image,
+           '/opt/sente/fnb/runtime-check.mjs',capture=False)
     with tempfile.TemporaryDirectory(prefix='sente-image-smoke-') as temp:
         work=Path(temp)
         for check in (lambda s:fresh(s,args.version,args.commit),upgrade,fnb_key):
