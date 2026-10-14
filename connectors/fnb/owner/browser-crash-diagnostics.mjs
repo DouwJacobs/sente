@@ -1,4 +1,4 @@
-// Diagnostic probe only. Browser stderr is private and never exported.
+// Fixed crash counters for the worker and owner-run diagnostic probe. Browser stderr is private and never exported.
 export function classifyBrowserStderr(text) {
  const counts={};
  if(/seccomp-bpf failure/i.test(text)) {
@@ -10,6 +10,9 @@ export function classifyBrowserStderr(text) {
  if(/WebGL(?:2)? blocklisted/i.test(text))counts.browser_webgl_unavailable=1;
  if(/No space left on device/i.test(text))counts.browser_storage_full=1;
  if(/Out of memory|OOM killer|Cannot allocate memory/i.test(text))counts.browser_memory_failure=1;
+ if(/Received signal 11|SIGSEGV/.test(text))counts.browser_segv=1;
+ if(/Received signal 31|SIGSYS/.test(text))counts.browser_sigsys=1;
+ if(/Received signal 6\b|SIGABRT/.test(text))counts.browser_aborted=1;
  return counts;
 }
 

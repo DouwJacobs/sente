@@ -4,6 +4,7 @@ import {mkdtemp,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {launchBrowser} from './browser-runtime.mjs'
+import {observeBrowserStderr} from './browser-crash-diagnostics.mjs'
 import {loginFailureDiagnostics,observeNavigation,bankValidationOrigin,waitForBankValidation} from './login-diagnostics.mjs'
 import {createInterface} from 'node:readline'
 import {normalizeAccounts,ProbeError} from './accounts.mjs'
@@ -295,7 +296,8 @@ export function readWorkerInput(stream,abort){
 }
 
 export async function main(){
- let browser,context,profile,control,credentials;let result,phase=1
+ let browser,context,profile,control,credentials,stopBrowserDiagnostics;let result,phase=1
+ const browserCounts={}
  process.stderr.write(`FNB_WORKER_PID ${process.pid}\n`)
  const abort=new AbortController()
  const cancel=()=>abort.abort()
@@ -312,6 +314,7 @@ export async function main(){
   profile=credentials.profile_directory||await mkdtemp(join(tmpdir(),'finance-fnb-refresh-'))
   phase=4
   browser=await launchBrowser(puppeteer,{profile,visible:credentials.visible})
+  stopBrowserDiagnostics=observeBrowserStderr(browser,browserCounts)
   const browserPID=browser.process()?.pid;if(browserPID)process.stderr.write(`FNB_BROWSER_PID ${browserPID}\n`)
   if(abort.signal.aborted)throw new ProbeError('REFRESH_FAILED')
   context=await browser.createBrowserContext();const page=await context.newPage();if(credentials.visible)await page.bringToFront()
@@ -333,11 +336,13 @@ export async function main(){
   if(context)result=await finishBankSession(context,result)
   clearTimeout(timeout)
   try{await context?.close()}catch{};try{await browser?.close()}catch{}
+  stopBrowserDiagnostics?.()
   if(profile){try{await rm(profile,{recursive:true,force:true})}catch{result={accounts:[],skipped:0,error:'REFRESH_FAILED',diagnostics:{refresh_phase:8,profile_cleanup_failed:1}}}}
   control?.removeAllListeners('close');control?.close();process.stdin.destroy()
   process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel)
  }
  if(abort.signal.aborted)result=workerFailure(null,phase,true)
+ result.diagnostics={...result.diagnostics,...browserCounts}
  process.stdout.write(JSON.stringify(result))
 }
 // Import-safe for synthetic unit tests; no browser is launched on import.
