@@ -42,10 +42,20 @@ docker compose run --rm --no-deps --entrypoint node finance /opt/sente/fnb/runti
 The check only opens a synthetic page and Chromium's internal sandbox page;
 release CI additionally disables container networking. It prints fixed PASS text,
 never bank data. FNB refresh remains owner initiated and owner verified.
-Docker runs headless: leave **Show Chrome** disabled. Complete phone-based bank
-approvals yourself if requested. No graphical desktop or remote browser viewer is
-exposed; approvals requiring direct browser interaction are not supported by this
-headless deployment and must stop with owner attention.
+Docker runs non-headless Chromium on a private virtual display: leave **Show
+Chrome** disabled. The browser stays inside the container, including scheduled
+refreshes; nothing appears on your desktop. Complete phone-based bank approvals
+yourself if requested. No remote browser viewer is exposed; approvals requiring
+direct browser interaction must stop with owner attention.
+
+The image defaults `FNB_BROWSER_MODE=virtual-display`; no new Compose setting or
+port is needed. Each run starts its own Xvfb display with TCP disabled and a random
+0600 authorization file inside the private temporary profile. Browser shutdown
+stops the display and removes its authorization. The browser retains its namespace
+and seccomp sandbox, private debugging pipe, approved-origin checks and confirmed
+logout requirement. Profiles and banking cookies are never retained across runs.
+For troubleshooting only, `FNB_BROWSER_MODE=headless` restores headless launch.
+Native development retains its existing Show Chrome behavior.
 
 Outside Docker, install Node 22.12+, the pinned `connectors/fnb/owner` dependencies
 and Chrome/Edge. Executable/worker overrides remain available; WSL defaults to
@@ -126,3 +136,119 @@ The user must enter their bank credentials again. Accounts, transaction history
 and discovery preferences remain; self-service password changes keep FNB.
 Keys and database snapshots still require separate private backups. Encryption
 does not protect against host/runtime or client-browser compromise.
+
+
+## Local Docker investigation on the development PC
+
+Run `bash scripts/run-fnb-local.sh` from this checkout to build `sente:fnb-local`,
+run full disposable image acceptance and start http://127.0.0.1:5180. Nothing is
+pushed to GitHub or a registry. The `sente-fnb-local` Compose project uses its own
+persistent database, backups and FNB key volumes, separate from development and
+homelab data. The owner creates the test login and enters banking credentials in
+that UI; agents do not inspect or run live banking. Keep Show Chrome off.
+Repeat the command after source changes to rebuild/recreate the local service.
+Do not delete its volumes when replacing the container.
+
+Unknown phase-5 failures now include only fixed numeric diagnostics:
+`login_step` 1 navigation, 2 login fields, 3 form validation, 4 username entry,
+5 password entry, 6 submission, 7 account discovery, 8 normalization.
+Additional count-only flags identify navigation failure, timeout, DNS, TLS,
+connection failure or closed browser. Raw errors, URLs, bank HTML and credentials
+are never returned. These flags narrow a failure; they do not establish invalid
+credentials or prove live compatibility. The image's offline check intercepts
+all requests and exercises a synthetic login/account page with network disabled.
+
+
+### Owner-run Chromium navigation probe
+
+When login_step is 1, the owner can run:
+
+```bash
+docker exec sente-fnb-local-finance-1 node /opt/sente/fnb/navigation-check.mjs
+```
+
+This opens only the public FNB home page in a new private temporary browser
+profile. It never opens the database/key, enters credentials, submits a login,
+reads page content or screenshots, or returns exception text/URLs. It returns
+fixed numeric status/diagnostics and removes the profile. Agents do not run this
+public bank navigation probe; the owner shares its count-only output.
+
+`login_error_kind`: 1 Error, 2 TypeError, 3 ReferenceError, 4 SyntaxError,
+5 ProtocolError, 6 TimeoutError, 7 TargetCloseError, 8 other.
+`login_network_error` is a fixed Chromium code index: 1 aborted, 2 failed,
+3 empty response, 4 HTTP/2 protocol, 5 HTTP response code, 6 invalid response,
+7 excessive redirects, 8 blocked by client, 9 blocked by response, 10 network
+access denied, 11 DNS name resolution, 12 DNS timeout, 13 certificate authority,
+14 certificate date, 15 certificate name, 16 SSL protocol, 17 connection closed,
+18 reset, 19 refused, 20 connection timeout, 21 disconnected, 22 network changed,
+23 proxy connection, 24 tunnel connection. Unrecognized codes are not exported.
+`login_protocol_failed` flags browser-control protocol errors.
+
+
+The probe also reports `login_chromium_error`, the absolute value of a registered
+Chromium network-error enum (249 recognized symbols from the public
+`net/base/net_error_list.h` snapshot of 13 October 2026). For example, 15 means
+socket not connected, 109 means address unreachable, 200 means certificate name
+mismatch, and 202 means certificate authority invalid. Unknown strings do not
+cross the diagnostic boundary. Frame detachment, page crash, browser disconnect,
+navigation blocklist and lifecycle termination each have a separate fixed flag.
+Only the main navigation request is observed; no subresource URLs/text are read
+or returned. Nested causes are bounded to four with cycle protection.
+Source: https://github.com/chromium/chromium/blob/main/net/base/net_error_list.h
+
+
+The production Dockerfile now reproduces the tested native Alpine Chromium 155
+runtime with its own authenticated virtual display. It uses Alpine edge throughout
+the final stage, with no stable/edge mixing and no positional-write preload adapter.
+The base digest and browser package version are explicit. Edge is rolling and may
+lag upstream security patches; do not treat a passing functional check or a clean
+scanner report as proof that current browser security fixes are present.
+
+Image acceptance checks synthetic login, real loopback HTTP, a caught JavaScript
+stack overflow, Chromium's namespace/seccomp sandbox and cleanup. Older Alpine
+Chromium 152 crashes the stack-overflow regression with SIGILL; native 155 returns
+the expected RangeError. Do not weaken the sandbox to work around renderer crashes.
+
+When navigation succeeds but bank_origin is zero, the public probe returns
+numeric checks for HTTPS/HTTP, approved bank hostname, default port, userinfo,
+browser error page and blank page. It also compares the HTTP response's approved
+origin and reports a bounded redirect count. No hostname, URL, query, page text
+or credential is returned. The actual login origin/form checks remain unchanged;
+never broaden them solely to make a rejected navigation pass.
+
+
+If a public-page redirect cannot be identified from numeric counters, the owner
+may explicitly run the standalone probe with `--show-public-host`. It prints only
+the final/response DNS hostnames, excluding URL paths, query strings, userinfo,
+page contents and bank credentials. This option reads no database or stored key;
+it is absent from the live worker/API/MCP. Hostnames can reveal network topology,
+so the owner reviews them before sharing. Agents do not invoke this public-bank
+probe or inspect the resulting page/session.
+
+
+### Bank browser validation
+
+The owner's container probe redirected to `validate.perfdrive.com`, documented by
+Radware as a Bot Manager CAPTCHA/block endpoint. The worker recognizes only that
+exact HTTPS default-port origin without userinfo, returns APPROVAL_REQUIRED with
+bank_validation_required=1, and types no credentials or inspects challenge content.
+Recognition does not add it to credential-approved banking origins. Headless
+Docker does not provide an interactive challenge-completion path; statement
+imports remain available. A future owner-assisted browser flow needs explicit
+interactive setup and fresh approved bank/form checks before credential entry.
+Source: https://portals.radware.com/ReleaseNotes/Alteon_Release_Notes_34_5_2_0/Alteon_Release_Notes/AlteonOS-34_5_2_0-Release_Notes.1.04.html
+
+
+Before declaring bank validation unresolved, the connector/public probe waits at
+most 15 seconds for ordinary navigation away from the known validation origin.
+It observes only the URL, never inspects or interacts with CAPTCHA/block content,
+never enters credentials on that origin, and checks the approved FNB origin/form
+again afterward. Unresolved verification returns APPROVAL_REQUIRED and pauses
+scheduling; a redirect to an unrelated origin remains LOGIN_LAYOUT_CHANGED.
+
+
+Individual Chromium protocol calls are bounded to 15 seconds, below the worker and Go run deadlines. Login-stage protocol/target/timeout failures are propagated rather than swallowed as approval waits; fixed numeric diagnostics remain the only reported error details. Owner testing found a retry starts a fresh worker, so the observed spinner is an in-flight request, not an image mismatch or permanently locked button. No API/MCP schema or consent change is required.
+
+Owner live diagnostic: initial navigation reports login_page_crashed=1 and timeout before credential entry. Container cgroup OOM/kill counters are zero; after cleanup /tmp and /dev/shm are empty, which does not establish their peak usage. The actual worker now uses the same fixed numeric browser-crash classifier as the public probe (sandbox syscall, GPU/WebGL, memory/storage and signal categories). Raw stderr is bounded, retained only transiently and never exported; counters remain within the browser diagnostic allowlist. No MCP schemas or consent scopes are expanded. The reproduced SIGILL is covered by the synthetic stack-overflow regression and resolved by the native Chromium 155 candidate.
+
+Owner identified the fourth transaction target as a 32-day notice savings account. The DOM product classifier now maps exact known 32 Day Notice/32 Day Flexi Notice labels (optional FNB prefix, hyphen/spacing and Account suffix) to the existing Savings type. Unknown/structured investment or loan labels remain rejected. Identity, ZAR currency, named columns and posted-history evidence remain mandatory; no partial batch is persisted on failure. This changes supported browser-connector labels, not API/MCP schemas, consent, authorization or transaction-import rules. The owner confirmed the exact Type label as 32 Day Flexi Notice and reported that the live retry succeeded. Scheduling has not been verified by this live test.

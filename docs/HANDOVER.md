@@ -360,3 +360,106 @@ zero new runtime-package vulnerabilities or secret findings, with the unchanged
 unused OpenPGP inventory warning documented in VERIFICATION.md. No schema or MCP
 contract/consent changes: this is runtime packaging for the existing browser-only
 banking workflow. No homelab changes or live banking were performed.
+
+
+## Local FNB investigation — 13 October 2026
+
+Local-only branch `codex/fnb-local-refresh-diagnostics` adds phase-5 step/failure
+counts, privacy tests and network-disabled real Chromium synthetic login coverage.
+Image `sente:fnb-local` is built and accepted locally. Repeat with
+`bash scripts/run-fnb-local.sh`; the isolated `sente-fnb-local` Compose project
+serves http://127.0.0.1:5180 with separate named data/backup/key volumes. Keep
+Show Chrome off. Owner live trial supplies the next safe counts; no cause of the
+actual bank failure is claimed. No changes pushed, no homelab deployment and no
+schema/MCP contract or consent expansion. Once this local UI contains owner bank
+credentials, agents must not invoke live refresh or inspect its database/profile.
+
+
+Owner retry narrowed the actual failure to first navigation, before credential
+entry. Extended only fixed exception-kind/network-code counters; added an
+owner-run public Chromium navigation probe that loads no stored credentials and
+returns no page content/URLs/raw errors. Do not run that probe from agent tools.
+The active local project's test credentials/database/profile must not be read.
+
+
+The owner public probe also fails before login. Expanded diagnostics cover all
+249 registered Chromium network-error symbols as fixed numeric values, bounded
+nested causes, frame detachment and browser/page crash events. The exact live
+cause is still unknown until the next owner probe result; agents did not open
+FNB. 53 worker tests cover numeric-only handling, unknown symbols, cyclic causes,
+main-request filtering and event-listener cleanup.
+
+
+The first real networking regression reproduces a Chromium child seccomp crash
+on pwritev2 in the Alpine libc/browser pair. `pwrite-compat.c` and its native
+build test implement/test standard pwrite64 selection, cancellation/errno and
+64-bit offsets; the browser launcher preloads the fixed immutable image path.
+No sandbox or TLS bypass. Acceptance now includes real loopback HTTP and child
+seccomp crash rejection. Debian candidates were rejected after package scans;
+an older-browser Alpine candidate was not chosen. Owner retry on the current
+browser plus adapter is needed to establish actual FNB compatibility. Do not
+inspect live banking or the owner's persistent local data/profile.
+
+
+### Local non-headless comparison
+
+`docker/Dockerfile.fnb-headful-test` derives a disposable local image from
+`sente:fnb-local` with Xvfb. `scripts/fnb-headful-test.sh` starts a local-only
+virtual display and runs the selected diagnostic with `--visible`. No app
+volumes, stored credentials, copied browser profiles or remote display are used.
+The production image and live worker behavior are unchanged. This is an owner-run
+public-navigation experiment, not a manual verification interface or a guarantee
+that bank validation will clear. MCP contracts and consent remain unchanged.
+
+Build: `docker build -f docker/Dockerfile.fnb-headful-test -t sente:fnb-headful-test .`
+
+Offline check: `docker run --rm --init --network none --read-only --tmpfs /tmp:size=128m,mode=1777 --shm-size 256m --cap-drop ALL --security-opt no-new-privileges:true --security-opt seccomp=./docker/chromium-seccomp.json --ulimit core=0:0 sente:fnb-headful-test`
+
+Owner public check: the same command with `--network none` removed and
+`navigation-check.mjs` appended. Only numeric public navigation diagnostics are
+returned. No bank login is attempted.
+
+The owner reported a headful public-navigation renderer crash followed by a timeout. Five offline synthetic navigation iterations across four tabs with dedicated workers passed; WebGL2 is blocklisted on Xvfb. The public-only probe now emits fixed numeric stderr crash categories and available tmp/shm MiB. Raw stderr, URLs and page content are never returned. No MCP/API allowlist or live worker consent is expanded. The cause of the owner-reported crash remains unconfirmed.
+
+### Production container virtual display
+
+Owner-approved container-only non-headless mode is the Docker default for manual and scheduled workers. No desktop window or remote display port is exposed. Xvfb is per-browser, uses random 0600 local authorization and disables TCP; fresh profiles and confirmed logout remain required. Native development behavior remains unchanged. No new MCP tools, schemas, output fields or consent scopes are introduced: browser runtime selection is host deployment configuration, and the expanded fixed worker diagnostic allowlist remains browser-only. Owner observed a successful public FNB homepage navigation in non-headless mode and a validation redirect in headless mode; actual login, logout and scheduled banking compatibility remain owner-tested and are not established by synthetic CI.
+
+Individual Chromium protocol calls are bounded to 15 seconds, below the worker and Go run deadlines. Login-stage protocol/target/timeout failures are propagated rather than swallowed as approval waits; fixed numeric diagnostics remain the only reported error details. Owner testing found a retry starts a fresh worker, so the observed spinner is an in-flight request, not an image mismatch or permanently locked button. No API/MCP schema or consent change is required.
+
+Owner live diagnostic: initial navigation reports login_page_crashed=1 and timeout before credential entry. Container cgroup OOM/kill counters are zero; after cleanup /tmp and /dev/shm are empty, which does not establish their peak usage. The actual worker now uses the same fixed numeric browser-crash classifier as the public probe (sandbox syscall, GPU/WebGL, memory/storage and signal categories). Raw stderr is bounded, retained only transiently and never exported; counters remain within the browser diagnostic allowlist. No MCP schemas or consent scopes are expanded. Cause remains unconfirmed.
+
+SIGILL root investigation: kernel metadata repeatedly maps to immutable ELF address 0x3d4de49 (UD2 after INT3) in Chromium build ID 82afe5637142447cd4acb07795ea3e94512756cd. Matching official Alpine debug symbols resolve it to v8::internal::Isolate::Throw. No browser memory/core dump or bank-page content was collected. A synthetic caught stack-overflow test reproduces the same offset in Alpine Chromium 152.0.7977.82, both headed and headless; ordinary caught exceptions pass. A 512 KiB V8 stack budget still fails. The same offline fixture passes five iterations across four tabs in Debian Chromium 155.0.8059.39. Distribution and browser versions differ, so this identifies a runtime-specific failure without proving which upstream change fixes it. No crash/sandbox/CFI check was disabled. A patched comparison image is being evaluated before any production runtime change.
+
+Alternative runtime verification: isolated `sente:fnb-ubuntu-chrome` uses pinned Ubuntu 24.04 digest 534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55 and official Chrome 155.0.8059.79 (package SHA256 b7726070ca707965e9a17b38e4f15ba283bf6f65c339626c092862af7b19badc). It passes the new caught-stack-overflow regression and complete synthetic production-image acceptance with namespace/seccomp protections. The Alpine pwrite adapter is absent. Final cached Trivy scan: Ubuntu 21 medium, 26 low, zero high/critical; Node packages zero; unchanged unused Go OpenPGP inventory advisory UNKNOWN; zero secrets. The scanner does not prove the absence of unknown flaws or exhaustively cover Google Chrome; the browser version was checked against Google’s October 13 stable release/security notes. Candidate-only Dockerfile and packages remain under ignored work/, not a production runtime change. The local sente-fnb-local stack uses this candidate for owner testing; original data/backups/key volumes are retained. Live bank compatibility and review of remaining findings are outstanding.
+
+Newer native Alpine comparison: isolated `sente:fnb-alpine155-test` uses official edge base digest 020dfcbaaf4cc1078bf2d9c7ba31a8466e334061dcd2f248001d68f79e52c000, reported OS 3.25.0_alpha20260805 and native Chromium 155.0.8059.39-r0. Both the original adapter-equipped image and `sente:fnb-alpine155-noadapter` pass caught JavaScript stack overflow, synthetic login, real loopback networking and namespace/seccomp checks. The no-adapter variant also completes five iterations across four tabs with audio, canvas, workers, storage, WebAssembly/WebGPU requests and full synthetic production-image acceptance (onboarding/MCP, restart, upgrade, backup/restore and FNB key/recovery). No bank network, real credentials, production database or application volumes were used. Cached Trivy scan of the same package inventory reports zero Alpine/Node package vulnerabilities/secrets and the existing unused OpenPGP inventory advisory; it warns that 3.25 is not in its EOL list, and coverage must not be treated as security clearance. Chromium is older than the October 13 Google stable patch release, so security-fix coverage needs confirmation. This rolling/alpha candidate is not integrated into the production Dockerfile or pushed as a release. The local port-5180 stack remains on the healthy Ubuntu/Chrome candidate. Owner-only public FNB navigation is outstanding.
+
+Owner identified the fourth transaction target as a 32-day notice savings account. The DOM product classifier now maps exact known 32 Day Notice/32 Day Flexi Notice labels (optional FNB prefix, hyphen/spacing and Account suffix) to the existing Savings type. Unknown/structured investment or loan labels remain rejected. Identity, ZAR currency, named columns and posted-history evidence remain mandatory; no partial batch is persisted on failure. This changes supported browser-connector labels, not API/MCP schemas, consent, authorization or transaction-import rules. The exact owner-visible Type label and live retry remain owner-verified.
+
+Owner confirmed exact bank Type label "32 Day Flexi Notice". All active worker tests and the offline native-Alpine Chromium synthetic notice DOM check passed after the label mapping fix. The local stack is updated to `sente:fnb-alpine155-notice-test` with its WSLg owner-viewing override retained. Live transaction retry remains owner-tested; no partial imports or unknown/ambiguous layouts are permitted.
+
+
+## PR 106 consolidation (14 October 2026)
+
+Production Dockerfile now builds the owner-tested native Alpine edge Chromium
+155.0.8059.39-r0 runtime directly from pinned public base images. Removed the
+positional-write C adapter/preload and obsolete local headful experiment; retained
+per-browser authenticated Xvfb, namespace/seccomp, non-root/read-only execution,
+private debugging pipe, ephemeral profiles and existing Compose hardening.
+Caught stack-overflow image regression prevents recurrence of the Alpine 152
+SIGILL. Owner confirmed discovery, repeated balance retrieval and the 32 Day Flexi
+Notice transaction retry; unattended scheduling is not live-verified.
+
+Security release caveat: Alpine's available package remains 155.0.8059.39-r0,
+whereas Google's 13 October stable update is 155.0.8059.79 with 37 security fixes,
+including critical issues. Reviewed Alpine APKBUILD has no documented backports
+of that release's fixes. Edge scan coverage is incomplete; cached scan results
+cannot establish current browser patch coverage. Resolve this runtime release
+choice before merging/publishing with banking credentials.
+Source: https://chromereleases.googleblog.com/2026/10/stable-channel-update-for-desktop_01668083673.html
+Package: https://pkgs.alpinelinux.org/package/edge/community/x86_64/chromium
+
+MCP impact: existing Savings product mapping and browser runtime only. No tools,
+input/output schemas, consent scopes, financial authorization, monetary parsing,
+proposal/audit behavior or persistence contract changes; no new disclosure fields.

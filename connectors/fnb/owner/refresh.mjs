@@ -4,6 +4,8 @@ import {mkdtemp,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {launchBrowser} from './browser-runtime.mjs'
+import {observeBrowserStderr} from './browser-crash-diagnostics.mjs'
+import {loginFailureDiagnostics,observeNavigation,bankValidationOrigin,waitForBankValidation} from './login-diagnostics.mjs'
 import {createInterface} from 'node:readline'
 import {normalizeAccounts,ProbeError} from './accounts.mjs'
 import {fetchTransactions,resolveMaskedCreditAccounts} from './transactions.mjs'
@@ -183,21 +185,43 @@ export function loginFormDOM(submit=false){
  if(submit)button.click()
  return true
 }
+// Only fixed stages and failure categories cross the worker boundary.
 export async function loginAndAccounts(page,credentials,signal){
+ const diagnostics={login_step:1}
+ const stopObserving=observeNavigation(page,diagnostics)
+ try{return await loginAndAccountsFlow(page,credentials,signal,diagnostics)}catch(err){
+  const counts={...diagnostics,...loginFailureDiagnostics(err,diagnostics.login_step),...(err instanceof ProbeError?err.diagnostics||{}:{})}
+  throw new ProbeError(err instanceof ProbeError?err.code:'REFRESH_FAILED',counts)
+ }finally{stopObserving()}
+}
+async function loginAndAccountsFlow(page,credentials,signal,diagnostics){
  await page.goto('https://www.fnb.co.za/',{waitUntil:'domcontentloaded',timeout:45000})
+ if(bankValidationOrigin(page.url())){
+  diagnostics.bank_validation_waited=1
+  const cleared=await waitForBankValidation(page,signal)
+  if(!cleared)throw new ProbeError('APPROVAL_REQUIRED',{bank_validation_required:1})
+  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+  diagnostics.bank_validation_cleared=1
+ }
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=2
  try{await page.waitForSelector('#user',{visible:true,timeout:10000});await page.waitForSelector('#pass',{visible:true,timeout:10000})}catch{throw new ProbeError('LOGIN_LAYOUT_CHANGED')}
  // Never send credentials to an unapproved origin or unrelated form.
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=3
  const valid=await page.evaluate(loginFormDOM)
  if(!valid)throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=4
  await page.type('#user',credentials.username)
  if(!bankPage(page)||!await page.evaluate(loginFormDOM))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=5
  await page.type('#pass',credentials.password)
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=6
  const submitted=await page.evaluate(loginFormDOM,true)
  if(!submitted)throw new ProbeError('LOGIN_LAYOUT_CHANGED')
  // One login attempt only. Owner can complete approval in visible manual runs.
+ diagnostics.login_step=7
  const deadline=Date.now()+110000
  while(Date.now()<deadline){
   if(signal?.aborted)throw new ProbeError('REFRESH_FAILED')
@@ -230,13 +254,19 @@ export async function loginAndAccounts(page,credentials,signal){
       if(!result.rows)throw new ProbeError('BALANCE_LAYOUT_CHANGED',result.diagnostics)
       result.diagnostics.masked_credit_resolved=Object.keys(aliases).length
      }
+     diagnostics.login_step=8
      return {...normalizeSnapshot(result.rows,credentials.hidden||[],result.diagnostics),navigation_aliases:aliases}
     }
     await candidate.evaluate(()=>{
      const link=[...document.querySelectorAll('.shortCutLink')].find(node=>/\bAccounts\b/.test(node.textContent||''))
      if(link&&link.getClientRects().length)link.click()
     })
-   }catch(err){if(err instanceof ProbeError)throw err}
+   }catch(err){
+    if(err instanceof ProbeError)throw err
+    // Failed protocol calls must not disappear behind an approval timeout.
+    Object.assign(diagnostics,loginFailureDiagnostics(err,diagnostics.login_step))
+    if(err?.name==='ProtocolError'||err?.name==='TargetCloseError'||err?.name==='TimeoutError')throw err
+   }
   }
   await new Promise(resolve=>setTimeout(resolve,1000))
  }
@@ -266,7 +296,8 @@ export function readWorkerInput(stream,abort){
 }
 
 export async function main(){
- let browser,context,profile,control,credentials;let result,phase=1
+ let browser,context,profile,control,credentials,stopBrowserDiagnostics;let result,phase=1
+ const browserCounts={}
  process.stderr.write(`FNB_WORKER_PID ${process.pid}\n`)
  const abort=new AbortController()
  const cancel=()=>abort.abort()
@@ -283,6 +314,7 @@ export async function main(){
   profile=credentials.profile_directory||await mkdtemp(join(tmpdir(),'finance-fnb-refresh-'))
   phase=4
   browser=await launchBrowser(puppeteer,{profile,visible:credentials.visible})
+  stopBrowserDiagnostics=observeBrowserStderr(browser,browserCounts)
   const browserPID=browser.process()?.pid;if(browserPID)process.stderr.write(`FNB_BROWSER_PID ${browserPID}\n`)
   if(abort.signal.aborted)throw new ProbeError('REFRESH_FAILED')
   context=await browser.createBrowserContext();const page=await context.newPage();if(credentials.visible)await page.bringToFront()
@@ -304,11 +336,13 @@ export async function main(){
   if(context)result=await finishBankSession(context,result)
   clearTimeout(timeout)
   try{await context?.close()}catch{};try{await browser?.close()}catch{}
+  stopBrowserDiagnostics?.()
   if(profile){try{await rm(profile,{recursive:true,force:true})}catch{result={accounts:[],skipped:0,error:'REFRESH_FAILED',diagnostics:{refresh_phase:8,profile_cleanup_failed:1}}}}
   control?.removeAllListeners('close');control?.close();process.stdin.destroy()
   process.removeListener('SIGINT',cancel);process.removeListener('SIGTERM',cancel)
  }
  if(abort.signal.aborted)result=workerFailure(null,phase,true)
+ result.diagnostics={...result.diagnostics,...browserCounts}
  process.stdout.write(JSON.stringify(result))
 }
 // Import-safe for synthetic unit tests; no browser is launched on import.

@@ -56,9 +56,9 @@ Owner-admin connection routes manage encrypted credentials, schedule/debug state
 
 Go launches `connectors/fnb/owner/refresh.mjs` with credentials and target identities on stdin. Strict bounded JSON stdout is accepted; stderr is discarded. WSL uses Windows Node/Chrome with a probed live interop socket; native Linux/Windows runtimes remain configurable. No credentials enter arguments/environment. Runs share one connector lock and recheck owner/account/visibility at persistence. JSON is bounded to 16 MiB; transaction work has a four-minute Go timeout and bounded worker abort/cleanup.
 
-Go owns temporary browser-profile directories and removes them after completion or cancellation. Credential JSON is the first bounded stdin line; later frames request cooperative cancellation, including Windows Node through WSL. `fnb_process.go` permits 30 seconds of cleanup, then terminates the relevant Linux/Windows process tree; stderr accepts numeric worker/browser PIDs only and discards other content. Manual runs recheck their initiating browser credential at financial persistence through `fnb_authorization.go`; scheduled runs recheck the current owner and target access. Cancelled output never persists. Manual and scheduled jobs default to headless; saved debug mode shows Chrome for owner approvals. Approved-origin/form checks precede credential entry. Successful cleanup requires confirmed logout; failures pause scheduling. Numeric diagnostics use a fixed allowlist, including startup phase/timeouts and account/transaction/layout counts; no raw errors, page text or credentials are exposed.
+Go owns temporary browser-profile directories and removes them after completion or cancellation. Credential JSON is the first bounded stdin line; later frames request cooperative cancellation, including Windows Node through WSL. `fnb_process.go` permits 30 seconds of cleanup, then terminates the relevant Linux/Windows process tree; stderr accepts numeric worker/browser PIDs only and discards other content. Manual runs recheck their initiating browser credential at financial persistence through `fnb_authorization.go`; scheduled runs recheck the current owner and target access. Cancelled output never persists. Native manual and scheduled jobs default to headless; saved debug mode shows Chrome for owner approvals. Docker sets FNB_BROWSER_MODE=virtual-display: each browser uses a private authenticated Xvfb display with no TCP listener, including scheduled jobs. Browser close or failed startup stops the display and removes its 0600 authorization file. No viewer or persistent browser profile is exposed. Approved-origin/form checks precede credential entry. Successful cleanup requires confirmed logout; failures pause scheduling. Numeric diagnostics use a fixed allowlist, including startup phase/timeouts and account/transaction/layout counts; no raw errors, page text or credentials are exposed.
 
-Scheduled jobs fetch mapped visible editable targets and refresh balances in the same provider session; initial discovery without targets is account-only. Clean imports are committed server-side. Coverage always admits incomplete history. Supported account/fee/masked-credit rules are in PLAN. Live compatibility remains owner-tested. The standard image excludes the browser/runtime. `connectors/fnb/service` is a disconnected mock experiment, not the active deployment.
+Scheduled jobs fetch mapped visible editable targets and refresh balances in the same provider session; initial discovery without targets is account-only. Clean imports are committed server-side. Coverage always admits incomplete history. Supported account/fee/masked-credit rules are in PLAN. Live compatibility remains owner-tested. The standard image includes the active worker, Node and sandboxed Chromium. `connectors/fnb/service` is a disconnected mock experiment, not the active deployment.
 
 ## MCP and offline configuration
 
@@ -170,3 +170,20 @@ Read-only root, no-new-privileges, non-root user and zero core dumps remain.
 input, a synthetic page and Chromium's namespace/seccomp status; publication
 acceptance runs it with network disabled. Headless Docker has no browser viewer.
 No schema, financial behavior, MCP tools, inputs, outputs or consent changes.
+
+
+## Native Alpine browser and private display
+
+The runtime uses an immutable Alpine edge base and explicitly selected native
+Chromium 155 package. Stable and edge repositories are never mixed. The older
+Chromium 152 positional-write adapter is removed: native 155 passes loopback
+networking and a caught JavaScript stack-overflow regression without preloads.
+Image acceptance verifies namespace/seccomp isolation, private debugging pipes,
+non-root/read-only execution and display/profile cleanup with networking disabled.
+
+`virtual-display.mjs` starts one authenticated local Xvfb display per browser,
+disables TCP and removes its private authorization file on shutdown. There are no
+viewer ports, retained cookies or external display mounts in the production image.
+The pinned edge package is a tested candidate, not a security update guarantee;
+review upstream browser fixes before publication. No MCP contract, schema or
+credential storage changes accompany this runtime replacement.

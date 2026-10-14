@@ -82,7 +82,9 @@ Existing custom Compose deployments need `init: true`, `shm_size: 256m`,
 `seccomp=./docker/chromium-seccomp.json` under `security_opt`, and the persistent
 key volume below. See [runtime setup and offline startup check](docs/FNB-RUNTIME.md)
 for the full upgrade procedure and host requirements. Keep **Show Chrome** off in
-Docker; it has no graphical desktop. Live login, MFA and bank layout compatibility
+Docker; Chromium renders on a private virtual display inside the container and
+does not open a window on your desktop. Manual and scheduled refreshes use this
+same browser mode, with a fresh profile for every run. Live login, MFA and bank layout compatibility
 still require owner verification. GitHub verifies browser startup using synthetic
 content and no network access before publishing the image.
 

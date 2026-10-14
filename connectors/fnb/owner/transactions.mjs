@@ -62,7 +62,8 @@ export function readTransactionDOM(){
  const bank_id=field(/^Account\s*(?:number|no\.?)$/i).replace(/\s/g,'')
  const type=field(/^Type$/i)
  const currency=field(/^Currency$/i)
- const account_type=/\bHome\s+Loan\b/i.test(type)?'Home Loan':/Cheque|Business Account|Fusion|Current/i.test(type)?'Cheque':/Credit/i.test(type)?'Credit':/Savings|\bMoney\s+Maximi[sz]er\b/i.test(type)?'Savings':/Easy Account/i.test(type)?'Easy':''
+ const notice_savings=/^(?:FNB\s+)?32[\s-]+Day[\s-]+(?:Flexi[\s-]+)?Notice(?:\s+Account)?$/i.test(type)
+ const account_type=/\bHome\s+Loan\b/i.test(type)?'Home Loan':/Cheque|Business Account|Fusion|Current/i.test(type)?'Cheque':/Credit/i.test(type)?'Credit':(/Savings|\bMoney\s+Maximi[sz]er\b/i.test(type)||notice_savings)?'Savings':/Easy Account/i.test(type)?'Easy':''
 
  const rowNodes=[...document.querySelectorAll('.tableRow')].filter(visible)
  const key=value=>value.toLowerCase().replace(/\s+/g,' ').trim()
