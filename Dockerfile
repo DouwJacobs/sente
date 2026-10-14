@@ -1,4 +1,4 @@
-FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS web
+FROM node:26.11.1-alpine@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS web
 WORKDIR /src/web
 COPY web/package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY scripts/dependency-notices.py /src/scripts/dependency-notices.py
 RUN npm run build
 RUN apk add --no-cache python3 && python3 /src/scripts/dependency-notices.py web /licenses/web
 
-FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS fnb
+FROM node:26.11.1-alpine@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS fnb
 WORKDIR /opt/sente/fnb
 COPY connectors/fnb/owner/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
