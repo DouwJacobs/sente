@@ -260,3 +260,5 @@ Offline check: `docker run --rm --init --network none --read-only --tmpfs /tmp:s
 Owner public check: the same command with `--network none` removed and
 `navigation-check.mjs` appended. Only numeric public navigation diagnostics are
 returned. No bank login is attempted.
+
+Individual Chromium protocol calls are bounded to 15 seconds, below the worker and Go run deadlines. Login-stage protocol/target/timeout failures are propagated rather than swallowed as approval waits; fixed numeric diagnostics remain the only reported error details. Owner testing found a retry starts a fresh worker, so the observed spinner is an in-flight request, not an image mismatch or permanently locked button. No API/MCP schema or consent change is required.

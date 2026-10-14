@@ -260,7 +260,12 @@ async function loginAndAccountsFlow(page,credentials,signal,diagnostics){
      const link=[...document.querySelectorAll('.shortCutLink')].find(node=>/\bAccounts\b/.test(node.textContent||''))
      if(link&&link.getClientRects().length)link.click()
     })
-   }catch(err){if(err instanceof ProbeError)throw err}
+   }catch(err){
+    if(err instanceof ProbeError)throw err
+    // Failed protocol calls must not disappear behind an approval timeout.
+    Object.assign(diagnostics,loginFailureDiagnostics(err,diagnostics.login_step))
+    if(err?.name==='ProtocolError'||err?.name==='TargetCloseError'||err?.name==='TimeoutError')throw err
+   }
   }
   await new Promise(resolve=>setTimeout(resolve,1000))
  }

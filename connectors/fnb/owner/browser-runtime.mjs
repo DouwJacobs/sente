@@ -37,7 +37,7 @@ export async function launchBrowser(puppeteer,{profile,visible=false}) {
  try {
  const browser=await puppeteer.launch({
   executablePath:await executable(),headless:!(visible||virtual),pipe:true,userDataDir:profile,
-  env,timeout:30000,ignoreDefaultArgs:['--disable-dev-shm-usage'],
+  env,timeout:30000,protocolTimeout:15000,ignoreDefaultArgs:['--disable-dev-shm-usage'],
   args:['--disable-breakpad','--disable-crash-reporter']
  })
  if(display) {

@@ -353,3 +353,18 @@ test('departure from validation to an unrelated origin never authorizes credenti
  await assert.rejects(()=>loginAndAccounts(page,{username:'synthetic-user',password:'synthetic-secret'}),{code:'LOGIN_LAYOUT_CHANGED'})
  assert.equal(typed,0)
 })
+
+
+test('post-submit protocol failures stop promptly with safe stage diagnostics',async()=>{
+ for(const name of ['ProtocolError','TargetCloseError','TimeoutError']) {
+  const page={url:()=> 'https://www.fnb.co.za/',goto:async()=>{},waitForSelector:async()=>{},type:async()=>{},
+   evaluate:async fn=>{if(fn===previousSessionDOM)throw Object.assign(Error('synthetic-secret'),{name});return true}}
+  page.browserContext=()=>({pages:async()=>[page]})
+  let failure
+  try{await loginAndAccounts(page,{username:'synthetic-user',password:'synthetic-secret'})}catch(error){failure=error}
+  const result=workerFailure(failure,5)
+  assert.equal(result.diagnostics.login_step,7)
+  assert.equal(result.diagnostics.login_error_kind,{ProtocolError:5,TargetCloseError:7,TimeoutError:6}[name])
+  assert(!JSON.stringify(result).includes('synthetic-secret'))
+ }
+})
