@@ -172,21 +172,18 @@ acceptance runs it with network disabled. Headless Docker has no browser viewer.
 No schema, financial behavior, MCP tools, inputs, outputs or consent changes.
 
 
-## Alpine Chromium positional-write compatibility
+## Native Alpine browser and private display
 
-The linux/amd64 image builds a small `pwrite-compat.so` from the active worker's
-C source. The shared browser launcher preloads only its fixed root-owned image
-path into Chromium (not the Go app/Node worker). It uses the standard pwrite64
-syscall for pwrite/pwrite64 and preserves cancellation checks, errno and offsets.
-The reproduced Alpine Chromium child seccomp SIGSYS rejected musl's pwritev2
-implementation; the outer Docker profile already allowed that syscall. Neither
-sandbox, TLS validation, user/capabilities nor credential behavior is changed.
-The native build test verifies ordinary/64-bit offsets, unchanged seek position
-and EINVAL/EBADF behavior. This adapter is amd64-only and fails compilation on
-unsupported targets rather than guessing a syscall ABI.
+The runtime uses an immutable Alpine edge base and explicitly selected native
+Chromium 155 package. Stable and edge repositories are never mixed. The older
+Chromium 152 positional-write adapter is removed: native 155 passes loopback
+networking and a caught JavaScript stack-overflow regression without preloads.
+Image acceptance verifies namespace/seccomp isolation, private debugging pipes,
+non-root/read-only execution and display/profile cleanup with networking disabled.
 
-Image acceptance now performs real loopback HTTP in addition to intercepted
-synthetic login DOM. It detects child seccomp crashes without exporting stderr,
-and retains network=none, namespace/seccomp assertions and profile cleanup.
-Remove the adapter only after a supported upstream browser/libc pair passes this
-networking regression without it. No MCP contract or financial/schema changes.
+`virtual-display.mjs` starts one authenticated local Xvfb display per browser,
+disables TCP and removes its private authorization file on shutdown. There are no
+viewer ports, retained cookies or external display mounts in the production image.
+The pinned edge package is a tested candidate, not a security update guarantee;
+review upstream browser fixes before publication. No MCP contract, schema or
+credential storage changes accompany this runtime replacement.

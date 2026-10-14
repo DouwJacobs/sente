@@ -50,12 +50,12 @@ test('DOM extraction requires unique identity fields and ignores hidden rows',()
  const extracted=read();assert.equal(extracted.bank_id,'00123456');assert.equal(extracted.account_type,'Cheque');assert.equal(extracted.rows.length,1);assert.equal(extracted.posted_history,true)
  assert.equal(normalizeTransactionTable(extracted,'00123456','run').transactions[0].amount_decimal,'-0.29')
  fields[1].nextElementSibling.innerText='FNB Home Loan';assert.equal(read().account_type,'Home Loan')
- for(const label of ['FNB Money Maximizer','Money Maximiser']){
+ for(const label of ['FNB Money Maximizer','Money Maximiser','32 Day Notice','FNB 32 Day Flexi Notice','32-Day Flexi Notice Account']){
   fields[1].nextElementSibling.innerText=label
   const savings=read();assert.equal(savings.account_type,'Savings')
   assert.equal(normalizeTransactionTable(savings,'00123456','run').account_type,'Savings')
  }
- for(const label of ['Vehicle Loan','Global Account','eBucks Account']){fields[1].nextElementSibling.innerText=label;assert.equal(read().account_type,'')}
+ for(const label of ['Vehicle Loan','Global Account','eBucks Account','Notice Investment','32 Day Notice Loan','132 Day Flexi Notice','32 Day Structured Investment']){fields[1].nextElementSibling.innerText=label;assert.equal(read().account_type,'')}
  fields.push(field('Account number','99887766'));assert.equal(read().bank_id,'')
 })
 
@@ -212,4 +212,12 @@ test('owner-selected masked summary identity supports credit fetch without inven
  await assert.rejects(()=>resolveMaskedCreditAccounts(page,[...rows,...rows]),{code:'ACCOUNT_LAYOUT_CHANGED'})
  const invalid={...table(),bank_id:mask,account_type:'Savings'}
  assert.throws(()=>normalizeTransactionTable(invalid,mask,'run'),{code:'TRANSACTION_ACCOUNT_UNSUPPORTED'})
+})
+
+
+test('notice-savings recognition does not bypass identity, currency or posted-history checks',()=>{
+ const input={...table(),account_type:'Savings'}
+ assert.throws(()=>normalizeTransactionTable({...input,bank_id:'99887766'},'00123456','run'),{code:'TRANSACTION_ACCOUNT_MISMATCH'})
+ assert.throws(()=>normalizeTransactionTable({...input,currency:'USD'},'00123456','run'),{code:'TRANSACTION_ACCOUNT_UNSUPPORTED'})
+ assert.throws(()=>normalizeTransactionTable({...input,headers:['Date','Description','Amount','Balance'],rows:[['03 Oct 2026','Synthetic interest','1.23','12.34']],posted_history:false},'00123456','run'),{code:'TRANSACTION_LAYOUT_CHANGED'})
 })

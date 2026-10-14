@@ -41,6 +41,13 @@ try {
  const page=await context.newPage()
  await page.setContent('<title>Offline FNB runtime check</title><p id="result">Synthetic only</p>')
  assert.equal(await page.$eval('#result',node=>node.textContent),'Synthetic only')
+ // A normal JavaScript stack overflow must be catchable, never a renderer crash.
+ // The Alpine Chromium 152 package traps inside V8::Isolate::Throw here.
+ assert.equal(await page.evaluate(()=>{
+  try {function recurse(){return recurse()}recurse();return false}
+  catch(error){return error instanceof RangeError}
+ }),true,'JavaScript stack overflow must return a catchable RangeError')
+ console.log('PASS offline JavaScript stack overflow: caught RangeError, no renderer crash')
  // Intercept every request before network access. The bank-shaped origin only
  // exercises origin/form protections; all HTML and account values are invented.
  await page.setRequestInterception(true)

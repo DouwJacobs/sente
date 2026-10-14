@@ -13,13 +13,7 @@ COPY connectors/fnb/owner/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 COPY connectors/fnb/owner/refresh.mjs connectors/fnb/owner/accounts.mjs connectors/fnb/owner/transactions.mjs connectors/fnb/owner/browser-runtime.mjs connectors/fnb/owner/virtual-display.mjs connectors/fnb/owner/runtime-check.mjs connectors/fnb/owner/login-diagnostics.mjs connectors/fnb/owner/navigation-check.mjs connectors/fnb/owner/browser-crash-diagnostics.mjs ./
 COPY scripts/dependency-notices.py /src/scripts/dependency-notices.py
-COPY connectors/fnb/owner/pwrite-compat.c connectors/fnb/owner/pwrite-compat.test.c ./
-RUN apk add --no-cache python3 build-base \
-    && cc -shared -fPIC -O2 -Wall -Wextra -Werror -o pwrite-compat.so pwrite-compat.c \
-    && cc -O2 -Wall -Wextra -Werror -o /tmp/pwrite-compat-test pwrite-compat.test.c \
-    && LD_PRELOAD=/opt/sente/fnb/pwrite-compat.so /tmp/pwrite-compat-test \
-    && rm pwrite-compat.c pwrite-compat.test.c \
-    && python3 /src/scripts/dependency-notices.py web /licenses/fnb
+RUN apk add --no-cache python3 && python3 /src/scripts/dependency-notices.py web /licenses/fnb
 
 FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS backend
 WORKDIR /src
@@ -35,7 +29,9 @@ ARG SENTE_BUILD_TIME=""
 COPY scripts/build-metadata.sh ./scripts/build-metadata.sh
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(sh scripts/build-metadata.sh)" -o /finance ./cmd/finance
 
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+# Native Chromium 155 fixes the reproduced Alpine 152 renderer trap.
+# Keep all runtime packages on edge; never mix stable and edge repositories.
+FROM alpine:edge@sha256:020dfcbaaf4cc1078bf2d9c7ba31a8466e334061dcd2f248001d68f79e52c000
 ARG SENTE_VERSION=dev
 ARG SENTE_COMMIT=""
 ARG SENTE_BUILD_TIME=""
@@ -46,7 +42,7 @@ LABEL org.opencontainers.image.version="$SENTE_VERSION" \
       org.opencontainers.image.title="Sente" \
       org.opencontainers.image.description="Self-hosted household finance and budgeting" \
       org.opencontainers.image.source="https://github.com/DouwJacobs/sente"
-RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git chromium xvfb && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git chromium=155.0.8059.39-r0 xvfb libstdc++ && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
 WORKDIR /app
 COPY --from=fnb /usr/local/bin/node /usr/local/bin/node
 COPY --from=fnb /opt/sente/fnb /opt/sente/fnb

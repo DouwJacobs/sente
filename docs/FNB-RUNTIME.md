@@ -197,13 +197,17 @@ or returned. Nested causes are bounded to four with cycle protection.
 Source: https://github.com/chromium/chromium/blob/main/net/base/net_error_list.h
 
 
-The local image retains the current Alpine/Chromium package and includes a narrow
-positional-write compatibility library for its reproduced child-sandbox crash.
-It never disables a sandbox or certificate checking. GitHub/image acceptance
-checks both synthetic login and real loopback HTTP and fails on child seccomp
-crashes. Re-run the owner public navigation probe after replacing the image,
-then use the local UI for owner-only live compatibility verification.
+The production Dockerfile now reproduces the tested native Alpine Chromium 155
+runtime with its own authenticated virtual display. It uses Alpine edge throughout
+the final stage, with no stable/edge mixing and no positional-write preload adapter.
+The base digest and browser package version are explicit. Edge is rolling and may
+lag upstream security patches; do not treat a passing functional check or a clean
+scanner report as proof that current browser security fixes are present.
 
+Image acceptance checks synthetic login, real loopback HTTP, a caught JavaScript
+stack overflow, Chromium's namespace/seccomp sandbox and cleanup. Older Alpine
+Chromium 152 crashes the stack-overflow regression with SIGILL; native 155 returns
+the expected RangeError. Do not weaken the sandbox to work around renderer crashes.
 
 When navigation succeeds but bank_origin is zero, the public probe returns
 numeric checks for HTTPS/HTTP, approved bank hostname, default port, userinfo,
@@ -243,24 +247,8 @@ again afterward. Unresolved verification returns APPROVAL_REQUIRED and pauses
 scheduling; a redirect to an unrelated origin remains LOGIN_LAYOUT_CHANGED.
 
 
-### Local non-headless comparison
-
-`docker/Dockerfile.fnb-headful-test` derives a disposable local image from
-`sente:fnb-local` with Xvfb. `scripts/fnb-headful-test.sh` starts a local-only
-virtual display and runs the selected diagnostic with `--visible`. No app
-volumes, stored credentials, copied browser profiles or remote display are used.
-The production image and live worker behavior are unchanged. This is an owner-run
-public-navigation experiment, not a manual verification interface or a guarantee
-that bank validation will clear. MCP contracts and consent remain unchanged.
-
-Build: `docker build -f docker/Dockerfile.fnb-headful-test -t sente:fnb-headful-test .`
-
-Offline check: `docker run --rm --init --network none --read-only --tmpfs /tmp:size=128m,mode=1777 --shm-size 256m --cap-drop ALL --security-opt no-new-privileges:true --security-opt seccomp=./docker/chromium-seccomp.json --ulimit core=0:0 sente:fnb-headful-test`
-
-Owner public check: the same command with `--network none` removed and
-`navigation-check.mjs` appended. Only numeric public navigation diagnostics are
-returned. No bank login is attempted.
-
 Individual Chromium protocol calls are bounded to 15 seconds, below the worker and Go run deadlines. Login-stage protocol/target/timeout failures are propagated rather than swallowed as approval waits; fixed numeric diagnostics remain the only reported error details. Owner testing found a retry starts a fresh worker, so the observed spinner is an in-flight request, not an image mismatch or permanently locked button. No API/MCP schema or consent change is required.
 
-Owner live diagnostic: initial navigation reports login_page_crashed=1 and timeout before credential entry. Container cgroup OOM/kill counters are zero; after cleanup /tmp and /dev/shm are empty, which does not establish their peak usage. The actual worker now uses the same fixed numeric browser-crash classifier as the public probe (sandbox syscall, GPU/WebGL, memory/storage and signal categories). Raw stderr is bounded, retained only transiently and never exported; counters remain within the browser diagnostic allowlist. No MCP schemas or consent scopes are expanded. Cause remains unconfirmed.
+Owner live diagnostic: initial navigation reports login_page_crashed=1 and timeout before credential entry. Container cgroup OOM/kill counters are zero; after cleanup /tmp and /dev/shm are empty, which does not establish their peak usage. The actual worker now uses the same fixed numeric browser-crash classifier as the public probe (sandbox syscall, GPU/WebGL, memory/storage and signal categories). Raw stderr is bounded, retained only transiently and never exported; counters remain within the browser diagnostic allowlist. No MCP schemas or consent scopes are expanded. The reproduced SIGILL is covered by the synthetic stack-overflow regression and resolved by the native Chromium 155 candidate.
+
+Owner identified the fourth transaction target as a 32-day notice savings account. The DOM product classifier now maps exact known 32 Day Notice/32 Day Flexi Notice labels (optional FNB prefix, hyphen/spacing and Account suffix) to the existing Savings type. Unknown/structured investment or loan labels remain rejected. Identity, ZAR currency, named columns and posted-history evidence remain mandatory; no partial batch is persisted on failure. This changes supported browser-connector labels, not API/MCP schemas, consent, authorization or transaction-import rules. The owner confirmed the exact Type label as 32 Day Flexi Notice and reported that the live retry succeeded. Scheduling has not been verified by this live test.

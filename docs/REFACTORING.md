@@ -95,9 +95,8 @@ without bank credentials. Docker sandbox policy lives in
 `docker/chromium-seccomp.json`; production image acceptance owns its execution.
 
 
-The FNB amd64 browser syscall adapter is owned by
-`connectors/fnb/owner/pwrite-compat.c`; its native test runs in the Docker build
-stage. `browser-runtime.mjs` controls its fixed-path loading and
-`runtime-check.mjs` guards real loopback networking and child sandbox crashes.
+`runtime-check.mjs` owns synthetic login, loopback networking, sandbox, caught
+JavaScript stack-overflow and temporary-profile cleanup regressions. Native
+Chromium packaging belongs to the Dockerfile; no syscall preload adapter remains.
 
 `connectors/fnb/owner/virtual-display.mjs` owns per-browser Xvfb startup, random local display authorization and bounded shutdown. `browser-runtime.mjs` selects the Docker virtual-display mode and composes browser/display lifecycle; worker consent and banking navigation remain in their existing modules.

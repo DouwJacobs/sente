@@ -28,10 +28,7 @@ export async function launchBrowser(puppeteer,{profile,visible=false}) {
   env.HOME=profile
   env.XDG_CONFIG_HOME=join(profile,'config')
   env.XDG_CACHE_HOME=join(profile,'cache')
-  // Fixed root-owned image path; never preload a caller-supplied library.
-  // Outside the packaged Alpine image this adapter is absent and unnecessary.
-  const compatibility='/opt/sente/fnb/pwrite-compat.so'
-  try{await access(compatibility);env.LD_PRELOAD=compatibility}catch{}
+
  }
  if(display){env.DISPLAY=display.display;env.XAUTHORITY=display.authority}
  try {
