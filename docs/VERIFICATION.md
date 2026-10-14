@@ -1,5 +1,30 @@
 # Verification
 
+## Local FNB phase-5 investigation — 13 October 2026
+
+`codex/fnb-local-refresh-diagnostics` starts from development `78bc2f7`.
+The owner's immediate phase-5 failure remains unproven: Node HTTP 200 does not
+establish Chromium connectivity or bank interaction. Added fixed numeric login
+steps and bounded DNS/TLS/connection/timeout/closed-browser flags; raw exception
+messages and bank content stay private. The browser-only diagnostic allowlist
+includes these flags; no MCP tools, fields, scopes or consent changed.
+
+Passed: 57 synthetic worker tests; backend diagnostic allowlist test and Go vet;
+local linux/amd64 image build; full disposable image acceptance including real
+Chromium typing/submission/extraction on intercepted invented bank-shaped HTML,
+with all networking disabled, namespace/seccomp sandbox and profile cleanup;
+onboarding, restart, backup/restore, v22 upgrade, key persistence/recovery and
+password-recovery disconnection. Script syntax and diff whitespace checks pass.
+
+Started `sente:fnb-local` under the separate `sente-fnb-local` Compose project on
+http://127.0.0.1:5180. Its three persistent named volumes were newly created and
+contain no copied production data. Windows IPv4 health check returns status ok.
+`scripts/run-fnb-local.sh` repeats build, acceptance and local start without a
+registry or GitHub push. No real credentials, bank navigation, financial data or
+homelab deployment inspected; owner live testing and the next diagnostic counts
+are required to locate the actual failure.
+
+
 ## Single-container FNB runtime — 12 October 2026
 
 Branch `codex/fnb-container-runtime` starts at development `d6b1c44`.
@@ -917,3 +942,88 @@ Trivy analysis used disabled networking/telemetry after a public DB-only downloa
 MCP contracts/permissions/consent/outputs/proposals/shared financial services do
 not expand; password recovery still uses its existing agent revocation.
 No schema migration. No required GitHub checks or release publication are claimed.
+
+
+## Reproduced Chromium networking sandbox crash — 13 October 2026
+
+The owner probe narrowed live failure to browser disconnect plus frame detach,
+before credential entry. A separate disposable network=none container running
+an invented loopback HTTP page exposed Chromium child SIGSYS at syscall 328
+(pwritev2), even though the outer Docker profile already allows pwritev2. Blank
+and intercepted-page checks alone missed this child-process crash. The new
+loopback regression fails on the original Alpine image and passes with the
+positional-write adapter, retaining Chromium's namespace/seccomp sandbox.
+
+Debian 12 and 13 candidates passed functionality but their local package scans
+reported substantial unresolved high/critical findings; they were not deployed
+for owner banking. Alpine 3.23 passed the crash check but used an older browser;
+it was not selected. The final image retains the current browser on Alpine 3.24
+and preloads a fixed image-owned C adapter that selects the equivalent supported
+pwrite64 syscall. A disposable matching-toolchain test covers offset/errno
+semantics and 64-bit sparse offsets. Synthetic raw stderr was used only on
+invented pages; no live bank page, credentials, stored user data or profile was
+inspected. Live compatibility remains owner verified.
+
+Final full production-image acceptance and all 53 worker tests pass, including
+real network I/O, child crash detection, sandbox checks, key persistence and
+recovery. Go diagnostic tests/vet remain passed. No schema or MCP contract/consent
+change, no GitHub push, and no homelab deployment. The existing local instance's
+persistent owner data is retained on image replacement.
+
+Final local Trivy 0.75.0 scan (cached database, network disabled): zero Alpine
+and Node package advisories and zero secret findings. The unchanged unused
+x/crypto OpenPGP inventory warning GO-2026-5932 remains. This scan is not a
+guarantee against undiscovered vulnerabilities. Only the verified compatibility
+image replaced the owner's local service; no Debian candidate was deployed.
+
+
+Owner public retry now returns navigation_ok=1 and HTTP 200 after the adapter,
+but bank_origin=0. Successful loading is not proof of an approved banking
+origin. Added owner-probe-only numeric origin components and response/redirect
+checks, with URL/credential exclusion tests; no login-origin relaxation or MCP
+field expansion. Exact final destination remains unknown to the agent.
+
+
+Owner hostname-only public probe identified validate.perfdrive.com. Radware's
+primary release notes identify it as a Bot Manager CAPTCHA/block endpoint;
+this accounts for the rejected banking origin but does not establish which
+challenge/block rule fired. Added exact-origin APPROVAL_REQUIRED recognition and
+fixed bank_validation_required counter. Synthetic test proves no credential entry
+or challenge-page inspection; HTTPS/port/userinfo/lookalike checks remain strict.
+No CAPTCHA bypass, stealth measures, origin expansion or live agent bank access.
+The present headless container cannot complete an interactive challenge.
+
+
+Bounded validation handling observes URL state for at most 15 seconds to permit
+normal JavaScript verification to settle, without challenge inspection, clicking,
+solving or credential entry. 57 worker tests include abort/bounds and proof that
+leaving validation for an unrelated origin does not authorize credentials.
+
+
+### Local non-headless comparison
+
+`docker/Dockerfile.fnb-headful-test` derives a disposable local image from
+`sente:fnb-local` with Xvfb. `scripts/fnb-headful-test.sh` starts a local-only
+virtual display and runs the selected diagnostic with `--visible`. No app
+volumes, stored credentials, copied browser profiles or remote display are used.
+The production image and live worker behavior are unchanged. This is an owner-run
+public-navigation experiment, not a manual verification interface or a guarantee
+that bank validation will clear. MCP contracts and consent remain unchanged.
+
+Build: `docker build -f docker/Dockerfile.fnb-headful-test -t sente:fnb-headful-test .`
+
+Offline check: `docker run --rm --init --network none --read-only --tmpfs /tmp:size=128m,mode=1777 --shm-size 256m --cap-drop ALL --security-opt no-new-privileges:true --security-opt seccomp=./docker/chromium-seccomp.json --ulimit core=0:0 sente:fnb-headful-test`
+
+Owner public check: the same command with `--network none` removed and
+`navigation-check.mjs` appended. Only numeric public navigation diagnostics are
+returned. No bank login is attempted.
+
+Verified locally: the Xvfb diagnostic image passes intercepted synthetic login, real loopback networking, private debugging pipe, non-root execution and Chromium PID/network namespace plus seccomp checks with external networking disabled. Live FNB navigation remains owner-tested. Windows executable metadata reports Chrome 154.0.8037.98; this experiment retains the existing packaged Chromium version.
+
+The owner reported a headful public-navigation renderer crash followed by a timeout. Five offline synthetic navigation iterations across four tabs with dedicated workers passed; WebGL2 is blocklisted on Xvfb. The public-only probe now emits fixed numeric stderr crash categories and available tmp/shm MiB. Raw stderr, URLs and page content are never returned. No MCP/API allowlist or live worker consent is expanded. The cause of the owner-reported crash remains unconfirmed.
+
+### Production container virtual display
+
+Owner-approved container-only non-headless mode is the Docker default for manual and scheduled workers. No desktop window or remote display port is exposed. Xvfb is per-browser, uses random 0600 local authorization and disables TCP; fresh profiles and confirmed logout remain required. Native development behavior remains unchanged. No new MCP tools, schemas, output fields or consent scopes are introduced: browser runtime selection is host deployment configuration, and the expanded fixed worker diagnostic allowlist remains browser-only. Owner observed a successful public FNB homepage navigation in non-headless mode and a validation redirect in headless mode; actual login, logout and scheduled banking compatibility remain owner-tested and are not established by synthetic CI.
+
+Final local candidate validation: 61 active worker tests passed, including display authorization and failed-start cleanup. Full production-image acceptance passed against disposable synthetic volumes (onboarding/MCP, restart, backup/restore, v22 upgrade, key creation and recovery). The image browser runs without a headless flag, with 0600 X authorization; namespace/seccomp checks and display-authorization removal passed. Offline Trivy 0.75.0 with the cached database reported zero Alpine/Node vulnerabilities and zero secrets; unchanged unused OpenPGP dependency inventory advisory GO-2026-5932 remains. The scan is limited to the cached database and does not prove absence of unknown vulnerabilities. No live banking tests were performed by the agent.

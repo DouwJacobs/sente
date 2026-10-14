@@ -360,3 +360,67 @@ zero new runtime-package vulnerabilities or secret findings, with the unchanged
 unused OpenPGP inventory warning documented in VERIFICATION.md. No schema or MCP
 contract/consent changes: this is runtime packaging for the existing browser-only
 banking workflow. No homelab changes or live banking were performed.
+
+
+## Local FNB investigation — 13 October 2026
+
+Local-only branch `codex/fnb-local-refresh-diagnostics` adds phase-5 step/failure
+counts, privacy tests and network-disabled real Chromium synthetic login coverage.
+Image `sente:fnb-local` is built and accepted locally. Repeat with
+`bash scripts/run-fnb-local.sh`; the isolated `sente-fnb-local` Compose project
+serves http://127.0.0.1:5180 with separate named data/backup/key volumes. Keep
+Show Chrome off. Owner live trial supplies the next safe counts; no cause of the
+actual bank failure is claimed. No changes pushed, no homelab deployment and no
+schema/MCP contract or consent expansion. Once this local UI contains owner bank
+credentials, agents must not invoke live refresh or inspect its database/profile.
+
+
+Owner retry narrowed the actual failure to first navigation, before credential
+entry. Extended only fixed exception-kind/network-code counters; added an
+owner-run public Chromium navigation probe that loads no stored credentials and
+returns no page content/URLs/raw errors. Do not run that probe from agent tools.
+The active local project's test credentials/database/profile must not be read.
+
+
+The owner public probe also fails before login. Expanded diagnostics cover all
+249 registered Chromium network-error symbols as fixed numeric values, bounded
+nested causes, frame detachment and browser/page crash events. The exact live
+cause is still unknown until the next owner probe result; agents did not open
+FNB. 53 worker tests cover numeric-only handling, unknown symbols, cyclic causes,
+main-request filtering and event-listener cleanup.
+
+
+The first real networking regression reproduces a Chromium child seccomp crash
+on pwritev2 in the Alpine libc/browser pair. `pwrite-compat.c` and its native
+build test implement/test standard pwrite64 selection, cancellation/errno and
+64-bit offsets; the browser launcher preloads the fixed immutable image path.
+No sandbox or TLS bypass. Acceptance now includes real loopback HTTP and child
+seccomp crash rejection. Debian candidates were rejected after package scans;
+an older-browser Alpine candidate was not chosen. Owner retry on the current
+browser plus adapter is needed to establish actual FNB compatibility. Do not
+inspect live banking or the owner's persistent local data/profile.
+
+
+### Local non-headless comparison
+
+`docker/Dockerfile.fnb-headful-test` derives a disposable local image from
+`sente:fnb-local` with Xvfb. `scripts/fnb-headful-test.sh` starts a local-only
+virtual display and runs the selected diagnostic with `--visible`. No app
+volumes, stored credentials, copied browser profiles or remote display are used.
+The production image and live worker behavior are unchanged. This is an owner-run
+public-navigation experiment, not a manual verification interface or a guarantee
+that bank validation will clear. MCP contracts and consent remain unchanged.
+
+Build: `docker build -f docker/Dockerfile.fnb-headful-test -t sente:fnb-headful-test .`
+
+Offline check: `docker run --rm --init --network none --read-only --tmpfs /tmp:size=128m,mode=1777 --shm-size 256m --cap-drop ALL --security-opt no-new-privileges:true --security-opt seccomp=./docker/chromium-seccomp.json --ulimit core=0:0 sente:fnb-headful-test`
+
+Owner public check: the same command with `--network none` removed and
+`navigation-check.mjs` appended. Only numeric public navigation diagnostics are
+returned. No bank login is attempted.
+
+The owner reported a headful public-navigation renderer crash followed by a timeout. Five offline synthetic navigation iterations across four tabs with dedicated workers passed; WebGL2 is blocklisted on Xvfb. The public-only probe now emits fixed numeric stderr crash categories and available tmp/shm MiB. Raw stderr, URLs and page content are never returned. No MCP/API allowlist or live worker consent is expanded. The cause of the owner-reported crash remains unconfirmed.
+
+### Production container virtual display
+
+Owner-approved container-only non-headless mode is the Docker default for manual and scheduled workers. No desktop window or remote display port is exposed. Xvfb is per-browser, uses random 0600 local authorization and disables TCP; fresh profiles and confirmed logout remain required. Native development behavior remains unchanged. No new MCP tools, schemas, output fields or consent scopes are introduced: browser runtime selection is host deployment configuration, and the expanded fixed worker diagnostic allowlist remains browser-only. Owner observed a successful public FNB homepage navigation in non-headless mode and a validation redirect in headless mode; actual login, logout and scheduled banking compatibility remain owner-tested and are not established by synthetic CI.

@@ -1,0 +1,10 @@
+# Local diagnostic image only; never published by release workflows.
+FROM sente:fnb-local
+USER root
+RUN apk add --no-cache xvfb
+COPY scripts/fnb-headful-test.sh /opt/sente/fnb/headful-test.sh
+COPY connectors/fnb/owner/navigation-check.mjs connectors/fnb/owner/runtime-check.mjs connectors/fnb/owner/browser-crash-diagnostics.mjs /opt/sente/fnb/
+USER finance
+ENV FNB_BROWSER_MODE=headless
+ENTRYPOINT ["/bin/sh", "/opt/sente/fnb/headful-test.sh"]
+CMD ["runtime-check.mjs"]

@@ -93,3 +93,11 @@ FNB container startup is owned by `connectors/fnb/owner/browser-runtime.mjs`;
 `runtime-check.mjs` exercises that same launch code and the configured worker
 without bank credentials. Docker sandbox policy lives in
 `docker/chromium-seccomp.json`; production image acceptance owns its execution.
+
+
+The FNB amd64 browser syscall adapter is owned by
+`connectors/fnb/owner/pwrite-compat.c`; its native test runs in the Docker build
+stage. `browser-runtime.mjs` controls its fixed-path loading and
+`runtime-check.mjs` guards real loopback networking and child sandbox crashes.
+
+`connectors/fnb/owner/virtual-display.mjs` owns per-browser Xvfb startup, random local display authorization and bounded shutdown. `browser-runtime.mjs` selects the Docker virtual-display mode and composes browser/display lifecycle; worker consent and banking navigation remain in their existing modules.

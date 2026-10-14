@@ -4,6 +4,7 @@ import {mkdtemp,rm} from 'node:fs/promises'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {launchBrowser} from './browser-runtime.mjs'
+import {loginFailureDiagnostics,observeNavigation,bankValidationOrigin,waitForBankValidation} from './login-diagnostics.mjs'
 import {createInterface} from 'node:readline'
 import {normalizeAccounts,ProbeError} from './accounts.mjs'
 import {fetchTransactions,resolveMaskedCreditAccounts} from './transactions.mjs'
@@ -183,21 +184,43 @@ export function loginFormDOM(submit=false){
  if(submit)button.click()
  return true
 }
+// Only fixed stages and failure categories cross the worker boundary.
 export async function loginAndAccounts(page,credentials,signal){
+ const diagnostics={login_step:1}
+ const stopObserving=observeNavigation(page,diagnostics)
+ try{return await loginAndAccountsFlow(page,credentials,signal,diagnostics)}catch(err){
+  const counts={...diagnostics,...loginFailureDiagnostics(err,diagnostics.login_step),...(err instanceof ProbeError?err.diagnostics||{}:{})}
+  throw new ProbeError(err instanceof ProbeError?err.code:'REFRESH_FAILED',counts)
+ }finally{stopObserving()}
+}
+async function loginAndAccountsFlow(page,credentials,signal,diagnostics){
  await page.goto('https://www.fnb.co.za/',{waitUntil:'domcontentloaded',timeout:45000})
+ if(bankValidationOrigin(page.url())){
+  diagnostics.bank_validation_waited=1
+  const cleared=await waitForBankValidation(page,signal)
+  if(!cleared)throw new ProbeError('APPROVAL_REQUIRED',{bank_validation_required:1})
+  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+  diagnostics.bank_validation_cleared=1
+ }
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=2
  try{await page.waitForSelector('#user',{visible:true,timeout:10000});await page.waitForSelector('#pass',{visible:true,timeout:10000})}catch{throw new ProbeError('LOGIN_LAYOUT_CHANGED')}
  // Never send credentials to an unapproved origin or unrelated form.
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=3
  const valid=await page.evaluate(loginFormDOM)
  if(!valid)throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=4
  await page.type('#user',credentials.username)
  if(!bankPage(page)||!await page.evaluate(loginFormDOM))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=5
  await page.type('#pass',credentials.password)
  if(!bankPage(page))throw new ProbeError('LOGIN_LAYOUT_CHANGED')
+ diagnostics.login_step=6
  const submitted=await page.evaluate(loginFormDOM,true)
  if(!submitted)throw new ProbeError('LOGIN_LAYOUT_CHANGED')
  // One login attempt only. Owner can complete approval in visible manual runs.
+ diagnostics.login_step=7
  const deadline=Date.now()+110000
  while(Date.now()<deadline){
   if(signal?.aborted)throw new ProbeError('REFRESH_FAILED')
@@ -230,6 +253,7 @@ export async function loginAndAccounts(page,credentials,signal){
       if(!result.rows)throw new ProbeError('BALANCE_LAYOUT_CHANGED',result.diagnostics)
       result.diagnostics.masked_credit_resolved=Object.keys(aliases).length
      }
+     diagnostics.login_step=8
      return {...normalizeSnapshot(result.rows,credentials.hidden||[],result.diagnostics),navigation_aliases:aliases}
     }
     await candidate.evaluate(()=>{

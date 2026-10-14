@@ -224,3 +224,132 @@ test('redirect between username and password entry stops before password typing'
  await assert.rejects(()=>loginAndAccounts(page,{username:'synthetic',password:'synthetic-secret'}),{code:'LOGIN_LAYOUT_CHANGED'})
  assert.deepEqual(typed,['#user'])
 })
+
+
+test('login diagnostics distinguish navigation failures without leaking raw errors',async()=>{
+ for(const [message,key] of [
+  ['net::ERR_NAME_NOT_RESOLVED synthetic-secret','login_dns_failed'],
+  ['net::ERR_CERT_AUTHORITY_INVALID synthetic-secret','login_tls_failed'],
+  ['net::ERR_CONNECTION_CLOSED synthetic-secret','login_connection_failed'],
+  ['Target closed synthetic-secret','login_browser_closed']
+ ]) {
+  let entered=0
+  const page={goto:async()=>{throw Error(message)},type:async()=>{entered++}}
+  let failure
+  try{await loginAndAccounts(page,{username:'synthetic-user',password:'synthetic-secret'})}catch(err){failure=err}
+  assert.equal(entered,0)
+  const result=workerFailure(failure,5)
+  assert.equal(result.error,'REFRESH_FAILED')
+  assert.equal(result.diagnostics.login_step,1)
+  assert.equal(result.diagnostics[key],1)
+  assert(!JSON.stringify(result).includes('synthetic-secret'))
+  assert(!JSON.stringify(result).includes('net::'))
+ }
+})
+
+test('login typing failures identify the failed field stage without disclosing credentials',async()=>{
+ for(const [selector,step] of [['#user',4],['#pass',5]]) {
+  const page={url:()=> 'https://www.fnb.co.za/',goto:async()=>{},waitForSelector:async()=>{},
+   evaluate:async()=>true,type:async field=>{if(field===selector)throw Error('synthetic-secret')}}
+  let failure
+  try{await loginAndAccounts(page,{username:'synthetic-user',password:'synthetic-secret'})}catch(err){failure=err}
+  const result=workerFailure(failure,5)
+  assert.equal(result.diagnostics.login_step,step)
+  assert(!JSON.stringify(result).includes('synthetic-secret'))
+ }
+})
+
+
+test('additional navigation categories remain numeric and exclude arbitrary bank/error text',async()=>{
+ const {loginFailureDiagnostics}=await import('./login-diagnostics.mjs')
+ for(const [code,value] of [['ERR_ABORTED',1],['ERR_HTTP2_PROTOCOL_ERROR',4],['ERR_NETWORK_ACCESS_DENIED',10]]) {
+  const result=loginFailureDiagnostics(Error('net::'+code+' at https://private.invalid/synthetic-secret'),1)
+  assert.equal(result.login_network_error,value)
+  assert.equal(result.login_error_kind,1)
+  assert(!JSON.stringify(result).includes('synthetic-secret'))
+  assert(!JSON.stringify(result).includes('private.invalid'))
+ }
+ assert.equal(loginFailureDiagnostics(new TypeError('synthetic-secret'),1).login_error_kind,2)
+ const protocol=Error('Protocol error (Page.navigate): synthetic-secret')
+ protocol.name='ProtocolError'
+ assert.equal(loginFailureDiagnostics(protocol,1).login_protocol_failed,1)
+ assert.equal(loginFailureDiagnostics({name:'synthetic-secret'},1).login_error_kind,8)
+})
+
+
+test('wrapped and less-common navigation errors export only registered numeric reasons',async()=>{
+ const {loginFailureDiagnostics}=await import('./login-diagnostics.mjs')
+ const error=Error('LifecycleWatcher terminated',{cause:Error('net::ERR_ADDRESS_UNREACHABLE at https://synthetic-secret.invalid/')})
+ assert.equal(loginFailureDiagnostics(error,1).login_chromium_error,109)
+ assert.equal(loginFailureDiagnostics(error,1).login_lifecycle_terminated,1)
+ assert.equal(loginFailureDiagnostics(Error('Navigating frame was detached'),1).login_frame_detached,1)
+ assert.equal(loginFailureDiagnostics(Error('net::ERR_UNKNOWN_PRIVATE_VALUE'),1).login_network_unclassified,1)
+ assert(!JSON.stringify(loginFailureDiagnostics(error,1)).includes('synthetic-secret'))
+ error.cause=error
+ assert.doesNotThrow(()=>loginFailureDiagnostics(error,1))
+})
+
+test('navigation observers expose crash flags, exclude subresources and detach cleanly',async()=>{
+ const {EventEmitter}=await import('node:events')
+ const {observeNavigation}=await import('./login-diagnostics.mjs')
+ const browser=new EventEmitter(),page=new EventEmitter(),frame={}
+ page.browser=()=>browser;page.mainFrame=()=>frame
+ const counts={login_step:1},stop=observeNavigation(page,counts)
+ page.emit('requestfailed',{isNavigationRequest:()=>false})
+ assert.equal(counts.login_chromium_error,undefined)
+ page.emit('requestfailed',{isNavigationRequest:()=>true,frame:()=>frame,failure:()=>({errorText:'net::ERR_SOCKET_NOT_CONNECTED'})})
+ assert.equal(counts.login_chromium_error,15)
+ page.emit('error',Error('synthetic-secret'))
+ browser.emit('disconnected')
+ assert.equal(counts.login_page_crashed,1)
+ assert.equal(counts.login_browser_disconnected,1)
+ stop();assert.equal(page.listenerCount('error'),0);assert.equal(browser.listenerCount('disconnected'),0)
+ assert(!JSON.stringify(counts).includes('synthetic-secret'))
+})
+
+
+test('public navigation origin diagnostics explain rejection without returning URLs or secrets',async()=>{
+ const {navigationOriginCounts}=await import('./login-diagnostics.mjs')
+ for(const url of ['https://www.fnb.co.za/','https://online.fnb.co.za/'])assert.equal(navigationOriginCounts(url).bank_origin,1)
+ for(const [url,key] of [['http://www.fnb.co.za/','origin_http'],['https://www.fnb.co.za:8443/','origin_bank_host'],['https://synthetic-secret@www.fnb.co.za/','origin_userinfo'],['chrome-error://chromewebdata/','origin_browser_error'],['about:blank','origin_blank']]) {
+  const result=navigationOriginCounts(url)
+  assert.equal(result.bank_origin,0)
+  assert.equal(result[key],1)
+  assert(!JSON.stringify(result).includes('synthetic-secret'))
+  assert(!JSON.stringify(result).includes('fnb.co.za'))
+ }
+ assert.equal(navigationOriginCounts('https://fnb.co.za.synthetic.invalid/').origin_bank_host,0)
+})
+
+
+test('recognized bank verification stops before any credential entry or challenge inspection',async()=>{
+ let typed=0,inspected=0
+ const page={goto:async()=>{},url:()=> 'https://validate.perfdrive.com/?private=synthetic-secret',
+  type:async()=>{typed++},evaluate:async()=>{inspected++}}
+ let failure
+ try{await loginAndAccounts(page,{username:'synthetic-user',password:'synthetic-secret'},{aborted:true})}catch(error){failure=error}
+ assert.equal(failure.code,'APPROVAL_REQUIRED')
+ assert.equal(failure.diagnostics.bank_validation_required,1)
+ assert.equal(typed,0);assert.equal(inspected,0)
+ assert(!JSON.stringify(workerFailure(failure,5)).includes('synthetic-secret'))
+ const {bankValidationOrigin}=await import('./login-diagnostics.mjs')
+ for(const url of ['http://validate.perfdrive.com/','https://validate.perfdrive.com:8443/','https://validate.perfdrive.com.synthetic.invalid/','https://synthetic-secret@validate.perfdrive.com/'])assert.equal(bankValidationOrigin(url),false)
+})
+
+
+test('validation wait only follows URL state and remains bounded/cancellable',async()=>{
+ const {waitForBankValidation}=await import('./login-diagnostics.mjs')
+ let reads=0
+ const transitioning={url:()=>reads++<2?'https://validate.perfdrive.com/':'https://www.fnb.co.za/'}
+ assert.equal(await waitForBankValidation(transitioning,undefined,{attempts:3,delayMs:0}),true)
+ assert.equal(await waitForBankValidation({url:()=> 'https://validate.perfdrive.com/'},undefined,{attempts:2,delayMs:0}),false)
+ assert.equal(await waitForBankValidation({url:()=> 'https://validate.perfdrive.com/'},{aborted:true}),false)
+})
+
+
+test('departure from validation to an unrelated origin never authorizes credential entry',async()=>{
+ let reads=0,typed=0
+ const page={goto:async()=>{},url:()=> reads++<2?'https://validate.perfdrive.com/':'https://unrelated.invalid/',type:async()=>{typed++}}
+ await assert.rejects(()=>loginAndAccounts(page,{username:'synthetic-user',password:'synthetic-secret'}),{code:'LOGIN_LAYOUT_CHANGED'})
+ assert.equal(typed,0)
+})
