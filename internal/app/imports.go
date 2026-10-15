@@ -44,28 +44,13 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 		row.Suggestion = ""
 		row.RuleConflict = false
 		row.RuleMatches = nil
-		mm, err := matchMerchantDetails(q, account, row.Description, row.Amount)
+		classified, _, err := evaluateDescription(q, account, row.Description, row.Amount, rules)
 		if err != nil {
 			return err
 		}
-		if mm != nil {
-			row.RuleConflict = mm.ClassificationConflict
-			if mm.ID > 0 {
-				row.MerchantID = &mm.ID
-			}
-			row.MerchantName = mm.Name
-			if mm.CategoryID != nil {
-				row.CategoryID = mm.CategoryID
-				row.SpendingGroupID = mm.SpendingGroupID
-				row.Suggestion = "Merchant: " + mm.Name
-			}
-		}
-		if row.RuleConflict {
-			row.Suggestion = "Conflicting merchant rules: needs review"
-		}
-		if row.CategoryID == nil && !row.RuleConflict {
-			classify(row, rules)
-		}
+		row.CategoryID, row.SpendingGroupID = classified.CategoryID, classified.SpendingGroupID
+		row.MerchantID, row.MerchantName = classified.MerchantID, classified.MerchantName
+		row.Suggestion, row.RuleConflict, row.RuleMatches = classified.Suggestion, classified.RuleConflict, classified.RuleMatches
 		if p.Format == "fnb-live" && row.FITID == "" {
 			continue
 		}

@@ -1,6 +1,6 @@
 import { desktopPhoneCases } from './coverage-cases';
 import {test,expect} from '@playwright/test'
-for(const {width,theme} of desktopPhoneCases)test(`transaction rule fills pending uncategorized only ${width} ${theme}`,async({page})=>{
+for(const {width,theme} of desktopPhoneCases)test(`transaction rule offers missing-only backfill ${width} ${theme}`,async({page})=>{
  await page.setViewportSize({width,height:900})
  await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme)
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message))
@@ -34,19 +34,25 @@ for(const {width,theme} of desktopPhoneCases)test(`transaction rule fills pendin
  await expect(page.getByRole('button',{name:'Mark seen (1)',exact:true})).toBeVisible()
  if(width===360)await page.getByRole('button',{name:'Cancel selection',exact:true}).click()
  await entries.filter({hasText:descriptions[0]}).click()
- const editor=page.locator('dialog.modal-wide')
+ const editor=page.getByRole('dialog',{name:/^Transaction #[0-9]+$/})
  await editor.getByLabel('Category',{exact:true}).click()
  await page.getByRole('dialog',{name:'Select category',exact:true}).getByRole('button').filter({hasText:'Groceries'}).first().click()
  await editor.getByLabel('Spending group',{exact:true}).click()
  await page.getByRole('dialog',{name:'Select spending group',exact:true}).getByRole('button',{name:/^Recurring(?: Selected)?$/}).click()
  await editor.locator('summary').filter({hasText:'Automatically categorize similar transactions'}).click()
- await expect(editor.getByText(/fills eligible uncategorized entries already imported/)).toBeVisible()
+ await expect(editor.getByText(/After saving/)).toBeVisible()
  await editor.getByLabel('Use this category and spending group for similar transactions in this account',{exact:true}).check()
  await editor.getByLabel('Description contains',{exact:true}).fill(tag)
  await editor.getByRole('button',{name:'Save changes',exact:true}).click()
  await expect(editor).not.toBeVisible()
- await expect(page.getByRole('button',{name:'Mark seen (1)',exact:true})).not.toBeVisible()
- await expect(page.getByText(/Rule applied to 1 other uncategorized transaction; they are accepted and unseen/)).toBeVisible()
+ const offered=page.getByRole('dialog',{name:'Apply this rule to previous transactions?',exact:true});
+ await expect(offered).toBeVisible();
+ const unchanged=await page.evaluate(async description=>(await fetch('/api/transactions?q='+encodeURIComponent(description)).then(r=>r.json())).items.find((t:any)=>t.description===description),descriptions[1]);
+ expect(unchanged.allocations[0].category_id).toBeNull();expect(unchanged.version).toBe(1);
+ await offered.getByLabel('Previous transactions',{exact:true}).selectOption('period');await offered.getByLabel('Budget period',{exact:true}).selectOption('1');
+ await offered.getByRole('button',{name:'Preview changes',exact:true}).click();
+ await expect(offered.getByRole('button',{name:'Apply 1 changes',exact:true})).toBeVisible();
+ await offered.getByRole('button',{name:'Apply 1 changes',exact:true}).click();await expect(offered).toBeHidden();
  const saved=await page.evaluate(async descriptions=>{
   const items=(await fetch('/api/transactions').then(r=>r.json())).items
   return descriptions.map(description=>items.find((t:any)=>t.description===description))
@@ -65,7 +71,7 @@ for(const {width,theme} of desktopPhoneCases)test(`transaction rule fills pendin
  expect(saved[3].allocations[0].category_id).toBeNull()
  expect(saved[3].version).toBe(1)
  const history=await page.evaluate(async id=>(await fetch('/api/audit/'+id).then(r=>r.json())),saved[1].id)
- expect(history.some((entry:any)=>entry.action==='rule_applied')).toBe(true)
+ expect(history.some((entry:any)=>entry.action==='rule_backfilled')).toBe(true)
  await page.getByRole('button',{name:/^Filters/}).click()
  await page.getByLabel('Filter by category',{exact:true}).selectOption('uncategorized')
  await expect(entries.filter({hasText:descriptions[1]})).toHaveCount(0)
@@ -73,3 +79,22 @@ for(const {width,theme} of desktopPhoneCases)test(`transaction rule fills pendin
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  expect(errors).toEqual([])
 })
+
+test('transaction rule can optionally assign its merchant without backfilling on save',async({page})=>{
+ await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible();
+ await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Transactions',exact:true}).click();
+ await page.getByRole('tab',{name:'All transactions',exact:true}).click();
+ await page.locator('.transaction-detail').filter({hasText:'Synthetic long description'}).click();
+ const editor=page.getByRole('dialog',{name:/^Transaction #[0-9]+$/});
+ await editor.getByLabel('Category',{exact:true}).click();await page.getByRole('dialog',{name:'Select category',exact:true}).getByRole('button').filter({hasText:'Groceries'}).first().click();
+ await editor.locator('summary').filter({hasText:'Notes, merchant and tags'}).click();
+ await editor.getByRole('button',{name:'New merchant',exact:true}).click();
+ const create=page.getByRole('dialog',{name:'New merchant',exact:true});await create.getByLabel('Name',{exact:true}).fill('Optional transaction merchant');await create.getByRole('button',{name:'Create and select',exact:true}).click();await expect(create).toBeHidden();
+ await editor.locator('summary').filter({hasText:'Automatically categorize similar transactions'}).click();await editor.getByLabel('Use this category and spending group for similar transactions in this account',{exact:true}).check();
+ await editor.getByLabel("Assign this transaction's merchant to future matches",{exact:true}).check();await editor.getByLabel('Description contains',{exact:true}).fill('Optional merchant rule');
+ const before=await(await page.request.get('/api/transactions')).json();
+ await editor.getByRole('button',{name:'Save changes',exact:true}).click();const offer=page.getByRole('dialog',{name:'Apply this rule to previous transactions?',exact:true});await expect(offer).toBeVisible();await offer.getByRole('button',{name:'Not now',exact:true}).click();
+ const rules=(await(await page.request.get('/api/merchant-rules?q=Optional%20merchant%20rule')).json()).items;expect(rules).toHaveLength(1);expect(rules[0].category_id).toBe(1);
+ const after=await(await page.request.get('/api/transactions')).json();
+ expect(after.items.filter((t:any)=>t.version!==before.items.find((b:any)=>b.id===t.id)?.version)).toHaveLength(1);
+});

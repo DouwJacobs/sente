@@ -32,7 +32,8 @@ type transactionInput struct {
 	PeriodID        *int64       `json:"period_id"`
 	SpendingGroupID *int64       `json:"spending_group_id"`
 	Rule            *struct {
-		Pattern string `json:"pattern"`
+		Pattern    string `json:"pattern"`
+		MerchantID *int64 `json:"merchant_id,omitempty"`
 	} `json:"rule"`
 }
 
@@ -126,34 +127,8 @@ func (a *App) editTransactionTx(tx *sql.Tx, u User, id int64, b transactionInput
 		return application, err
 	}
 	if b.Rule != nil {
-		if b.Transfer || len(b.Allocations) != 1 || b.Allocations[0].CategoryID == nil || b.Amount == 0 {
-			return application, fail(400, "Rules need a single categorized transaction that is not a transfer")
-		}
-		direction := "debit"
-		if b.Amount > 0 {
-			direction = "credit"
-		}
-		rule := ruleInput{AccountID: account, Pattern: b.Rule.Pattern, CategoryID: *b.Allocations[0].CategoryID, SpendingGroupID: b.SpendingGroupID, Direction: direction}
-		var ruleID int64
-		existing, err := data(tx, "SELECT id,pattern,version,priority FROM rules WHERE account_id=? AND direction=?", account, direction)
-		if err != nil {
-			return application, err
-		}
-		for _, old := range existing {
-			if normalize(old["pattern"].(string)) != normalize(rule.Pattern) {
-				continue
-			}
-			if ruleID != 0 {
-				return application, fail(409, "Multiple rules use this description. Edit the rules before saving another.")
-			}
-			ruleID = num(old["id"])
-			rule.Version = num(old["version"])
-			rule.Priority = int(num(old["priority"]))
-		}
-		if err := a.writeRule(tx, u, &ruleID, &rule); err != nil {
-			return application, err
-		}
-		application, err = a.applyRuleToPending(tx, u, account, ruleID, id)
+		var err error
+		application, err = a.saveTransactionRuleTx(tx, u, account, id, b)
 		if err != nil {
 			return application, err
 		}

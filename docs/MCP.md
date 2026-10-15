@@ -346,3 +346,13 @@ permission changes the mode to Custom. Selecting another preset disables YOLO's
 automatic approvals; revocation/current authorization/financial validation still
 apply to pending and approved proposals. No credentials or additional financial
 read fields are exposed. No schema migration.
+
+
+## Unified browser rules and optional backfill — 15 October 2026
+
+The browser Rules catalogue/editor consolidate management without merging MCP consent domains. list_rules/save_rule/delete_rule retain account/category-rule permissions and literal/custom-over-builtin behavior; category_id=0 with a valid spending_group_id represents a group-only rule. list_merchant_rules/save_merchant_rule/delete_merchant_rule retain read_merchants and their separate merchant grants, advanced patterns and highest-priority behavior. No existing grant implies another, and merchant metadata remains excluded without merchant consent. Existing exact proposals retain original IDs, scopes, outputs and matching behavior; no pending proposal gains retrospective effects.
+
+Historical rule application is browser-only through authenticated, CSRF-protected /rule-backfill/preview and /rule-backfill/apply. It is not exposed as a new MCP tool or implied by rule grants/automatic approval. Transaction-created rule saving no longer mutates historical targets. The legacy pending_rule response retains applied/conflicts=0 and adds browser-only rule_kind/rule_id/rule_version for the optional prompt; these fields are not added to MCP output allowlists. Per-rule global-search assignments are corrected without exposing new agent fields. Shared import/backfill evaluation and authorized rule writers enforce existing financial and access invariants.
+
+
+Rule-search follow-up: list_rules now actually filters description patterns, category names and spending-group names before grouped pagination, retaining every visible account copy in a matched definition. Assignment renames invalidate list versions. Its tool description removes the obsolete immediate historical-application claim. This is a correction to the existing q filter, not a new tool or consent scope. The browser's unified Rules catalogue does not combine separately consented MCP merchant reads.

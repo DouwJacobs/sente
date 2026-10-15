@@ -3279,3 +3279,13 @@ body:has(dialog[open]) { overflow:hidden; }
 }
 
 .spending-controls .account-action-menu .button { border: 0; }
+
+/* Rules share the classification list; historical previews retain natural mobile height. */
+.rule-backfill-row{display:grid;gap:6px;padding:14px 0;overflow-wrap:anywhere}
+.rule-backfill-row small{display:block}
+.rule-backfill-row dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:4px 0}
+.rule-backfill-row dt{font-size:12px;color:var(--muted)}
+.rule-backfill-row dd{margin:4px 0 0;font-size:13px}
+@media(max-width:760px){.rule-backfill-row dl{grid-template-columns:1fr;gap:8px}}
+
+.rule-fields{border:0;padding:0;margin:0;min-width:0}

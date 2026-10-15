@@ -43,8 +43,7 @@ Pass direct Button children to Empty so actions live in the action row. Wrap exp
 | Spending groups | Organize spending your way / Use groups such as Essentials or Leisure to organize transactions without changing their categories. | Add spending group for budget members | None |
 | Budget periods | No budget periods / Choose your dates, then set spending limits. Your first period can follow a calendar month or your payday. | New period | None |
 | Period groups | Start building your budget / Add a spending group, then choose the categories and limits for this period. | Add group | None |
-| Rules | No rules yet / Match a bank description to a category so future imports need less manual review. | Add rule; route to the missing account/category prerequisite otherwise | None |
-| Merchant rules | Recognize your regular merchants / Turn bank descriptions into familiar merchant names. You can also set a default category for future imports. | Add merchant rule | None |
+| Rules | No rules yet / Create a rule to recognize merchants or categorize future transactions. | Add rule when authorized | None |
 | Global search, untouched | Find something in your finances / Search categories, groups, transactions and rules. Try a merchant name or a bank description. | Focus remains in search | None |
 | Global search, no matches | No search results / No results for "[query]". Try a shorter name or a different description. | Clear search; restore input focus | None |
 | Global search failure | Search could not be completed / Your search is still here. Try again when your connection is available. | Retry search | None |
@@ -125,3 +124,8 @@ existing Edit budgets scope/availability. The chart belongs on its dedicated San
 page, retaining account/period selectors and Back to dashboard without resetting scope.
 The Spending breakdown disclosure keeps 12px left padding and 36px right space.
 See docs/UI.md for node labels, proportional sizing and responsive/table behavior.
+
+
+## Unified Rules and explicit historical application
+
+Follow docs/UI.md's Unified Rules section. One visible search and one shared editor cover optional merchant/category/group assignments. Preserve complete grouped account scopes and original matching policies; current accounts never silently become global. Save affects future imports only. A new active rule offers optional historical application, and active rows expose the same manual action. Historical effects require exact named before/after preview, all previous matches or a selected saved period, explicit apply, missing-only assignments and stale/access rechecks. Preserve cancellation, loading locks, keyboard focus, merchant logos and review navigation. Existing MCP consent remains separate; browser historical application never inherits agent rule grants.

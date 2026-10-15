@@ -34,7 +34,7 @@ const descriptions: Record<string, string> = {
   Imports: "Get bank transactions or upload a statement for review.",
   Accounts: "Shared household accounts and private accounts.",
   Budgets: "Category limits and the dates that work for you.",
-  Categories: "Organize categories, spending groups, and automatic rules.",
+  Categories: "Organize categories, spending groups, and rules.",
   Settings: "Household preferences, access, and backups.",
 };
 export function WorkspaceShell({

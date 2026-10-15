@@ -46,20 +46,21 @@ func (a *App) rulePages(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
 	// Rank definitions before paging so grouped account edits never lose a member at a page boundary.
 	query := `WITH visible AS (
- SELECT rules.id,rules.account_id,rules.pattern,rules.category_id,rules.priority,rules.spending_group_id,rules.direction,rules.enabled,rules.version,0 builtin,c.name category_name,a.name account_name,s.name spending_group_name FROM rules JOIN accounts a ON a.id=rules.account_id JOIN categories c ON c.id=rules.category_id LEFT JOIN spending_groups s ON s.id=rules.spending_group_id WHERE ` + accountAccessSQL(u) + `
- UNION ALL SELECT -b.id,0,b.pattern,b.category_id,b.priority,b.spending_group_id,b.direction,b.enabled,b.version,1,c.name,'All enabled accounts',s.name FROM builtin_rules b JOIN categories c ON c.id=b.category_id LEFT JOIN spending_groups s ON s.id=b.spending_group_id
- ), definitions AS (SELECT finance_normalize(pattern) pattern_key,category_id,spending_group_id,direction,priority,enabled,builtin,MIN(abs(id)) first_id FROM visible GROUP BY finance_normalize(pattern),category_id,spending_group_id,direction,priority,enabled,builtin), ranked AS (SELECT *,ROW_NUMBER() OVER(ORDER BY builtin,priority DESC,first_id) position FROM definitions)
+ SELECT rules.id,rules.account_id,rules.pattern,rules.category_id,rules.priority,rules.spending_group_id,rules.direction,rules.enabled,rules.version,0 builtin,c.name category_name,a.name account_name,s.name spending_group_name FROM rules JOIN accounts a ON a.id=rules.account_id LEFT JOIN categories c ON c.id=rules.category_id LEFT JOIN spending_groups s ON s.id=rules.spending_group_id WHERE ` + accountAccessSQL(u) + `
+ UNION ALL SELECT -b.id,0,b.pattern,b.category_id,b.priority,b.spending_group_id,b.direction,b.enabled,b.version,1,c.name,'All enabled accounts',s.name FROM builtin_rules b LEFT JOIN categories c ON c.id=b.category_id LEFT JOIN spending_groups s ON s.id=b.spending_group_id
+ ), definitions AS (SELECT finance_normalize(pattern) pattern_key,category_id,spending_group_id,direction,priority,enabled,builtin,MIN(abs(id)) first_id FROM visible WHERE instr(finance_normalize(pattern||' '||COALESCE(category_name,'')||' '||COALESCE(spending_group_name,'')),?)>0 GROUP BY finance_normalize(pattern),category_id,spending_group_id,direction,priority,enabled,builtin), ranked AS (SELECT *,ROW_NUMBER() OVER(ORDER BY builtin,priority DESC,first_id) position FROM definitions)
  `
+	args := []any{u.Member, u.ID, normalize(r.URL.Query().Get("q"))}
 	tx, err := a.DB.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	counts, err := data(tx, query+"SELECT COUNT(*) total FROM ranked", u.Member, u.ID)
+	counts, err := data(tx, query+"SELECT COUNT(*) total FROM ranked", args...)
 	if err != nil {
 		return err
 	}
-	states, err := data(tx, query+"SELECT group_concat(id||':'||version) state FROM (SELECT id,version FROM visible ORDER BY id)", u.Member, u.ID)
+	states, err := data(tx, query+"SELECT group_concat(state) state FROM (SELECT json_array(id,version,pattern,category_name,spending_group_name) state FROM visible ORDER BY id)", args...)
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func (a *App) rulePages(w http.ResponseWriter, r *http.Request) error {
 	if expected := r.URL.Query().Get("list_version"); expected != "" && expected != version {
 		return fail(409, "This list changed. Start from the first page.")
 	}
-	items, err := data(tx, query+`SELECT v.*,finance_normalize(v.pattern) normalized_pattern FROM visible v JOIN ranked d ON finance_normalize(v.pattern)=d.pattern_key AND v.category_id=d.category_id AND v.spending_group_id IS d.spending_group_id AND v.direction=d.direction AND v.priority=d.priority AND v.enabled=d.enabled AND v.builtin=d.builtin WHERE d.position>? AND d.position<=? ORDER BY d.position,abs(v.id)`, u.Member, u.ID, page*size, (page+1)*size)
+	items, err := data(tx, query+`SELECT v.*,finance_normalize(v.pattern) normalized_pattern FROM visible v JOIN ranked d ON finance_normalize(v.pattern)=d.pattern_key AND v.category_id IS d.category_id AND v.spending_group_id IS d.spending_group_id AND v.direction=d.direction AND v.priority=d.priority AND v.enabled=d.enabled AND v.builtin=d.builtin WHERE d.position>? AND d.position<=? ORDER BY d.position,abs(v.id)`, append(append([]any{}, args...), page*size, (page+1)*size)...)
 	if err != nil {
 		return err
 	}

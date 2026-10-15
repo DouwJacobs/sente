@@ -1,3 +1,5 @@
+import {RuleBackfill} from "../rules/RuleBackfill";
+import type {RuleRef} from "../rules/types";
 import { TransactionExtras } from "./TransactionExtras";
 import { Allocations } from "./Allocations";
 import { TransactionLabels } from "../../CoreWorkflows";
@@ -52,6 +54,7 @@ export function TransactionEditor({
       merchant,
       tags,
       saveRule,
+      assignRuleMerchant,
       pattern,
     });
   const baseline = useRef("");
@@ -89,6 +92,7 @@ export function TransactionEditor({
       refresh();
     }
   };
+  const [assignRuleMerchant,setAssignRuleMerchant]=useState(false);
   const [saveRule, setSaveRule] = useState(false),
     [pattern, setPattern] = useState(proposeRulePattern(t.description));
   const { busy, run } = useTask(notify);
@@ -129,7 +133,9 @@ export function TransactionEditor({
       alive = false;
     };
   }, [reviewQuery, t.id, t.date, processed.join(",")]);
+  const [backfill,setBackfill] = useState<{refs:RuleRef[];after?:()=>void}|null>(null);
   const save = async (after?: () => void) => {
+    let savedRef:RuleRef|null=null;
     const ok = await run(async () => {
       const parsed = cents(amount);
       const result = await api("/transactions/" + t.id, "PUT", {
@@ -150,18 +156,13 @@ export function TransactionEditor({
         spending_group_id: spendingGroup,
         assignment,
         period_id: assignment === "manual" ? Number(period) : null,
-        rule: saveRule && canSaveRule ? { pattern } : null,
+        rule: saveRule && canSaveRule ? { pattern, ...(assignRuleMerchant&&merchant?{merchant_id:merchant}:{}) } : null,
       });
       let message =
         transfer || alloc.every((a) => a.category_id)
           ? "Transaction saved and accepted"
           : "Transaction saved; missing categories still need review";
-      const applied = result.pending_rule?.applied || 0,
-        conflicts = result.pending_rule?.conflicts || 0;
-      if (applied)
-        message += `. Rule applied to ${applied} other uncategorized ${applied === 1 ? "transaction" : "transactions"}; they are accepted and unseen.`;
-      if (conflicts)
-        message += ` ${conflicts} matching ${conflicts === 1 ? "transaction needs" : "transactions need"} manual categorization because rules disagree.`;
+      if(result.pending_rule?.rule_id) savedRef={kind:result.pending_rule.rule_kind||"category",id:result.pending_rule.rule_id,version:result.pending_rule.rule_version};
       notify(message);
     });
     if (ok) {
@@ -169,6 +170,7 @@ export function TransactionEditor({
       setLeave(null);
       onSaved();
       refresh();
+      if(savedRef){setBackfill({refs:[savedRef],after});return}
       if (after) after();
       else onClose();
     }
@@ -176,6 +178,7 @@ export function TransactionEditor({
   const submit = (container: HTMLElement) => {
     if (validateFields(container)) save();
   };
+  if(backfill)return <RuleBackfill canSelectPeriod={!!data.user.budget_member} refs={backfill.refs} notify={notify} refresh={refresh} offered onClose={()=>{if(backfill.after)backfill.after();else onClose()}}/>;
   return (
     <Modal
       size="wide"
@@ -334,12 +337,9 @@ export function TransactionEditor({
                   {saveRule ? " · Enabled" : ""}
                 </summary>
                 <div className="rule-offer">
-                  <h3>Proposed automatic rule</h3>
+                  <h3>Create a rule</h3>
                   <p className="muted">
-                    Uses this category and group for future matches in this
-                    account, and fills eligible uncategorized entries already
-                    imported. Existing categories, splits and groups are kept.
-                    Rule-applied entries start unseen.
+                    Uses this category and group for future matches in this account. After saving, you can optionally preview changes to previous transactions. Existing assignments are kept.
                   </p>
                   <label className="check">
                     <input
@@ -350,6 +350,7 @@ export function TransactionEditor({
                     Use this category and spending group for similar
                     transactions in this account
                   </label>
+                  {!!merchant&&<label className="check"><input type="checkbox" checked={assignRuleMerchant} disabled={!saveRule} onChange={e=>setAssignRuleMerchant(e.target.checked)}/>Assign this transaction's merchant to future matches</label>}
                   <Field
                     label="Description contains"
                     hint="Use the shop or service name, leaving out reference numbers."

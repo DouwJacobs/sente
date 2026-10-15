@@ -7,7 +7,7 @@ async function navigate(page:Page,name:string,mobile=false){
  else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:target,exact:true}).click()
  await expect(page.getByRole('heading',{name:target,exact:true,level:1})).toBeVisible()
  if(tab)await page.getByRole('tab',{name:new RegExp(tab)}).click();else if(name==='Transactions')await page.getByRole('tab',{name:'All transactions',exact:true}).click()
- if(name==='Categories')await page.getByRole('tab',{name:'Automatic rules',exact:true}).click()
+ if(name==='Categories')await page.getByRole('tab',{name:'Rules',exact:true}).click()
 }
 async function fit(page:Page){
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)

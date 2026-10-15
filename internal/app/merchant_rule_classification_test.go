@@ -133,7 +133,7 @@ func TestMerchantRulePortableRoundTrip(t *testing.T) {
 }
 func TestMerchantRuleClassificationMigration(t *testing.T) {
 	db := migrationDB(t)
-	if err := runSchemaMigrations(db, schemaMigrations[:len(schemaMigrations)-1], 30); err != nil {
+	if err := runSchemaMigrations(db, schemaMigrations[:30-migrationBaseline+1], 30); err != nil {
 		t.Fatal(err)
 	}
 	migrationExec(t, db, "INSERT INTO categories(id,name,group_name,kind) VALUES(1,'Synthetic fees','','expense'); INSERT INTO spending_groups(id,name,color) VALUES(1,'Synthetic bank','teal'); INSERT INTO merchants(id,name,category_id,spending_group_id) VALUES(1,'Synthetic FNB',1,1); INSERT INTO merchant_rules(id,merchant_id,pattern,version) VALUES(1,1,'fees',8)")
@@ -154,7 +154,7 @@ func TestMerchantRuleClassificationMigration(t *testing.T) {
 
 func TestMerchantRuleMigrationRollbackRetry(t *testing.T) {
 	db := migrationDB(t)
-	if err := runSchemaMigrations(db, schemaMigrations[:len(schemaMigrations)-1], 30); err != nil {
+	if err := runSchemaMigrations(db, schemaMigrations[:30-migrationBaseline+1], 30); err != nil {
 		t.Fatal(err)
 	}
 	migrationExec(t, db, "INSERT INTO merchants(id,name) VALUES(1,'Synthetic'); INSERT INTO merchant_rules(merchant_id,pattern) VALUES(1,'synthetic'); CREATE TRIGGER stop_rule_upgrade BEFORE UPDATE ON merchant_rules BEGIN SELECT RAISE(ABORT,'synthetic migration failure'); END")

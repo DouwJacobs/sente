@@ -9,7 +9,7 @@ async function navigate(page:Page,name:string,mobile=false){
  else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:target,exact:true}).click()
  await expect(page.getByRole('heading',{name:target,exact:true,level:1})).toBeVisible()
  if(tab)await page.getByRole('tab',{name:new RegExp(tab)}).click()
- if(name==='Categories')await page.getByRole('tab',{name:'Automatic rules',exact:true}).click()
+ if(name==='Categories')await page.getByRole('tab',{name:'Rules',exact:true}).click()
 }
 for(const mobile of [false,true]){
  test('typed category and atomic transaction rule '+(mobile?'360px':'desktop'),async({page})=>{
@@ -39,6 +39,7 @@ for(const mobile of [false,true]){
   await transaction.getByLabel('Description contains',{exact:true}).fill('Synthetic long description')
   await transaction.getByRole('button',{name:'Save changes',exact:true}).click()
   await expect(transaction).not.toBeVisible()
+  await page.getByRole('dialog',{name:'Apply this rule to previous transactions?',exact:true}).getByRole('button',{name:'Not now',exact:true}).click()
   const rule=await page.evaluate(async()=>{
    const rows=await fetch('/api/rules').then(r=>r.json());return rows.filter((r:{pattern:string})=>r.pattern==='Synthetic long description')
   })
@@ -78,7 +79,7 @@ test('fresh installation starts empty and imports optional editable defaults',as
  await expect(row.getByRole('img',{name:'Paused',exact:true})).toBeVisible()
  await row.locator('summary').click();await row.getByRole('button',{name:'Resume',exact:true}).click()
  await expect(row.getByRole('img',{name:'Paused',exact:true})).toHaveCount(0)
- await row.locator('summary').click();await row.getByRole('button',{name:'Edit rule Monthly Account Fee',exact:true}).click()
+ await row.locator('summary').click();await row.getByRole('button',{name:'Edit',exact:true}).click()
  const edit=page.getByRole('dialog',{name:'Edit rule',exact:true})
  await edit.getByLabel('Description contains',{exact:true}).fill('Monthly Account Fee updated')
  await edit.getByRole('button',{name:'Save rule',exact:true}).click()

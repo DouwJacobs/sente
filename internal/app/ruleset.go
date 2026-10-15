@@ -139,7 +139,7 @@ func exportRulesetTx(tx *sql.Tx, u User, w io.Writer) error {
 	for _, r := range rows {
 		cfg.MerchantRules = append(cfg.MerchantRules, MerchantRuleExport{Category: rulesetStringPointer(exportString(r, "category")), CategoryGroupName: exportPtr(r, "category_group_name"), SpendingGroup: rulesetStringPointer(exportString(r, "spending_group")), Merchant: exportString(r, "merchant"), MerchantAccountName: exportString(r, "merchant_account_name"), AccountName: exportString(r, "account_name"), Pattern: exportString(r, "pattern"), Direction: exportString(r, "direction"), Priority: int(num(r["priority"])), Enabled: num(r["enabled"]) != 0})
 	}
-	rows, err = data(tx, "SELECT x.pattern,c.name category,c.group_name category_group_name,s.name spending_group,a.name account_name,x.direction,x.priority,x.enabled,0 builtin FROM rules x JOIN accounts a ON a.id=x.account_id JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id WHERE "+accountAccessSQL(u)+" UNION ALL SELECT x.pattern,c.name,c.group_name,s.name,NULL,x.direction,x.priority,x.enabled,1 FROM builtin_rules x JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id", u.Member, u.ID)
+	rows, err = data(tx, "SELECT x.pattern,c.name category,c.group_name category_group_name,s.name spending_group,a.name account_name,x.direction,x.priority,x.enabled,0 builtin FROM rules x JOIN accounts a ON a.id=x.account_id LEFT JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id WHERE "+accountAccessSQL(u)+" UNION ALL SELECT x.pattern,c.name,c.group_name,s.name,NULL,x.direction,x.priority,x.enabled,1 FROM builtin_rules x LEFT JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id", u.Member, u.ID)
 	if err != nil {
 		return err
 	}
@@ -431,9 +431,6 @@ func (a *App) importRulesetTx(tx *sql.Tx, u User, cfg RulesetConfig, summary *Ru
 		if e != nil {
 			return e
 		}
-		if cat == 0 {
-			return fmt.Errorf("provide the category for every rule")
-		}
 		group, e := rulesetLookup(tx, true, "spending_groups", r.SpendingGroup, "")
 		if e != nil {
 			return e
@@ -458,7 +455,7 @@ func (a *App) importRulesetTx(tx *sql.Tx, u User, cfg RulesetConfig, summary *Ru
 		if e != nil {
 			return e
 		}
-		if id != 0 && queryInt(tx, "SELECT COUNT(*) FROM "+table+" WHERE id=? AND category_id=? AND COALESCE(spending_group_id,0)=? AND priority=? AND enabled=?", id, cat, group, r.Priority, r.Enabled) == 1 {
+		if id != 0 && queryInt(tx, "SELECT COUNT(*) FROM "+table+" WHERE id=? AND COALESCE(category_id,0)=? AND COALESCE(spending_group_id,0)=? AND priority=? AND enabled=?", id, cat, group, r.Priority, r.Enabled) == 1 {
 			continue
 		}
 		input := ruleInput{AccountID: scope, Pattern: pattern, CategoryID: cat, SpendingGroupID: rulesetPointer(group), Direction: direction, Priority: r.Priority, Enabled: &r.Enabled, Version: version}
