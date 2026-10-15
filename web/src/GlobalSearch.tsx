@@ -143,7 +143,7 @@ export function GlobalSearch({open, onClose, openTransaction, notify, refresh, d
 
   for (const m of results.merchant_rules) {
     flatItems.push({
-      id: `mrule-${m.id}`, section: 'Merchant rules',
+      id: `mrule-${m.id}`, section: 'Rules',
       label: m.merchant_name,
       detail: [m.pattern ? `"${m.pattern}"` : '', m.category_name, m.account_name || 'All accounts'].filter(Boolean).join(' · '),
       merchantName: m.merchant_name,

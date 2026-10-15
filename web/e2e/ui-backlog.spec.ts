@@ -43,17 +43,20 @@ for(const width of [1440,360])test(`shared account actions, refresh scope and pe
 for(const width of [1440,360])test(`rule pages retain grouped edit actions and recover from failed loads at ${width}px`,async({page})=>{
  await page.setViewportSize({width,height:900});const mobile=width===360
  const groups=Array.from({length:41},(_,index)=>({index,pattern:'Synthetic paged rule '+String(index).padStart(2,'0'),enabled:1,version:1}));let failNext=true,pauseIds:number[]=[]
- await page.route('**/api/rules**',async route=>{
+ await page.route('**/api/unified-rules**',async route=>{
   const req=route.request(),url=new URL(req.url())
   if(req.method()==='GET'){
    const pageIndex=Number(url.searchParams.get('page')||0)
    if(pageIndex===1&&failNext){failNext=false;await route.fulfill({status:503,json:{error:'Synthetic page unavailable'}});return}
-   const items=groups.slice(pageIndex*20,(pageIndex+1)*20).flatMap(g=>[1,2].map(account=>({id:10000+g.index*2+account,account_id:account,account_name:account===1?'Everyday account':'Savings',pattern:g.pattern,category_id:1,category_name:'Groceries',direction:'any',priority:0,enabled:g.enabled,version:g.version,builtin:0})))
+   const items=groups.slice(pageIndex*20,(pageIndex+1)*20).map(g=>{
+    const rows=[1,2].map(account=>({id:10000+g.index*2+account,account_id:account,account_name:account===1?'Everyday account':'Savings',pattern:g.pattern,category_id:1,category_name:'Groceries',direction:'any',priority:0,enabled:g.enabled,version:g.version,builtin:0,rule_kind:'category'}));
+    return {...rows[0],rows,refs:rows.map(r=>({kind:'category',id:r.id,version:r.version})),editable:true};
+   })
    await route.fulfill({json:{items,total:groups.length,list_version:'synthetic-'+groups.map(g=>g.version).join('-')}});return
   }
-  const body=req.postDataJSON();pauseIds=body.rules.map((r:any)=>r.id);for(const item of body.rules){const g=groups[Math.floor((item.id-10001)/2)];g.enabled=item.rule.enabled?1:0;g.version++}
+  const body=req.postDataJSON();pauseIds=body.refs.map((r:any)=>r.id);for(const item of body.refs){const g=groups[Math.floor((item.id-10001)/2)];g.enabled=body.rule.enabled?1:0;g.version++}
   await route.fulfill({json:{ok:true}})
  })
- await login(page);await navigate(page,'Categories',mobile);await page.getByRole('tab',{name:'Automatic rules',exact:true}).click();const panel=page.getByRole('tabpanel',{name:'Automatic rules',exact:true});await expect(panel.locator('.rule-row')).toHaveCount(20);await panel.getByRole('button',{name:'Next',exact:true}).click();await expect(page.locator('.toast:popover-open')).toContainText('Synthetic page unavailable');await expect(panel.locator('.loading-status')).toHaveCount(0);await panel.getByRole('button',{name:'Retry',exact:true}).click();await expect(panel.getByRole('navigation',{name:'List pages'}).getByRole('status')).toContainText('Page 2 of 3')
+ await login(page);await navigate(page,'Categories',mobile);await page.getByRole('tab',{name:'Rules',exact:true}).click();const panel=page.getByRole('tabpanel',{name:'Rules',exact:true});await expect(panel.locator('.rule-row')).toHaveCount(20);await panel.getByRole('button',{name:'Next',exact:true}).click();await expect(page.locator('.toast:popover-open')).toContainText('Synthetic page unavailable');await expect(panel.locator('.loading-status')).toHaveCount(0);await panel.getByRole('button',{name:'Retry',exact:true}).click();await expect(panel.getByRole('navigation',{name:'List pages'}).getByRole('status')).toContainText('Page 2 of 3')
  const row=panel.locator('.rule-row').filter({hasText:'Synthetic paged rule 20'});await row.locator('summary').click();await row.getByRole('button',{name:'Pause',exact:true}).click();await expect(row.getByRole('img',{name:'Paused',exact:true})).toBeVisible();expect(pauseIds).toEqual([10041,10042]);await panel.getByRole('button',{name:'Previous',exact:true}).click();await expect(panel.getByRole('navigation',{name:'List pages'}).getByRole('status')).toContainText('Page 1 of 3');await panel.getByRole('button',{name:'Next',exact:true}).click();await expect(row.getByRole('img',{name:'Paused',exact:true})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
 })

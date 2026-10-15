@@ -1140,3 +1140,42 @@ by retaining both period and merchant proposal evidence, both operation descript
 and both documentation additions. Combined period/merchant MCP and the three
 upgrade-fixture race tests passed (65.422s); Go vet, 21 frontend tests and production
 build passed. Final GitHub CI on the integrated #109 revision remains the merge gate.
+
+
+## Unified Rules and explicit historical application — 15 October 2026
+
+Branch codex/unified-rules starts from pulled development ea3ba1c in /home/douw/finance-tracker. Synthetic verification only; no owner database, bank data, live refresh, production migration or deployment was used. Owner policy excludes computer-use inspection, so there is no manual visual sign-off.
+
+Implemented one searched/paged/filterable Rules catalogue and shared editor, preserved account/global/merchant compatibility identities, literal/advanced patterns and existing conflict/precedence policies. Migration 32 preserves IDs/authorship/versions/history while allowing category-less group rules. Transaction-created rules are future-only with optional merchant assignment. Explicit historical preview/application supports all prior matches or one saved household period, missing-only assignments, complete grouped scopes, transfer/split exclusion, exact named changes, stale/access checks, audit rollback and unseen targets. Group-only merchant previews now include the group already filled by existing import commit behavior.
+
+### Passed checks
+
+- Go vet on the final implementation; domain Go race tests for classification, ledger, statements and money.
+- Focused app race selection TestUnified, TestOptionalRuleMigration and TestTransactionRuleSaving passed (134.792s) after fixture fixes. Covers >100-target atomic backfill, money/allocation/note preservation, existing assignments, private account scope, saved-period filtering, replay rejection, stale transactions/rules, conflicts across legacy priorities, injected audit failure/rollback, search/grouping, configuration round trip, example rollback, migration rollback/retry/once-only execution, grouped shared-logo updates and group-only merchant effects.
+- Final category/merchant transaction-created rule tests passed under race (8.322s). The two historical migration rechecks plus both transaction-rule cases then passed together (12.030s).
+- Added TestUnifiedGroupOnlyMCPConsentAndFutureOnly passed under race (4.654s): category-rule grant permits a group-only rule without historical mutation; merchant write without its separate consent and replay after revoked rule consent are rejected.
+- Synchronized frontend dependencies with npm ci: zero reported vulnerabilities. All 21 frontend tests passed on the synchronized lockfile. Production build passed with Vite 8.3.3 and the existing >500 kB bundle-size advisory.
+- **72 distinct browser cases** passed in sequential disposable-fixture batches. run-k9aac4lj passed 29 cases in pending-rules, merchant-global, classification-defaults, global-search, core-improvements, ui-hierarchy, ui-backlog and rule-layout (166.779s). run-zte735uo passed 39 cases in rules, pending-rules, configuration, mcp, audit-followup, cohesive-flow, workflows and polish (166.351s); two pending-rule cases overlap the earlier batch. run-g0j49jwy added six geometry/workflow cases at 430x800, 760x400 and 761x400 in both themes (12.920s). Other batches cover 360px phone, 390px search, 900px intermediate and desktop themes. Latest editor checks include missing-assignment focus/validation, grouped pause/resume/edit, search/no-results, optional transaction merchant creation, save without backfill, explicit period backfill and preserved manual classifications.
+- Final MCP tool catalogue/privacy/transport race check passed (4.805s) after the description-only clarification. Git diff whitespace check passed.
+
+### Broader run and repaired fixtures
+
+The affected backend/MCP/configuration/migration race selection (TestUnified, TestOptionalRuleMigration, TestTransactionRuleSaving, TestMerchant, TestRule, migrations, rulesets and TestMCP) completed in 946.436s with only two failures: older merchant-rule migration tests sliced off the last registry entry assuming schema 31 was latest. Both now explicitly construct the schema-30 registry. Their rollback/retry and preservation rechecks passed as recorded above. The broad selection was not repeated after this fixture-only correction and the final optional-merchant/preview refinements; relevant final behavior has focused race coverage. This is not a claim that the full backend suite was rerun.
+
+Initial new fixtures incorrectly relied on auto-period assignment for an outside-budget target, omitted historical category group_name, and assumed offline import always needed an environment-specified user. Those fixtures were corrected before the successful focused run. Early browser failures exposed stale built frontend assets and the repeated shared-logo update; rebuilt the current bundle, added a grouped-logo regression, and fixed overly broad copy/dialog locators. Final successful batches use current contracts and preserve financial/geometry assertions.
+
+### MCP and release limits
+
+Existing tools, input fields, output allowlists and default-off consent boundaries remain separate. save_rule now documents category_id=0 plus group for a group-only rule. Legacy configuration versions 1/2 remain accepted; published schema reflects independent merchant-rule assignments and empty category plus group. Historical application and transaction-created merchant-rule choices are browser-only; no new MCP tool, automatic approval type or merchant disclosure is introduced. Existing pending proposals gain no historical effects. No external MCP-client certification, physical-device certification, manual visual inspection, full-suite repeat or deployment is claimed.
+
+
+### MCP search recheck
+
+Fixed the existing list_rules q filter to search patterns, categories and spending groups before grouped paging, preserve complete visible account copies and invalidate list versions after assignment renames. Removed obsolete immediate-backfill wording from the tool catalogue. TestMCPRuleSearchAndFutureOnlyDescription, TestMCPPrivacyAndTransport and TestUnifiedGroupOnlyMCPConsentAndFutureOnly passed together under race (13.259s); Go vet and diff whitespace checks passed. No frontend, schema, consent scope, output allowlist or new tool change accompanies this follow-up.
+
+
+### PR #111 CI transaction-editor follow-up — 15 October 2026
+
+GitHub run 38719543704 on 1d682a7 passed backend tests/race detection, Go vet, CI/release regressions, FNB worker invariants, demo invariants, frontend unit tests/build and synthetic bank DOM checks. The browser gate stopped on two transaction-editor cases still expecting the old Proposed automatic rule heading.
+
+Updated those expectations to Create a rule, selected the transaction dialog by its accessible name, handled the optional backfill offer with Not now, and scoped the save confirmation to the active toast rather than an exiting dialog snapshot. Financial, picker geometry, focus, scrolling and transfer protections remain asserted. All four transaction-editor cases passed against disposable synthetic databases in run-ea50kv4u (34.1s Playwright, 48.972s runner). No product behavior, schema, MCP tool/input/output/consent/proposal/audit or shared financial service change. CI must rerun on the pushed correction; no merge/deployment or manual visual inspection.

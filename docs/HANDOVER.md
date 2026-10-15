@@ -535,3 +535,24 @@ by retaining both period and merchant proposal evidence, both operation descript
 and both documentation additions. Combined period/merchant MCP and the three
 upgrade-fixture race tests passed (65.422s); Go vet, 21 frontend tests and production
 build passed. Final GitHub CI on the integrated #109 revision remains the merge gate.
+
+
+## Unified Rules and explicit backfill — 15 October 2026
+
+codex/unified-rules starts from freshly pulled development ea3ba1c in the original WSL source checkout. Categories now has one searchable Rules tab, shared editor/global-search entry points, complete grouped account actions, optional merchant/category/group assignments, example testing and active-only manual historical application. Original rule IDs/scopes and two-tier matching/conflict policies remain behind compatibility adapters; no destructive conversion or manufactured merchant catalogue is introduced.
+
+Migration 32 rebuilds category-rule tables only to permit group-only assignments, preserving IDs/authors/versions and financial/access history. Never alter migration 31 or frozen historical schema. Historical schema-30 tests now explicitly slice the registry at 30 rather than assuming the latest registry has only one newer step.
+
+Saving a rule, including from a transaction, affects future imports only. Transaction rules can optionally assign the transaction's selected merchant. The browser offers optional backfill after creation and a manual row action; all previous matches or household transactions assigned to one saved budget period are supported. Signed 15-minute exact previews fill missing merchant/category/group only, exclude transfers/splits, preserve manual values, recheck configuration/period/access/transaction versions and commit updates/acceptance/audit atomically. Changed targets begin unseen. Scope is bounded to 10,000 matches/100,000 scanned entries; narrow to a saved period for larger histories. Shared-logo updates occur once per grouped save. Import preview now includes the group that existing merchant import commits already fill.
+
+Owning modules: unified_rules.go (catalogue/compatibility writes/rollback examples), rule_evaluation.go (shared import/backfill orchestration), rule_backfill.go (exact browser historical application), transaction_rules.go (future-only transaction-created rules), rule_schema.go (migration 32), and web/src/features/rules (shared UI). Old editor exports are thin adapters. Plan/UI/architecture/module/configuration/MCP guides and repository Sente experience guidance are synchronized.
+
+Verification: 21 frontend tests, synchronized production build, Go vet, domain race tests, focused rule/backfill/migration/transaction/MCP races and 72 distinct synthetic browser cases passed. The 946.436s broader affected race run had only two historical registry-fixture failures; corrected tests passed separately. It was not rerun in full after those fixture fixes/final refinements. See VERIFICATION.md for exact batches, coverage and limitations. Existing bundle-size advisory remains. All data was synthetic; no manual visual inspection, owner-data access, live banking, external MCP-client certification or production deployment.
+
+MCP: retain separate category-rule and merchant grants/read fields/automatic approvals. Group-only save_rule uses existing category_id=0 plus spending_group_id fields and is documented in the tool description. Backfill and the optional transaction-created merchant choice remain browser-only. No consent expansion or new output allowlist fields; pending proposals gain no historical mutations. Portable versions 1/2 preserve their identities and remain compatible.
+
+
+MCP recheck follow-up: corrected list_rules to honor its advertised q filter over patterns/categories/groups before grouped paging, with renamed assignments invalidating page versions. Removed its stale transaction-rule immediate-backfill description. Category/group and merchant tools remain separate under existing consent; historical application remains browser-only.
+
+
+PR #111 CI follow-up: the first GitHub run passed backend race/static/unit/build gates but found two obsolete transaction-editor browser heading assertions. Updated the heading, scoped transaction/toast locators and explicitly dismissed the new backfill offer. All four transaction-editor cases passed locally with synthetic data. Product/MCP/schema/financial behavior is unchanged; the new PR revision requires its own green CI gate.

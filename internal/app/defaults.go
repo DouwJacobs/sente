@@ -95,7 +95,7 @@ func (a *App) writeBuiltinRule(tx *sql.Tx, u User, id int64, b ruleInput) error 
 	if err := b.validate(tx); err != nil {
 		return err
 	}
-	res, err := tx.Exec("UPDATE builtin_rules SET pattern=?,category_id=?,spending_group_id=?,direction=?,priority=?,enabled=?,version=version+1 WHERE id=? AND version=?", b.Pattern, b.CategoryID, b.SpendingGroupID, b.Direction, b.Priority, b.active(), -id, b.Version)
+	res, err := tx.Exec("UPDATE builtin_rules SET pattern=?,category_id=?,spending_group_id=?,direction=?,priority=?,enabled=?,version=version+1 WHERE id=? AND version=?", b.Pattern, rulesetPointer(b.CategoryID), b.SpendingGroupID, b.Direction, b.Priority, b.active(), -id, b.Version)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (a *App) createBuiltinRule(tx *sql.Tx, u User, id *int64, b ruleInput) erro
 	if err := b.validate(tx); err != nil {
 		return err
 	}
-	res, err := tx.Exec("INSERT INTO builtin_rules(pattern,category_id,spending_group_id,direction,priority,enabled) VALUES(?,?,?,?,?,?)", b.Pattern, b.CategoryID, b.SpendingGroupID, b.Direction, b.Priority, b.active())
+	res, err := tx.Exec("INSERT INTO builtin_rules(pattern,category_id,spending_group_id,direction,priority,enabled) VALUES(?,?,?,?,?,?)", b.Pattern, rulesetPointer(b.CategoryID), b.SpendingGroupID, b.Direction, b.Priority, b.active())
 	if err != nil {
 		return err
 	}

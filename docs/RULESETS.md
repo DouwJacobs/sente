@@ -53,3 +53,8 @@ The export includes all five configuration collections, accessible scoped rules/
 
 
 Merchant rules in portable version 2 can specify `category`, historical `category_group_name`, and `spending_group` by name. Each rule exports its own assignments. Explicit empty category/group strings mean unassigned; omitted legacy fields snapshot the merchant defaults. Import/export and configuration previews preserve different fee/interest classifications for a single merchant, and explicit null classifications without reintroducing merchant defaults. Imports validate all names and roll back atomically.
+
+
+## Unified rules compatibility
+
+The Rules screen is unified while version-1/version-2 configuration collections retain their established identities and matching policies. Existing category/account/global and merchant rules are not converted into one another or deleted. Version 2 category rules may export an empty category with a nonempty spending_group for group-only assignment; omitting both rejects atomically. The published schema also includes independent per-merchant-rule category/category_group_name/spending_group fields. Account copies remain explicit; importing never backfills history. Existing starter files remain compatible.

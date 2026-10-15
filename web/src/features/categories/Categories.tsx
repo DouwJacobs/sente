@@ -1,5 +1,5 @@
 import { SpendingGroupEditor } from "../../SpendingGroupEditor";
-import { CategoryEditor, MerchantRules } from "../../Organisation";
+import { CategoryEditor } from "../../Organisation";
 import { useTransactionAccess } from "../../TransactionAccess";
 import { usePagedList, ListStatus, ListNavigation } from "../../PagedList";
 import { Rules } from "../../Rules";
@@ -15,7 +15,6 @@ export function Categories({
   refresh,
   notify,
   revision,
-  onAccounts,
   tab: externalTab,
   onTabChange,
 }: PageProps & {
@@ -30,7 +29,8 @@ export function Categories({
     [kind, setKind] = useState("expense");
   const [categoryEdit, setCategoryEdit] = useState<Row | null>(null);
   const [internalTab, setInternalTab] = useState("categories");
-  const categoryTab = externalTab || internalTab;
+  const selectedTab = externalTab || internalTab;
+  const categoryTab = selectedTab === "merchants" ? "rules" : selectedTab;
   const changeTab = (t: string) => {
     setInternalTab(t);
     onTabChange?.(t);
@@ -52,8 +52,7 @@ export function Categories({
             items={[
               { id: "categories", label: "Categories" },
               { id: "groups", label: "Spending groups" },
-              { id: "rules", label: "Automatic rules" },
-              { id: "merchants", label: "Merchant rules" },
+              { id: "rules", label: "Rules" },
             ]}
             value={categoryTab}
             onChange={changeTab}
@@ -64,14 +63,6 @@ export function Categories({
           id={"classification-panel-" + categoryTab}
           aria-labelledby={"classification-tab-" + categoryTab}
         >
-          {categoryTab === "merchants" && (
-            <MerchantRules
-              data={data}
-              refresh={refresh}
-              notify={notify}
-              revision={revision}
-            />
-          )}
           {categoryEdit && (
             <CategoryEditor
               category={categoryEdit}
@@ -85,8 +76,6 @@ export function Categories({
           )}
           {categoryTab === "rules" && (
             <Rules
-              onAccounts={onAccounts}
-              onCreateCategory={() => setCreating(true)}
               data={data}
               refresh={refresh}
               notify={notify}

@@ -105,3 +105,10 @@ Chromium packaging belongs to the Dockerfile; no syscall preload adapter remains
 `merchant_rule_schema.go` owns migration 31 for per-rule classifications; `features/merchants/MerchantRuleEditor.tsx` owns the mounted merchant/rule/logo/classification draft. Organisation composes rule lists and previews; GlobalSearch uses the same editor.
 
 `mcp_periods.go` owns typed MCP period creation and exact effect checks; periods.go owns the browser-shared authorized period creation transaction service.
+
+
+Unified rules: internal/app/unified_rules.go owns the browser catalogue, complete grouped writes and rollback-only draft examples, adapting existing category/global/merchant writers without changing their IDs or consent domains. rule_evaluation.go owns the single import/backfill evaluation orchestration; classification remains transport independent. rule_backfill.go owns signed exact historical previews, authorized missing-only application and audits. rule_schema.go appends migration 32, rebuilding category-rule tables to permit a category-less group assignment while preserving IDs, authorship, versions and all financial/access data. Existing storage identities remain compatibility adapters; no destructive conversion is needed.
+
+web/src/features/rules owns RulesPage, UnifiedRuleEditor, RuleBackfill and explicit reference adapters. Rules.tsx and the merchant editor path are thin compatibility exports; Categories and GlobalSearch use the shared workflow. TransactionEditor retains its saved-rule offer until the owner closes or applies it, preserving review navigation callbacks.
+
+transaction_rules.go owns future-only category/merchant rule creation from a saved browser transaction; MCP transaction patches do not expose that optional browser input.

@@ -33,7 +33,10 @@ func (b *ruleInput) validate(q queryer) error {
 	if b.active() && queryInt(q, "SELECT archived FROM categories WHERE id=?", b.CategoryID) == 1 {
 		return fail(400, "Restore the category before enabling a rule")
 	}
-	if queryInt(q, "SELECT COUNT(*) FROM categories WHERE id=?", b.CategoryID) == 0 {
+	if b.CategoryID == 0 && b.SpendingGroupID == nil {
+		return fail(400, "Choose a category or spending group")
+	}
+	if b.CategoryID != 0 && queryInt(q, "SELECT COUNT(*) FROM categories WHERE id=?", b.CategoryID) == 0 {
 		return fail(400, "Choose a category")
 	}
 	if b.SpendingGroupID != nil && queryInt(q, "SELECT COUNT(*) FROM spending_groups WHERE id=?", *b.SpendingGroupID) == 0 {
@@ -53,14 +56,14 @@ func (a *App) rules(w http.ResponseWriter, r *http.Request) error {
 		return a.rulePages(w, r)
 	}
 	u := Current(r)
-	v, err := data(a.DB, "SELECT rules.*,c.name category_name,a.name account_name,s.name spending_group_name FROM rules JOIN accounts a ON a.id=rules.account_id JOIN categories c ON c.id=rules.category_id LEFT JOIN spending_groups s ON s.id=rules.spending_group_id WHERE "+accountAccessSQL(u)+" ORDER BY priority DESC,rules.id LIMIT 100", u.Member, u.ID)
+	v, err := data(a.DB, "SELECT rules.*,c.name category_name,a.name account_name,s.name spending_group_name FROM rules JOIN accounts a ON a.id=rules.account_id LEFT JOIN categories c ON c.id=rules.category_id LEFT JOIN spending_groups s ON s.id=rules.spending_group_id WHERE "+accountAccessSQL(u)+" ORDER BY priority DESC,rules.id LIMIT 100", u.Member, u.ID)
 	if err != nil {
 		return err
 	}
 	for _, row := range v {
 		row["builtin"] = int64(0)
 	}
-	defaults, err := data(a.DB, "SELECT -b.id id,0 account_id,b.pattern,b.category_id,b.spending_group_id,b.direction,b.priority,b.enabled,b.version,1 builtin,c.name category_name,s.name spending_group_name,'All enabled accounts' account_name FROM builtin_rules b JOIN categories c ON c.id=b.category_id LEFT JOIN spending_groups s ON s.id=b.spending_group_id ORDER BY b.priority DESC,b.id LIMIT 100")
+	defaults, err := data(a.DB, "SELECT -b.id id,0 account_id,b.pattern,b.category_id,b.spending_group_id,b.direction,b.priority,b.enabled,b.version,1 builtin,c.name category_name,s.name spending_group_name,'All enabled accounts' account_name FROM builtin_rules b LEFT JOIN categories c ON c.id=b.category_id LEFT JOIN spending_groups s ON s.id=b.spending_group_id ORDER BY b.priority DESC,b.id LIMIT 100")
 	if err != nil {
 		return err
 	}
@@ -109,13 +112,13 @@ func (a *App) writeRule(tx *sql.Tx, u User, idRef *int64, input *ruleInput) erro
 	}
 	action := "created"
 	if id == 0 {
-		res, err := tx.Exec("INSERT INTO rules(user_id,account_id,pattern,category_id,priority,direction,spending_group_id,enabled) VALUES(?,?,?,?,?,?,?,?)", u.ID, b.AccountID, b.Pattern, b.CategoryID, b.Priority, b.Direction, b.SpendingGroupID, b.active())
+		res, err := tx.Exec("INSERT INTO rules(user_id,account_id,pattern,category_id,priority,direction,spending_group_id,enabled) VALUES(?,?,?,?,?,?,?,?)", u.ID, b.AccountID, b.Pattern, rulesetPointer(b.CategoryID), b.Priority, b.Direction, b.SpendingGroupID, b.active())
 		if err != nil {
 			return err
 		}
 		id, _ = res.LastInsertId()
 	} else {
-		res, err := tx.Exec("UPDATE rules SET account_id=?,pattern=?,category_id=?,priority=?,direction=?,spending_group_id=?,enabled=?,version=version+1 WHERE id=? AND version=?", b.AccountID, b.Pattern, b.CategoryID, b.Priority, b.Direction, b.SpendingGroupID, b.active(), id, b.Version)
+		res, err := tx.Exec("UPDATE rules SET account_id=?,pattern=?,category_id=?,priority=?,direction=?,spending_group_id=?,enabled=?,version=version+1 WHERE id=? AND version=?", b.AccountID, b.Pattern, rulesetPointer(b.CategoryID), b.Priority, b.Direction, b.SpendingGroupID, b.active(), id, b.Version)
 		if err != nil {
 			return err
 		}
@@ -248,7 +251,7 @@ func (a *App) deleteRule(w http.ResponseWriter, r *http.Request) error {
 type classificationRule = classification.Rule
 
 func loadRules(q queryer, account int64) ([]classificationRule, error) {
-	rows, err := q.Query("SELECT r.id,r.pattern,r.category_id,c.name,r.spending_group_id,COALESCE(s.name,''),r.direction,r.priority,0 builtin FROM rules r JOIN categories c ON c.id=r.category_id LEFT JOIN spending_groups s ON s.id=r.spending_group_id WHERE r.account_id=? AND r.enabled=1 UNION ALL SELECT -r.id,r.pattern,r.category_id,c.name,r.spending_group_id,COALESCE(s.name,''),r.direction,r.priority,1 builtin FROM builtin_rules r JOIN categories c ON c.id=r.category_id LEFT JOIN spending_groups s ON s.id=r.spending_group_id WHERE r.enabled=1 ORDER BY 8 DESC,1", account)
+	rows, err := q.Query("SELECT r.id,r.pattern,COALESCE(r.category_id,0),COALESCE(c.name,''),r.spending_group_id,COALESCE(s.name,''),r.direction,r.priority,0 builtin FROM rules r LEFT JOIN categories c ON c.id=r.category_id LEFT JOIN spending_groups s ON s.id=r.spending_group_id WHERE r.account_id=? AND r.enabled=1 UNION ALL SELECT -r.id,r.pattern,COALESCE(r.category_id,0),COALESCE(c.name,''),r.spending_group_id,COALESCE(s.name,''),r.direction,r.priority,1 builtin FROM builtin_rules r LEFT JOIN categories c ON c.id=r.category_id LEFT JOIN spending_groups s ON s.id=r.spending_group_id WHERE r.enabled=1 ORDER BY 8 DESC,1", account)
 	if err != nil {
 		return nil, err
 	}

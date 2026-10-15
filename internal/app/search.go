@@ -102,13 +102,13 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 	mRules, err := data(a.DB, `
 		SELECT mr.id, mr.account_id, mr.pattern, mr.direction, mr.priority, mr.enabled, mr.version,
 		       m.id merchant_id, m.name merchant_name, m.logo_data merchant_logo, m.version merchant_version,
-		       m.category_id, c.name category_name,
-		       m.spending_group_id, s.name spending_group_name, s.color spending_group_color,
+		       mr.category_id, c.name category_name,
+		       mr.spending_group_id, s.name spending_group_name, s.color spending_group_color,
 		       CASE WHEN mr.account_id IS NULL THEN 'All accounts' ELSE a.name END account_name
 		FROM merchant_rules mr
 		JOIN merchants m ON m.id=mr.merchant_id
-		LEFT JOIN categories c ON c.id=m.category_id
-		LEFT JOIN spending_groups s ON s.id=m.spending_group_id
+		LEFT JOIN categories c ON c.id=mr.category_id
+		LEFT JOIN spending_groups s ON s.id=mr.spending_group_id
 		LEFT JOIN accounts a ON a.id=mr.account_id
 		WHERE (mr.account_id IS NULL OR `+accountAccessSQL(u)+`)
 		  AND (
@@ -133,14 +133,14 @@ func (a *App) globalSearch(w http.ResponseWriter, r *http.Request) error {
 		         0 builtin, c.name category_name, a.name account_name, s.name spending_group_name
 		  FROM rules r
 		  JOIN accounts a ON a.id=r.account_id
-		  JOIN categories c ON c.id=r.category_id
+		  LEFT JOIN categories c ON c.id=r.category_id
 		  LEFT JOIN spending_groups s ON s.id=r.spending_group_id
 		  WHERE `+accountAccessSQL(u)+`
 		  UNION ALL
 		  SELECT -b.id, 0, b.pattern, b.category_id, b.priority, b.spending_group_id, b.direction, b.enabled, b.version,
 		         1, c.name, 'All enabled accounts', s.name
 		  FROM builtin_rules b
-		  JOIN categories c ON c.id=b.category_id
+		  LEFT JOIN categories c ON c.id=b.category_id
 		  LEFT JOIN spending_groups s ON s.id=b.spending_group_id
 		)
 		SELECT id, account_id, pattern, category_id, priority, spending_group_id, direction, enabled, version,

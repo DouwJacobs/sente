@@ -14,7 +14,7 @@ async function navigate(page:Page,name:string,mobile=false){
  else await page.getByRole('navigation',{name:mobile?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:target,exact:true}).click()
  await expect(page.getByRole('heading',{name:target,exact:true,level:1})).toBeVisible()
  if(tab)await page.getByRole('tab',{name:new RegExp(tab)}).click()
- if(name==='Categories')await page.getByRole('tab',{name:'Automatic rules',exact:true}).click()
+ if(name==='Categories')await page.getByRole('tab',{name:'Rules',exact:true}).click()
 }
 async function noOverflow(page:Page){expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)}
 test('desktop dashboard, keyboard review, rules, and split approval',async({page})=>{
@@ -40,8 +40,9 @@ test('desktop dashboard, keyboard review, rules, and split approval',async({page
  await navigate(page,'Categories')
  await page.getByRole('button',{name:'Add rule',exact:true}).click()
  await page.getByRole('dialog').getByLabel('Description contains').fill('Station')
- await page.getByRole('dialog').getByLabel('Category',{exact:true}).selectOption('2')
+ await page.getByRole('dialog').getByLabel('Category',{exact:true}).click();await page.getByRole('dialog',{name:'Select category',exact:true}).getByRole('button').filter({hasText:'Transport'}).first().click()
  await page.getByRole('dialog').getByRole('button',{name:'Save rule'}).click()
+ await page.getByRole('dialog',{name:'Apply this rule to previous transactions?',exact:true}).getByRole('button',{name:'Not now',exact:true}).click()
  await expect(page.getByRole('dialog')).not.toBeVisible()
  await expect(page.locator('.rule-list-row').filter({hasText:'Station'})).toBeVisible()
  expect(errors).toEqual([])

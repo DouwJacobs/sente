@@ -28,7 +28,7 @@ for(const width of [1440,360])for(const theme of ['light','dark'])test(`cohesive
  await page.getByRole('tab',{name:/Import activity/}).click();await page.locator('.activity-run>summary').click();await expect(page.locator('.activity-account')).toHaveCount(2);await expect(page.locator('.activity-account').first()).toContainText('Everyday account')
  if(width===360)await nav.getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:width===360?'More pages':'Main navigation',exact:true}).getByRole('button',{name:'Accounts',exact:true}).click();await expect(page.locator('.account-summary').first()).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  if(width===360){await nav.getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages'}).getByRole('button',{name:'Categories',exact:true}).click()}else await nav.getByRole('button',{name:'Categories',exact:true}).click()
- await expect(page.getByRole('tab',{name:'Categories',exact:true})).toHaveAttribute('aria-selected','true');await page.getByRole('tab',{name:'Automatic rules',exact:true}).click();await expect(page.getByRole('tabpanel',{name:'Automatic rules'})).toBeVisible()
+ await expect(page.getByRole('tab',{name:'Categories',exact:true})).toHaveAttribute('aria-selected','true');await page.getByRole('tab',{name:'Rules',exact:true}).click();await expect(page.getByRole('tabpanel',{name:'Rules'})).toBeVisible()
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(errors).toEqual([])
 })
 

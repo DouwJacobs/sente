@@ -10,6 +10,7 @@ import (
 )
 
 type MatchedMerchant struct {
+	RuleIDs                []int64
 	ClassificationConflict bool
 	ID                     int64
 	Name                   string
@@ -18,10 +19,11 @@ type MatchedMerchant struct {
 }
 
 func matchMerchantDetails(q queryer, account int64, description string, amount int64) (*MatchedMerchant, error) {
-	rules, e := data(q, "SELECT r.merchant_id,r.pattern,r.priority,m.name merchant_name,r.category_id,r.spending_group_id FROM merchant_rules r JOIN merchants m ON m.id=r.merchant_id WHERE (r.account_id=? OR r.account_id IS NULL) AND r.enabled=1 AND (r.direction='any' OR r.direction='debit' AND ?<0 OR r.direction='credit' AND ?>0) ORDER BY r.priority DESC,r.id", account, amount, amount)
+	rules, e := data(q, "SELECT r.id,r.merchant_id,r.pattern,r.priority,m.name merchant_name,r.category_id,r.spending_group_id FROM merchant_rules r JOIN merchants m ON m.id=r.merchant_id WHERE (r.account_id=? OR r.account_id IS NULL) AND r.enabled=1 AND (r.direction='any' OR r.direction='debit' AND ?<0 OR r.direction='credit' AND ?>0) ORDER BY r.priority DESC,r.id", account, amount, amount)
 	if e != nil {
 		return nil, e
 	}
+	ids := []int64{}
 	matched := false
 	var priority int64
 	var result *MatchedMerchant
@@ -34,6 +36,7 @@ func matchMerchantDetails(q queryer, account int64, description string, amount i
 		if matched && p < priority {
 			break
 		}
+		ids = append(ids, num(rule["id"]))
 		mid := num(rule["merchant_id"])
 		if !matched {
 			matched = true
@@ -74,12 +77,13 @@ func matchMerchantDetails(q queryer, account int64, description string, amount i
 		return nil, nil
 	}
 	if conflict {
-		return &MatchedMerchant{ClassificationConflict: true}, nil
+		return &MatchedMerchant{ClassificationConflict: true, RuleIDs: ids}, nil
 	}
 	if result.ClassificationConflict {
 		result.CategoryID = nil
 		result.SpendingGroupID = nil
 	}
+	result.RuleIDs = ids
 	return result, nil
 }
 

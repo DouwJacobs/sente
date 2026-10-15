@@ -31,7 +31,9 @@ func Classify(description string, amount int64, rules []Rule) (result Result) {
 		return result
 	}
 	id := matches[0].CategoryID
-	row.CategoryID = &id
+	if id != 0 {
+		row.CategoryID = &id
+	}
 	row.SpendingGroupID = matches[0].SpendingGroupID
 	row.Suggestion = "Description contains: " + matches[0].Pattern
 	return result

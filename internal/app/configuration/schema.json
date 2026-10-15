@@ -190,6 +190,18 @@
         },
         "enabled": {
           "type": "boolean"
+        },
+        "category": {
+          "type": "string"
+        },
+        "category_group_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "spending_group": {
+          "type": "string"
         }
       },
       "required": [
@@ -209,7 +221,7 @@
         },
         "category": {
           "type": "string",
-          "minLength": 1,
+          "minLength": 0,
           "maxLength": 200
         },
         "category_group_name": {
