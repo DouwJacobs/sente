@@ -12,7 +12,7 @@ for(const width of [1440,360])test(`account-to-banking navigation and adjacent k
  await expect(page.getByRole('button',{name:'Add account',exact:true})).toBeVisible()
  await page.getByRole('button',{name:'Bank connection',exact:true}).click()
  await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible()
- await expect(page.getByRole('tab',{name:'Banking',exact:true})).toHaveAttribute('aria-selected','true')
+ await expect(page.getByRole('tab',{name:'Accounts & banking',exact:true})).toHaveAttribute('aria-selected','true')
  await expect(page.getByRole('heading',{name:'FNB connection',exact:true})).toBeVisible()
  await page.getByRole('tab',{name:'Branding',exact:true}).click()
  // Draft retention and Home/End focus live in the responsive workflow owner.
@@ -40,7 +40,7 @@ for(const width of [360,1440])test('ordinary users see General, PWA, MCP, Notifi
   const tab=page.getByRole('tab',{name,exact:true});await expect(tab).toBeVisible();await tab.click()
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  }
- for(const name of ['Branding','Configuration','Accounts','Users & access','Backups','Network','Banking']){
+ for(const name of ['Branding','Configuration','Accounts','Users & access','Backups','Network','Accounts & banking']){
   await expect(page.getByRole('tab',{name,exact:true})).toHaveCount(0)
  }
  await expect(page.getByRole('tab',{name:'Diagnostics',exact:true})).toHaveCount(0)

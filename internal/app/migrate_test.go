@@ -347,7 +347,7 @@ CREATE TRIGGER reject_category_conversion BEFORE UPDATE ON categories BEGIN SELE
 // Production migrations must never reconcile already-applied table creation.
 func removePostBaselineFixtureTables(t *testing.T, db *sql.DB) {
 	t.Helper()
-	removeMerchantRuleClassificationFixtureColumns(t, db)
+	removePost30FixtureColumns(t, db)
 	migrationExec(t, db, "DROP TABLE notification_budget_scopes; DROP TABLE notification_budget_preferences; DROP TABLE app_identity")
 	for _, table := range notificationSourceTables {
 		for _, operation := range []string{"INSERT", "UPDATE", "DELETE"} {
@@ -359,8 +359,9 @@ func removePostBaselineFixtureTables(t *testing.T, db *sql.DB) {
 }
 
 // Synthetic downgrade fixtures remove later schema before replaying history.
-func removeMerchantRuleClassificationFixtureColumns(t *testing.T, db *sql.DB) {
+func removePost30FixtureColumns(t *testing.T, db *sql.DB) {
 	t.Helper()
+	migrationExec(t, db, "ALTER TABLE fnb_connections DROP COLUMN schedule_json; ALTER TABLE fnb_connections DROP COLUMN daily_time")
 	columns, err := data(db, "PRAGMA table_info(merchant_rules)")
 	if err != nil {
 		t.Fatal(err)

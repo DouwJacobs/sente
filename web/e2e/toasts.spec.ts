@@ -15,7 +15,7 @@ for(const width of [1440,360])test(`toasts overlay pages and dialogs without shi
  await expect(toast).toContainText('Branding saved');await expect(toast).toHaveCSS('position','fixed')
  expect(await tabs.evaluate(el=>el.getBoundingClientRect().top+scrollY)).toBe(before)
  await toast.getByRole('button',{name:'Dismiss message',exact:true}).click();await expect(toast).toHaveCount(0)
- await page.getByRole('tab',{name:'Accounts',exact:true}).click();await page.getByRole('button',{name:'Open Accounts',exact:true}).click()
+ await page.getByRole('tab',{name:'Accounts & banking',exact:true}).click();await page.getByRole('button',{name:'Open Accounts',exact:true}).click()
  await page.getByLabel('Actions for Everyday account',{exact:true}).click()
  await page.getByRole('button',{name:'Edit account',exact:true}).click()
  const dialog=page.getByRole('dialog',{name:'Edit account',exact:true})

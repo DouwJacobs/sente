@@ -1179,3 +1179,43 @@ Fixed the existing list_rules q filter to search patterns, categories and spendi
 GitHub run 38719543704 on 1d682a7 passed backend tests/race detection, Go vet, CI/release regressions, FNB worker invariants, demo invariants, frontend unit tests/build and synthetic bank DOM checks. The browser gate stopped on two transaction-editor cases still expecting the old Proposed automatic rule heading.
 
 Updated those expectations to Create a rule, selected the transaction dialog by its accessible name, handled the optional backfill offer with Not now, and scoped the save confirmation to the active toast rather than an exiting dialog snapshot. Financial, picker geometry, focus, scrolling and transfer protections remain asserted. All four transaction-editor cases passed against disposable synthetic databases in run-ea50kv4u (34.1s Playwright, 48.972s runner). No product behavior, schema, MCP tool/input/output/consent/proposal/audit or shared financial service change. CI must rerun on the pushed correction; no merge/deployment or manual visual inspection.
+
+
+## Daily FNB clock-time refresh — 15 October 2026
+
+Implemented on codex/daily-bank-refresh with disposable synthetic data only.
+
+Passed:
+- Frontend production build (existing bundle-size advisory), all 21 frontend unit tests and Go vet ./....
+- Four fnb-connection browser cases at 360/390/780/1440px across light/dark. Covers daily noon save, required-time first-blur/live errors and submit focus, interval/daily/off transitions, persisted summary, draft preservation across real status polling, existing troubleshooting/credential secrecy and no horizontal overflow. Results: web/test-results/run-k5efbmfh.
+- New daily due/lifecycle/upgrade rollback-retry tests under race: strict HH:MM, SAST date/year rollover and exact-time boundary, owner restrictions, stale versions, once-only overdue execution, manual refresh preserving noon, failure pause, off and unchanged legacy schedules/credentials/access/version. Final affected daily + existing interval/permission/restart + scoped historical migration race batch passed (51.669s).
+- Existing PWA migration rollback/retry preservation race test passed (9.556s). Historical v9/v19/v22 sequential upgrade snapshots passed (81.369s), preserving financial/access/history data and once-only restart.
+- git diff --check passed.
+
+Initial broader FNB run (329.328s) found one synthetic downgrade-fixture failure: retaining daily_time while deleting its migration record. Updated the shared post-30 fixture cleanup and its callers to remove the added column before replay; affected restart/PWA/scoped migration checks passed afterward. The full FNB batch was not rerun. An earlier broad sequential migration run was interrupted; the historical snapshot subset and new rollback/retry test passed separately. No full backend-suite, manual visual, physical-device, live-banking, external-MCP-client or deployment certification is claimed.
+
+MCP impact: daily_time is restricted to the existing owner-admin browser status/settings endpoints. Scheduling remains browser-only; no MCP tool/input/output/consent, exact proposal/audit preview or financial service expansion. Migration 33 is appended; frozen historical migrations/schema remain unchanged.
+
+
+## Friendly schedules and merged account settings — 15 October 2026
+
+Continuation on codex/daily-bank-refresh, using disposable synthetic fixtures only.
+
+Passed:
+- Frontend production build (existing bundle-size advisory), 24 frontend unit tests and Go vet ./....
+- Calendar/daily scheduling plus existing FNB permissions, interval scheduling, interrupted restart and PWA/scoped-budget upgrade rollback/retry tests under race (37.690s). After adding custom 1–168-hour intervals, the final calendar/daily/permission/historical v9/v19/v22 upgrade race run passed (71.582s), including the new interval replacement assertion. Covers canonical times/dates, invalid combinations, weekdays/weekends, month-end/absent dates/leap years/year rollover, multiple daily occurrences, owner/stale/running locks, overdue once-only execution, manual refresh preserving clock times, credential replacement clearing schedules, migration-34 rollback/retry/data retention and unchanged legacy schedules.
+- 48 distinct browser cases across fnb-calendar (4), fnb-connection (4), settings (8), mobile-budget-settings (20), account-discovery (1), password-visibility (2), toasts (2), ui-backlog (4), and polish (3). Final new builder cases cover 360/390/780/1440px, light/dark, weekday shortcuts and empty-day validation, duplicate times, adding/removing times, monthly dates/last-day dependent validation, reload persistence, tab draft retention, custom intervals/off, SAST summaries, 44px actions, no overflow and the combined account shortcut. Existing workflows cover short-landscape/breakpoint geometry, administrator-only sections, credential clearing/secrecy, account discovery, navigation, keyboard and request states. Final results: web/test-results/run-dyqvgt3o; unchanged fnb-connection/settings cases passed in run-bmsn6bh9.
+- git diff --check passed.
+
+Initial browser attempts found an ambiguous new error/status text locator and older section inventories expecting separate Banking/Accounts tabs. Updated those test assertions; final affected cases passed. No manual visual/physical-device inspection, live bank login, owner financial data access, complete backend-suite certification, external MCP-client verification or deployment is claimed.
+
+MCP: calendar/interval settings remain owner-admin browser operations. No tools, input/output allowlists, grants, consent or proposal effects expand; the existing audit includes exact schedule settings, and browser status returns only structured validated schedule data. Migration 34 is appended without editing migration 33 or frozen history.
+
+
+## Calm banking overview and clear pause recovery — 15 October 2026
+
+Owner-requested presentation follow-up on codex/daily-bank-refresh. Passed the frontend production build (existing bundle-size advisory), all 27 unit tests, git diff --check, and 50 synthetic browser cases in web/test-results/run-mm3dftss (228.732s): fnb-pause 4, fnb-connection 4, fnb-calendar 4, settings 8, mobile-budget-settings 20, password-visibility 2, account-discovery 1, ui-backlog 4 and polish 3.
+
+New pause cases exercise 360/390/780/1440px in both themes: one connection card, optional controls initially hidden, interrupted 05:00 schedule reason and saved-schedule recovery copy immediately visible, failed retry updating to phone-approval reason, successful retry clearing pause and retaining the next SAST run, polling into a running/locked state without the false Paused label, unavailable-key and unknown-error recovery, 44px actions, overflow checks and read-only disclosure opening. Existing connection cases verify nested diagnostics, browser mode, credential updates/cancel/secrecy and scheduling draft/validation behavior. Broader cases preserve credential clearing on tab departure, settings access, account navigation/discovery, keyboard and layout behavior. Unit checks cover off/running/paused/not-scheduled states, readable interval/clock labels, and safe fallback for unknown/prototype-shaped error identifiers.
+
+Only synthetic services and data were used. These checks are automated structural/behavior coverage, not manual visual or physical-device verification. No live bank session, owner financial-data inspection or deployment was performed. No additional backend tests were needed for this browser-only follow-up; server scheduling/pause/recovery semantics remain those verified above. No new API/MCP fields/tools/consent/proposals or migration changes; explanations use the existing owner-admin connection state and bounded error fields.

@@ -79,7 +79,7 @@ for(const {viewport,theme} of workflowCases) {
   await navigate(page,'Settings');
   const tabs=page.getByRole('tablist',{name:'Settings sections'});
   // Required sections remain discoverable; new authorized sections may be added.
-  for(const name of ['General','Branding','Configuration','Banking','Accounts','Users & access','Backups','Network','PWA','MCP','Notifications','Security','About']) {
+  for(const name of ['General','Branding','Configuration','Accounts & banking','Users & access','Backups','Network','PWA','MCP','Notifications','Security','About']) {
    await expect(tabs.getByRole('tab',{name,exact:true})).toBeVisible();
   }
   const general=page.getByRole('tab',{name:'General',exact:true});
@@ -128,10 +128,10 @@ for(const {viewport,theme} of workflowCases) {
   await general.click();await page.getByRole('tab',{name:'Configuration',exact:true}).click();
   await expect(preview).toBeVisible();
   await preview.getByRole('button',{name:'Cancel preview',exact:true}).click();
-  await page.getByRole('tab',{name:'Banking',exact:true}).click();
+  await page.getByRole('tab',{name:'Accounts & banking',exact:true}).click();
   await page.getByLabel('FNB username',{exact:true}).fill('synthetic credential draft');
   await page.getByLabel('FNB password',{exact:true}).fill('synthetic secret draft');
-  await general.click();await page.getByRole('tab',{name:'Banking',exact:true}).click();
+  await general.click();await page.getByRole('tab',{name:'Accounts & banking',exact:true}).click();
   await expect(page.getByLabel('FNB username',{exact:true})).toHaveValue('');
   await expect(page.getByLabel('FNB password',{exact:true})).toHaveValue('');
   await page.getByRole('tab',{name:'Users & access',exact:true}).click();

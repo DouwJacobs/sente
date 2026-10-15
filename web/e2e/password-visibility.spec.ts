@@ -66,7 +66,7 @@ for (const width of [1440, 360]) {
     await checkPassword(page, reset, 'New password');
     await checkPassword(page, reset, 'Confirm new password');
     await reset.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('tab', { name: 'Banking', exact: true }).click();
+    await page.getByRole('tab', { name: 'Accounts & banking', exact: true }).click();
     await checkPassword(page, page, 'FNB password');
     await page.emulateMedia({ colorScheme: 'dark' });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
