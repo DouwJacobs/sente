@@ -301,5 +301,13 @@ func (a *App) mcpMerchantPreviewTool(ctx context.Context, _ *mcp.CallToolRequest
 	}
 	safe := mcpSafe(raw).(map[string]any)
 	safe["rule_version"] = raw.(map[string]any)["rule_version"]
+	for n, item := range raw.(map[string]any)["items"].([]any) {
+		row := safe["items"].([]any)[n].(map[string]any)
+		state, _ := item.(map[string]any)["classification_state"].(string)
+		switch state {
+		case "no_winner", "conflict", "fallback", "classified":
+			row["classification_state"] = state
+		}
+	}
 	return mcpResult(safe), nil, nil
 }

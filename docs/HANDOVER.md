@@ -463,3 +463,39 @@ Package: https://pkgs.alpinelinux.org/package/edge/community/x86_64/chromium
 MCP impact: existing Savings product mapping and browser runtime only. No tools,
 input/output schemas, consent scopes, financial authorization, monetary parsing,
 proposal/audit behavior or persistence contract changes; no new disclosure fields.
+
+
+## Per-rule merchant classification — issue #108, 15 October 2026
+
+`codex/merchant-rule-classification` starts independently from development a3f2aca.
+Owner clarified one merchant with several pattern rules (e.g. FNB fees/interest),
+each with one category and optional group, rather than multiple-choice or split
+allocations. Migration 31 snapshots existing merchant defaults into each rule;
+per-rule updates never rewrite merchants/siblings or existing transactions. Ties
+with different classifications remain uncategorized and bypass fallback rules.
+Import freshness includes merchant rules, category archive guards include active
+merchant rules, and portable configuration retains rule-specific/empty assignments.
+MCP reuses existing grants/output fields and requires a new preview for pending
+pre-change merchant proposals. No consent expansion or banking runtime changes.
+Synthetic coverage/results follow; no owner data or manual visual inspection.
+
+Final #108 verification: Go vet and 20 frontend unit tests passed; production
+build passed with the existing bundle-size advisory. Both existing merchant/logo
+browser cases and both new independent-rule editor cases passed (360px light and
+1440px dark for the new cases). New synthetic importer assertions preserve exact
+parent/allocation totals and keep ambiguous matches in Needs review. Focused new
+merchant/migration/MCP race tests passed (54.901s), followed by final MCP proposal
+binding/preview/legacy-proposal race checks (12.980s). A fresh affected MCP/import/
+migration recheck also passed (16.915s). The broader merchant, historical migration,
+ruleset and configuration race run completed with two new-fixture errors only:
+a missing historical group_name column value and omitted required MCP account_id.
+Both were corrected and passed in the focused rechecks. Browser fixture mistakes
+(unpaged catalogue responses and a native disclosure locator) were corrected;
+final new cases passed. No full backend-suite rerun, manual visual sign-off,
+external MCP-client certification or deployment is claimed. Only disposable
+synthetic databases were used.
+
+MCP preview now deliberately exposes numeric category/group assignments and one
+fixed classification_state under existing merchant-read consent; free-text browser
+explanations stay excluded. New inherited classification defaults are canonicalized
+at preparation, so changing merchant defaults cannot change approved effects.

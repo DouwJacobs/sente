@@ -84,7 +84,7 @@ INSERT INTO mcp_tokens(id,user_id,name,token_hash,permissions,expires_at) VALUES
 				"SELECT * FROM targets ORDER BY period_id,category_id",
 			}
 			if version >= 19 {
-				protected = append(protected, "SELECT * FROM merchants ORDER BY id", "SELECT * FROM merchant_rules ORDER BY id", "SELECT * FROM group_targets ORDER BY period_id", "SELECT * FROM mcp_tokens ORDER BY id")
+				protected = append(protected, "SELECT * FROM merchants ORDER BY id", "SELECT id,account_id,merchant_id,pattern,direction,priority,enabled,version FROM merchant_rules ORDER BY id", "SELECT * FROM group_targets ORDER BY period_id", "SELECT * FROM mcp_tokens ORDER BY id")
 			}
 			before := migrationSnapshot(t, db, protected...)
 			if err := migrate(db); err != nil {
@@ -347,6 +347,15 @@ CREATE TRIGGER reject_category_conversion BEFORE UPDATE ON categories BEGIN SELE
 // Production migrations must never reconcile already-applied table creation.
 func removePostBaselineFixtureTables(t *testing.T, db *sql.DB) {
 	t.Helper()
+	columns, err := data(db, "PRAGMA table_info(merchant_rules)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, column := range columns {
+		if column["name"] == "category_id" || column["name"] == "spending_group_id" {
+			migrationExec(t, db, "ALTER TABLE merchant_rules DROP COLUMN "+column["name"].(string))
+		}
+	}
 	migrationExec(t, db, "DROP TABLE notification_budget_scopes; DROP TABLE notification_budget_preferences; DROP TABLE app_identity")
 	for _, table := range notificationSourceTables {
 		for _, operation := range []string{"INSERT", "UPDATE", "DELETE"} {

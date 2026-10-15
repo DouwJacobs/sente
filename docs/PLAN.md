@@ -113,3 +113,6 @@ expenses are explicit. The full group/category breakdown is independent of dashb
 pagination. Positive net category amounts form ribbons. Negative/zero amounts stay in
 the accessible breakdown; a refund explanation reconciles positive flows to net spending.
 Percentages use net period spending and are unavailable for zero/negative period totals.
+
+
+One merchant can have several description-matching merchant rules, each with one optional category and spending group. Saving a rule changes its assignments only. New requests that omit classification snapshot merchant defaults; existing requests that omit it retain that rule’s assignments. Equal-priority differences in category or group preserve a shared merchant name but withhold classification and automatic category-rule fallback, leaving Needs review. Different merchant names also withhold classification. These are separate alternatives selected by description/direction/priority, never split allocations.

@@ -42,13 +42,16 @@ type MerchantExport struct {
 	SpendingGroup     string  `json:"spending_group,omitempty"`
 }
 type MerchantRuleExport struct {
-	Merchant            string `json:"merchant"`
-	MerchantAccountName string `json:"merchant_account_name,omitempty"`
-	AccountName         string `json:"account_name,omitempty"`
-	Pattern             string `json:"pattern"`
-	Direction           string `json:"direction"`
-	Priority            int    `json:"priority"`
-	Enabled             bool   `json:"enabled"`
+	Category            *string `json:"category,omitempty"`
+	CategoryGroupName   *string `json:"category_group_name,omitempty"`
+	SpendingGroup       *string `json:"spending_group,omitempty"`
+	Merchant            string  `json:"merchant"`
+	MerchantAccountName string  `json:"merchant_account_name,omitempty"`
+	AccountName         string  `json:"account_name,omitempty"`
+	Pattern             string  `json:"pattern"`
+	Direction           string  `json:"direction"`
+	Priority            int     `json:"priority"`
+	Enabled             bool    `json:"enabled"`
 }
 type RuleExport struct {
 	Pattern           string  `json:"pattern"`
@@ -129,12 +132,12 @@ func exportRulesetTx(tx *sql.Tx, u User, w io.Writer) error {
 	for _, r := range rows {
 		cfg.Merchants = append(cfg.Merchants, MerchantExport{Name: exportString(r, "name"), AccountName: exportString(r, "account_name"), LogoData: exportString(r, "logo_data"), Category: exportString(r, "category"), CategoryGroupName: exportPtr(r, "category_group_name"), SpendingGroup: exportString(r, "spending_group")})
 	}
-	rows, err = data(tx, "SELECT m.name merchant,ma.name merchant_account_name,a.name account_name,x.pattern,x.direction,x.priority,x.enabled FROM merchant_rules x JOIN merchants m ON m.id=x.merchant_id LEFT JOIN accounts ma ON ma.id=m.account_id LEFT JOIN accounts a ON a.id=x.account_id WHERE x.account_id IS NULL OR "+accountAccessSQL(u)+" ORDER BY x.id", u.Member, u.ID)
+	rows, err = data(tx, "SELECT m.name merchant,ma.name merchant_account_name,a.name account_name,x.pattern,x.direction,x.priority,x.enabled,c.name category,c.group_name category_group_name,s.name spending_group FROM merchant_rules x JOIN merchants m ON m.id=x.merchant_id LEFT JOIN accounts ma ON ma.id=m.account_id LEFT JOIN accounts a ON a.id=x.account_id LEFT JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id WHERE x.account_id IS NULL OR "+accountAccessSQL(u)+" ORDER BY x.id", u.Member, u.ID)
 	if err != nil {
 		return err
 	}
 	for _, r := range rows {
-		cfg.MerchantRules = append(cfg.MerchantRules, MerchantRuleExport{Merchant: exportString(r, "merchant"), MerchantAccountName: exportString(r, "merchant_account_name"), AccountName: exportString(r, "account_name"), Pattern: exportString(r, "pattern"), Direction: exportString(r, "direction"), Priority: int(num(r["priority"])), Enabled: num(r["enabled"]) != 0})
+		cfg.MerchantRules = append(cfg.MerchantRules, MerchantRuleExport{Category: rulesetStringPointer(exportString(r, "category")), CategoryGroupName: exportPtr(r, "category_group_name"), SpendingGroup: rulesetStringPointer(exportString(r, "spending_group")), Merchant: exportString(r, "merchant"), MerchantAccountName: exportString(r, "merchant_account_name"), AccountName: exportString(r, "account_name"), Pattern: exportString(r, "pattern"), Direction: exportString(r, "direction"), Priority: int(num(r["priority"])), Enabled: num(r["enabled"]) != 0})
 	}
 	rows, err = data(tx, "SELECT x.pattern,c.name category,c.group_name category_group_name,s.name spending_group,a.name account_name,x.direction,x.priority,x.enabled,0 builtin FROM rules x JOIN accounts a ON a.id=x.account_id JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id WHERE "+accountAccessSQL(u)+" UNION ALL SELECT x.pattern,c.name,c.group_name,s.name,NULL,x.direction,x.priority,x.enabled,1 FROM builtin_rules x JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id", u.Member, u.ID)
 	if err != nil {
@@ -388,10 +391,26 @@ func (a *App) importRulesetTx(tx *sql.Tx, u User, cfg RulesetConfig, summary *Ru
 		if e != nil {
 			return e
 		}
-		if id != 0 && queryInt(tx, "SELECT COUNT(*) FROM merchant_rules WHERE id=? AND merchant_id=? AND priority=? AND enabled=?", id, mid, m.Priority, m.Enabled) == 1 {
+		// Missing fields are legacy merchant defaults; explicit empty strings
+		// preserve a rule with no category/group even if its merchant has defaults.
+		cat := queryInt(tx, "SELECT COALESCE(category_id,0) FROM merchants WHERE id=?", mid)
+		group := queryInt(tx, "SELECT COALESCE(spending_group_id,0) FROM merchants WHERE id=?", mid)
+		if m.Category != nil {
+			cat, e = rulesetCategory(tx, *m.Category, m.CategoryGroupName)
+			if e != nil {
+				return e
+			}
+		}
+		if m.SpendingGroup != nil {
+			group, e = rulesetLookup(tx, true, "spending_groups", *m.SpendingGroup, "")
+			if e != nil {
+				return e
+			}
+		}
+		if id != 0 && queryInt(tx, "SELECT COUNT(*) FROM merchant_rules WHERE id=? AND merchant_id=? AND priority=? AND enabled=? AND COALESCE(category_id,0)=? AND COALESCE(spending_group_id,0)=?", id, mid, m.Priority, m.Enabled, cat, group) == 1 {
 			continue
 		}
-		if e = a.writeMerchantRule(tx, u, &id, merchantRuleInput{Account: scope, Merchant: mid, Pattern: pattern, Direction: direction, Priority: m.Priority, Enabled: m.Enabled, Version: version}); e != nil {
+		if e = a.writeMerchantRule(tx, u, &id, merchantRuleInput{Account: scope, Merchant: mid, Pattern: pattern, Direction: direction, Priority: m.Priority, Enabled: m.Enabled, Version: version, CategoryID: rulesetPointer(cat), ClearCategory: cat == 0, SpendingGroupID: rulesetPointer(group), ClearGroup: group == 0}); e != nil {
 			return e
 		}
 		summary.MerchantRulesAdded++
@@ -555,3 +574,5 @@ func decodeRuleset(r io.Reader) (RulesetConfig, error) {
 
 	return cfg, nil
 }
+
+func rulesetStringPointer(value string) *string { return &value }

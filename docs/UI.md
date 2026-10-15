@@ -228,3 +228,6 @@ ready; existing loading/failure/retry behavior owns request states. Explicitly e
 positive flows versus net spending when category refunds are negative. Zero/negative
 categories have no ribbon but remain in the table; percentages reference net period
 spending and may exceed 100%, or are unavailable when the total is nonpositive.
+
+
+Merchant rule rows show both the merchant name and description pattern, followed by that rule’s category/group. The shared editor labels Category for this rule and Spending group for this rule, and explains independent assignments and equal-priority conflicts. Merchant selection loads its defaults into the draft once; saving does not update sibling rules. Matching unnamed transaction previews explain future-import classification; explicitly applying that preview assigns names only and preserves existing categories/groups.

@@ -187,3 +187,6 @@ viewer ports, retained cookies or external display mounts in the production imag
 The pinned edge package is a tested candidate, not a security update guarantee;
 review upstream browser fixes before publication. No MCP contract, schema or
 credential storage changes accompany this runtime replacement.
+
+
+Migration 31 appends category_id/spending_group_id to merchant_rules and snapshots existing effective merchant defaults per rule without changing IDs/versions, ledger records, grants or MCP consent. merchant_rules.go owns per-rule validation and atomic saves; merchant_matching.go owns tie/conflict handling and import preview explanations. Import classification fingerprints include merchant rule state. MerchantRuleEditor lives under features/merchants; Organisation composes it. Portable version-2 merchant-rule fields preserve explicit empty classifications.

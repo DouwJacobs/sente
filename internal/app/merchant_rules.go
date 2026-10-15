@@ -24,7 +24,7 @@ type merchantRuleInput struct {
 
 func (a *App) merchantRules(w http.ResponseWriter, r *http.Request) error {
 	u := Current(r)
-	text := "SELECT x.*,m.name merchant_name,m.logo_data merchant_logo,m.version merchant_version,m.category_id,c.name category_name,m.spending_group_id,s.name spending_group_name,s.color spending_group_color,CASE WHEN x.account_id IS NULL THEN 'All accounts' ELSE a.name END account_name FROM merchant_rules x JOIN merchants m ON m.id=x.merchant_id LEFT JOIN categories c ON c.id=m.category_id LEFT JOIN spending_groups s ON s.id=m.spending_group_id LEFT JOIN accounts a ON a.id=x.account_id WHERE (x.account_id IS NULL OR " + accountAccessSQL(u) + ")"
+	text := "SELECT x.*,m.name merchant_name,m.logo_data merchant_logo,m.version merchant_version,c.name category_name,s.name spending_group_name,s.color spending_group_color,CASE WHEN x.account_id IS NULL THEN 'All accounts' ELSE a.name END account_name FROM merchant_rules x JOIN merchants m ON m.id=x.merchant_id LEFT JOIN categories c ON c.id=x.category_id LEFT JOIN spending_groups s ON s.id=x.spending_group_id LEFT JOIN accounts a ON a.id=x.account_id WHERE (x.account_id IS NULL OR " + accountAccessSQL(u) + ")"
 	args := []any{u.Member, u.ID}
 	if acc := r.URL.Query().Get("account"); acc != "" {
 		text += " AND (x.account_id IS NULL OR a.id=?)"
@@ -70,46 +70,37 @@ func (a *App) writeMerchantRule(tx *sql.Tx, u User, id *int64, b merchantRuleInp
 			return err
 		}
 	}
-	if b.CategoryID != nil || b.ClearCategory || b.SpendingGroupID != nil || b.ClearGroup {
-		var catID, groupID any
-		if b.CategoryID != nil && !b.ClearCategory {
-			if queryInt(tx, "SELECT COUNT(*) FROM categories WHERE id=?", *b.CategoryID) == 0 {
-				return fail(400, "Choose an existing category")
-			}
-			catID = *b.CategoryID
-		}
-		if b.SpendingGroupID != nil && !b.ClearGroup {
-			if queryInt(tx, "SELECT COUNT(*) FROM spending_groups WHERE id=?", *b.SpendingGroupID) == 0 {
-				return fail(400, "Choose an existing spending group")
-			}
-			groupID = *b.SpendingGroupID
-		}
-		setClauses := []string{}
-		args := []any{}
-		if b.CategoryID != nil || b.ClearCategory {
-			setClauses = append(setClauses, "category_id=?")
-			args = append(args, catID)
-		}
-		if b.SpendingGroupID != nil || b.ClearGroup {
-			setClauses = append(setClauses, "spending_group_id=?")
-			args = append(args, groupID)
-		}
-		if len(setClauses) > 0 {
-			setClauses = append(setClauses, "version=version+1")
-			args = append(args, b.Merchant)
-			if _, e := tx.Exec("UPDATE merchants SET "+strings.Join(setClauses, ", ")+" WHERE id=?", args...); e != nil {
-				return e
-			}
-		}
+	// New legacy requests inherit merchant defaults once. Existing rules retain
+	// their own values when classification fields are omitted.
+	catID, groupID, err := merchantRuleClassification(tx, localID, b.Merchant)
+	if err != nil {
+		return err
 	}
+	if b.ClearCategory {
+		catID = sql.NullInt64{}
+	} else if b.CategoryID != nil {
+		catID = sql.NullInt64{Int64: *b.CategoryID, Valid: true}
+	}
+	if b.ClearGroup {
+		groupID = sql.NullInt64{}
+	} else if b.SpendingGroupID != nil {
+		groupID = sql.NullInt64{Int64: *b.SpendingGroupID, Valid: true}
+	}
+	if catID.Valid && queryInt(tx, "SELECT COUNT(*) FROM categories WHERE id=? AND archived=0", catID.Int64) != 1 {
+		return fail(400, "Choose an active category")
+	}
+	if groupID.Valid && queryInt(tx, "SELECT COUNT(*) FROM spending_groups WHERE id=?", groupID.Int64) != 1 {
+		return fail(400, "Choose an existing spending group")
+	}
+
 	if localID == 0 {
-		res, e := tx.Exec("INSERT INTO merchant_rules(account_id,merchant_id,pattern,direction,priority,enabled) VALUES(?,?,?,?,?,?)", nullableAccount(b.Account), b.Merchant, b.Pattern, b.Direction, b.Priority, b.Enabled)
+		res, e := tx.Exec("INSERT INTO merchant_rules(account_id,merchant_id,pattern,direction,priority,enabled,category_id,spending_group_id) VALUES(?,?,?,?,?,?,?,?)", nullableAccount(b.Account), b.Merchant, b.Pattern, b.Direction, b.Priority, b.Enabled, catID, groupID)
 		if e != nil {
 			return e
 		}
 		localID, _ = res.LastInsertId()
 	} else {
-		res, e := tx.Exec("UPDATE merchant_rules SET account_id=?,merchant_id=?,pattern=?,direction=?,priority=?,enabled=?,version=version+1 WHERE id=? AND version=?", nullableAccount(b.Account), b.Merchant, b.Pattern, b.Direction, b.Priority, b.Enabled, localID, b.Version)
+		res, e := tx.Exec("UPDATE merchant_rules SET account_id=?,merchant_id=?,pattern=?,direction=?,priority=?,enabled=?,category_id=?,spending_group_id=?,version=version+1 WHERE id=? AND version=?", nullableAccount(b.Account), b.Merchant, b.Pattern, b.Direction, b.Priority, b.Enabled, catID, groupID, localID, b.Version)
 		if e != nil {
 			return e
 		}
@@ -120,4 +111,40 @@ func (a *App) writeMerchantRule(tx *sql.Tx, u User, id *int64, b merchantRuleInp
 	*id = localID
 	b.Logo = nil // Image data is not duplicated in the audit log.
 	return audit(tx, u, nullableAccount(b.Account), "merchant_rule", localID, "saved", b)
+}
+
+func merchantRuleClassification(tx *sql.Tx, id, merchant int64) (sql.NullInt64, sql.NullInt64, error) {
+	var category, group sql.NullInt64
+	query, lookup := "SELECT category_id,spending_group_id FROM merchant_rules WHERE id=?", id
+	if id == 0 {
+		query, lookup = "SELECT category_id,spending_group_id FROM merchants WHERE id=?", merchant
+	}
+	err := tx.QueryRow(query, lookup).Scan(&category, &group)
+	return category, group, err
+}
+
+// Bind inherited values to proposal preparation rather than rereading defaults
+// when an approved proposal is later applied.
+func canonicalMerchantRule(tx *sql.Tx, id int64, b merchantRuleInput) (merchantRuleInput, error) {
+	category, group, err := merchantRuleClassification(tx, id, b.Merchant)
+	if err != nil {
+		return b, err
+	}
+	if b.CategoryID == nil && !b.ClearCategory {
+		if category.Valid {
+			value := category.Int64
+			b.CategoryID = &value
+		} else {
+			b.ClearCategory = true
+		}
+	}
+	if b.SpendingGroupID == nil && !b.ClearGroup {
+		if group.Valid {
+			value := group.Int64
+			b.SpendingGroupID = &value
+		} else {
+			b.ClearGroup = true
+		}
+	}
+	return b, nil
 }
