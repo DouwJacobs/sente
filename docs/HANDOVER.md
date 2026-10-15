@@ -553,3 +553,6 @@ MCP: retain separate category-rule and merchant grants/read fields/automatic app
 
 
 MCP recheck follow-up: corrected list_rules to honor its advertised q filter over patterns/categories/groups before grouped paging, with renamed assignments invalidating page versions. Removed its stale transaction-rule immediate-backfill description. Category/group and merchant tools remain separate under existing consent; historical application remains browser-only.
+
+
+PR #111 CI follow-up: the first GitHub run passed backend race/static/unit/build gates but found two obsolete transaction-editor browser heading assertions. Updated the heading, scoped transaction/toast locators and explicitly dismissed the new backfill offer. All four transaction-editor cases passed locally with synthetic data. Product/MCP/schema/financial behavior is unchanged; the new PR revision requires its own green CI gate.

@@ -1172,3 +1172,10 @@ Existing tools, input fields, output allowlists and default-off consent boundari
 ### MCP search recheck
 
 Fixed the existing list_rules q filter to search patterns, categories and spending groups before grouped paging, preserve complete visible account copies and invalidate list versions after assignment renames. Removed obsolete immediate-backfill wording from the tool catalogue. TestMCPRuleSearchAndFutureOnlyDescription, TestMCPPrivacyAndTransport and TestUnifiedGroupOnlyMCPConsentAndFutureOnly passed together under race (13.259s); Go vet and diff whitespace checks passed. No frontend, schema, consent scope, output allowlist or new tool change accompanies this follow-up.
+
+
+### PR #111 CI transaction-editor follow-up — 15 October 2026
+
+GitHub run 38719543704 on 1d682a7 passed backend tests/race detection, Go vet, CI/release regressions, FNB worker invariants, demo invariants, frontend unit tests/build and synthetic bank DOM checks. The browser gate stopped on two transaction-editor cases still expecting the old Proposed automatic rule heading.
+
+Updated those expectations to Create a rule, selected the transaction dialog by its accessible name, handled the optional backfill offer with Not now, and scoped the save confirmation to the active toast rather than an exiting dialog snapshot. Financial, picker geometry, focus, scrolling and transfer protections remain asserted. All four transaction-editor cases passed against disposable synthetic databases in run-ea50kv4u (34.1s Playwright, 48.972s runner). No product behavior, schema, MCP tool/input/output/consent/proposal/audit or shared financial service change. CI must rerun on the pushed correction; no merge/deployment or manual visual inspection.
