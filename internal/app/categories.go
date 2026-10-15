@@ -20,7 +20,7 @@ func categoryDeps(q queryer, id int64) (map[string]any, error) {
 	if e != nil {
 		return nil, e
 	}
-	return map[string]any{"active_rules": num(rules[0]["n"]) + num(built[0]["n"]), "carry_forward_periods": budgets}, nil
+	return map[string]any{"active_rules": num(rules[0]["n"]) + num(built[0]["n"]) + queryInt(q, "SELECT COUNT(*) FROM merchant_rules WHERE category_id=? AND enabled=1", id), "carry_forward_periods": budgets}, nil
 }
 func (a *App) categoryDependencies(w http.ResponseWriter, r *http.Request) error {
 	if e := requireMember(Current(r)); e != nil {
@@ -36,6 +36,7 @@ func (a *App) categoryDependencies(w http.ResponseWriter, r *http.Request) error
 		return e
 	}
 	visible := queryInt(a.DB, "SELECT COUNT(*) FROM rules x JOIN accounts a ON a.id=x.account_id WHERE x.category_id=? AND x.enabled=1 AND "+accountAccessSQL(Current(r)), id, Current(r).Member, Current(r).ID) + queryInt(a.DB, "SELECT COUNT(*) FROM builtin_rules WHERE category_id=? AND enabled=1", id)
+	visible += queryInt(a.DB, "SELECT COUNT(*) FROM merchant_rules x LEFT JOIN accounts a ON a.id=x.account_id WHERE x.category_id=? AND x.enabled=1 AND (x.account_id IS NULL OR "+accountAccessSQL(Current(r))+")", id, Current(r).Member, Current(r).ID)
 	v["restricted_rules"] = num(v["active_rules"]) > visible
 	if v["restricted_rules"] == true {
 		v["active_rules"] = visible

@@ -53,16 +53,17 @@ type mcpExactEdit struct {
 	After  transactionInput `json:"after"`
 }
 type mcpExactChange struct {
-	PeriodEffects     any                     `json:"period_effects,omitempty"`
-	PeriodAfter       any                     `json:"period_after,omitempty"`
-	AutomaticApproval bool                    `json:"automatic_approval,omitempty"`
-	Change            mcpChange               `json:"change"`
-	Transactions      []mcpExactEdit          `json:"transactions,omitempty"`
-	SeenStates        []mcpSeenState          `json:"seen_states,omitempty"`
-	Before            any                     `json:"before,omitempty"`
-	BudgetAlertBefore []budgetAlertPreference `json:"budget_alert_before,omitempty"`
-	BudgetAlertAfter  []budgetAlertPreference `json:"budget_alert_after,omitempty"`
-	BudgetAfter       any                     `json:"budget_after,omitempty"`
+	PeriodEffects                     any                     `json:"period_effects,omitempty"`
+	PeriodAfter                       any                     `json:"period_after,omitempty"`
+	MerchantRuleClassificationVersion int                     `json:"merchant_rule_classification_version,omitempty"`
+	AutomaticApproval                 bool                    `json:"automatic_approval,omitempty"`
+	Change                            mcpChange               `json:"change"`
+	Transactions                      []mcpExactEdit          `json:"transactions,omitempty"`
+	SeenStates                        []mcpSeenState          `json:"seen_states,omitempty"`
+	Before                            any                     `json:"before,omitempty"`
+	BudgetAlertBefore                 []budgetAlertPreference `json:"budget_alert_before,omitempty"`
+	BudgetAlertAfter                  []budgetAlertPreference `json:"budget_alert_after,omitempty"`
+	BudgetAfter                       any                     `json:"budget_after,omitempty"`
 }
 type mcpProposalID struct {
 	ProposalID string `json:"proposal_id"`
@@ -74,6 +75,9 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 		return mcpFailure(fail(403, "This token is read-only"))
 	}
 	exact := mcpExactChange{Change: in}
+	if in.Operation == "save_merchant_rule" {
+		exact.MerchantRuleClassificationVersion = 1
+	}
 	// Validate using the same write services, then roll back the preview in full.
 	a.mu.Lock()
 	tx, err := a.DB.Begin()
@@ -87,7 +91,15 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 		if in.Operation == "save_merchant" {
 			exact.Before, err = data(tx, "SELECT id,account_id,name,version,logo_data FROM merchants WHERE id=?", in.ID)
 		}
-		if in.Operation == "save_merchant_rule" || in.Operation == "delete_merchant_rule" {
+		if in.Operation == "save_merchant_rule" && in.MerchantRule != nil {
+			canonical, canonicalErr := canonicalMerchantRule(tx, in.ID, *in.MerchantRule)
+			if canonicalErr != nil {
+				err = canonicalErr
+			} else {
+				exact.Change.MerchantRule = &canonical
+			}
+		}
+		if err == nil && (in.Operation == "save_merchant_rule" || in.Operation == "delete_merchant_rule") {
 			exact.Before, err = data(tx, "SELECT * FROM merchant_rules WHERE id=?", in.ID)
 		}
 		if in.Operation == "assign_merchants" {
@@ -310,6 +322,9 @@ func (a *App) executeMCPChange(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 		}
 		result["id"] = id
 	case "save_merchant_rule":
+		if exact.MerchantRuleClassificationVersion != 1 {
+			return nil, fail(409, "Merchant rule classification changed; prepare this proposal again")
+		}
 		id := b.ID
 		if err := a.writeMerchantRule(tx, u, &id, *b.MerchantRule); err != nil {
 			return nil, err

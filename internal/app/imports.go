@@ -22,7 +22,11 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 	if err != nil {
 		return err
 	}
-	ruleState, _ := json.Marshal(rules)
+	merchantState, err := data(q, "SELECT r.*,m.version merchant_version,c.version category_version,c.archived FROM merchant_rules r JOIN merchants m ON m.id=r.merchant_id LEFT JOIN categories c ON c.id=r.category_id WHERE r.account_id=? OR r.account_id IS NULL ORDER BY r.id", account)
+	if err != nil {
+		return err
+	}
+	ruleState, _ := json.Marshal(map[string]any{"rules": rules, "merchant_rules": merchantState})
 	p.ClassificationVersion = hash(string(ruleState))
 	seen := map[string]SourceRow{}
 	fingerprints := map[string][]map[string]any{}
@@ -38,12 +42,17 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 		row.MerchantID = nil
 		row.MerchantName = ""
 		row.Suggestion = ""
+		row.RuleConflict = false
+		row.RuleMatches = nil
 		mm, err := matchMerchantDetails(q, account, row.Description, row.Amount)
 		if err != nil {
 			return err
 		}
 		if mm != nil {
-			row.MerchantID = &mm.ID
+			row.RuleConflict = mm.ClassificationConflict
+			if mm.ID > 0 {
+				row.MerchantID = &mm.ID
+			}
 			row.MerchantName = mm.Name
 			if mm.CategoryID != nil {
 				row.CategoryID = mm.CategoryID
@@ -51,7 +60,10 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 				row.Suggestion = "Merchant: " + mm.Name
 			}
 		}
-		if row.CategoryID == nil {
+		if row.RuleConflict {
+			row.Suggestion = "Conflicting merchant rules: needs review"
+		}
+		if row.CategoryID == nil && !row.RuleConflict {
 			classify(row, rules)
 		}
 		if p.Format == "fnb-live" && row.FITID == "" {

@@ -50,3 +50,6 @@ The JSON Schema is in [configuration/schema.json](../internal/app/configuration/
 ```
 
 The export includes all five configuration collections, accessible scoped rules/merchants and optional logos. It excludes budgets, account definitions, grants, transactions, bank identities, credentials, notes and source-tracking records. Preserve historical category `group_name` keys when round-tripping existing configurations. Map account names deliberately when transferring personal configuration to a differently named installation. Account names, merchant names, personal patterns and logos may be sensitive even though credentials are excluded.
+
+
+Merchant rules in portable version 2 can specify `category`, historical `category_group_name`, and `spending_group` by name. Each rule exports its own assignments. Explicit empty category/group strings mean unassigned; omitted legacy fields snapshot the merchant defaults. Import/export and configuration previews preserve different fee/interest classifications for a single merchant, and explicit null classifications without reintroducing merchant defaults. Imports validate all names and roll back atomically.

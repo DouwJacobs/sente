@@ -189,4 +189,6 @@ review upstream browser fixes before publication. No MCP contract, schema or
 credential storage changes accompany this runtime replacement.
 
 
+Migration 31 appends category_id/spending_group_id to merchant_rules and snapshots existing effective merchant defaults per rule without changing IDs/versions, ledger records, grants or MCP consent. merchant_rules.go owns per-rule validation and atomic saves; merchant_matching.go owns tie/conflict handling and import preview explanations. Import classification fingerprints include merchant rule state. MerchantRuleEditor lives under features/merchants; Organisation composes it. Portable version-2 merchant-rule fields preserve explicit empty classifications.
+
 `mcp_periods.go` adapts create_period proposals to the browser-shared `createPeriodTx` service in periods.go. It binds reassignment/version evidence and source/copied budget state to the existing rollback preview, application and audit transaction. Stored YOLO permissions are explicit snapshots; reading an existing connection never regenerates its catalogue.

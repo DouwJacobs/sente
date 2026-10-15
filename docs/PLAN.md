@@ -115,4 +115,6 @@ the accessible breakdown; a refund explanation reconciles positive flows to net 
 Percentages use net period spending and are unavailable for zero/negative period totals.
 
 
+One merchant can have several description-matching merchant rules, each with one optional category and spending group. Saving a rule changes its assignments only. New requests that omit classification snapshot merchant defaults; existing requests that omit it retain that rule’s assignments. Equal-priority differences in category or group preserve a shared merchant name but withhold classification and automatic category-rule fallback, leaving Needs review. Different merchant names also withhold classification. These are separate alternatives selected by description/direction/priority, never split allocations.
+
 MCP connections can explicitly grant shared budget-period creation with exact reassignment and copied recurring-budget previews. The owner can explicitly select YOLO to enable every currently supported read/change permission and automatic approval type; existing grants remain unchanged and current authorization/validation/audit checks remain mandatory.

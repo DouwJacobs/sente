@@ -318,6 +318,8 @@ tools, input fields, output fields, account permissions, consent, proposal previ
 audit behavior or financial write services are introduced.
 
 
+Issue #108: save_merchant_rule.category_id/spending_group_id and clear_category/clear_group now affect only that rule. Omitted fields preserve an existing rule’s assignments; new rules snapshot merchant defaults at preparation, recording explicit values in the approved proposal. list_merchant_rules returns the existing category/group fields with rule-owned values. No new tools, permissions or automatic-approval types are added. `preview_merchant_rule` includes optional category_id/spending_group_id and a bounded classification_state (`no_winner`, `conflict`, `fallback`, `classified`) under existing merchant-read consent. Human-readable browser explanations are excluded from agent output; no descriptions/notes or account fields are added. Existing manage_merchant_rules/read_merchants grants and current account access remain mandatory; logos still require manage_merchants. Pending proposals prepared before these semantics must be prepared again; successful applied replay retains its stored result. Import ambiguity at equal priority remains Needs review. Category/group names remain independent, and no split allocations are inferred.
+
 ## Budget-period creation and YOLO — issue #107
 
 `prepare_change` supports `{"operation":"create_period","period":{"name":"November 2026","start_date":"2026-11-20","end_date":"2026-12-19"}}`.
