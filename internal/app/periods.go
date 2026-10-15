@@ -110,50 +110,63 @@ func (a *App) createPeriod(w http.ResponseWriter, r *http.Request) error {
 	}
 	var id int64
 	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
-		if err := requireMember(u); err != nil {
-			return err
-		}
-		preview, err := periodChanges(tx, 0, b)
-		if err != nil {
-			return err
-		}
-		if b.PreviewToken == "" || b.PreviewToken != preview["preview_token"] {
-			return fail(409, "Preview the new period before saving")
-		}
-		previous := queryInt(tx, "SELECT id FROM periods ORDER BY start_date DESC,id DESC LIMIT 1")
-		res, err := tx.Exec("INSERT INTO periods(name,start_date,end_date) VALUES(?,?,?)", b.Name, b.Start, b.End)
-		if err != nil {
-			return err
-		}
-		id, _ = res.LastInsertId()
-		if _, err := tx.Exec("INSERT INTO targets SELECT ?,category_id,amount_cents FROM targets WHERE period_id=?", id, previous); err != nil {
-			return err
-		}
-		if _, err := tx.Exec("INSERT INTO group_targets(period_id,category_id,spending_group_id,amount_cents,carry_forward,included) SELECT ?,category_id,spending_group_id,amount_cents,carry_forward,included FROM group_targets WHERE period_id=? AND carry_forward=1 AND included=1", id, previous); err != nil {
-			return err
-		}
-		if _, err := tx.Exec("INSERT INTO group_targets(period_id,category_id,amount_cents) SELECT ?,t.category_id,t.amount_cents FROM targets t WHERE t.period_id=? AND NOT EXISTS(SELECT 1 FROM group_targets g WHERE g.period_id=t.period_id AND g.category_id=t.category_id)", id, previous); err != nil {
-			return err
-		}
-		if _, err := tx.Exec("DELETE FROM targets WHERE period_id=?", id); err != nil {
-			return err
-		}
-		if _, err := tx.Exec("INSERT INTO targets SELECT period_id,category_id,SUM(amount_cents) FROM group_targets WHERE period_id=? AND included=1 GROUP BY period_id,category_id", id); err != nil {
-			return err
-		}
-		if _, err := tx.Exec("INSERT INTO budget_groups SELECT DISTINCT period_id,spending_group_id FROM group_targets WHERE period_id=?", id); err != nil {
-			return err
-		}
-		if err := reassign(tx); err != nil {
-			return err
-		}
-		return audit(tx, u, nil, "period", id, "created", b)
+		var err error
+		id, err = a.createPeriodTx(tx, u, b)
+		return err
 	})
 	if err != nil {
 		return err
 	}
 	send(w, map[string]int64{"id": id})
 	return nil
+}
+
+// createPeriodTx is shared by browser and MCP proposals.
+func (a *App) createPeriodTx(tx *sql.Tx, u User, b periodInput) (int64, error) {
+	if err := validatePeriod(b); err != nil {
+		return 0, err
+	}
+	if err := requireMember(u); err != nil {
+		return 0, err
+	}
+	preview, err := periodChanges(tx, 0, b)
+	if err != nil {
+		return 0, err
+	}
+	if b.PreviewToken == "" || b.PreviewToken != preview["preview_token"] {
+		return 0, fail(409, "Preview the new period before saving")
+	}
+	previous := queryInt(tx, "SELECT id FROM periods ORDER BY start_date DESC,id DESC LIMIT 1")
+	res, err := tx.Exec("INSERT INTO periods(name,start_date,end_date) VALUES(?,?,?)", b.Name, b.Start, b.End)
+	if err != nil {
+		return 0, err
+	}
+	id, _ := res.LastInsertId()
+	if _, err := tx.Exec("INSERT INTO targets SELECT ?,category_id,amount_cents FROM targets WHERE period_id=?", id, previous); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec("INSERT INTO group_targets(period_id,category_id,spending_group_id,amount_cents,carry_forward,included) SELECT ?,category_id,spending_group_id,amount_cents,carry_forward,included FROM group_targets WHERE period_id=? AND carry_forward=1 AND included=1", id, previous); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec("INSERT INTO group_targets(period_id,category_id,amount_cents) SELECT ?,t.category_id,t.amount_cents FROM targets t WHERE t.period_id=? AND NOT EXISTS(SELECT 1 FROM group_targets g WHERE g.period_id=t.period_id AND g.category_id=t.category_id)", id, previous); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec("DELETE FROM targets WHERE period_id=?", id); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec("INSERT INTO targets SELECT period_id,category_id,SUM(amount_cents) FROM group_targets WHERE period_id=? AND included=1 GROUP BY period_id,category_id", id); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec("INSERT INTO budget_groups SELECT DISTINCT period_id,spending_group_id FROM group_targets WHERE period_id=?", id); err != nil {
+		return 0, err
+	}
+	if err := reassign(tx); err != nil {
+		return 0, err
+	}
+	if err := audit(tx, u, nil, "period", id, "created", b); err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 func periodChanges(q queryer, id int64, b periodInput) (map[string]any, error) {
 	periods, err := data(q, "SELECT * FROM periods ORDER BY start_date DESC,id DESC")

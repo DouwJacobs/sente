@@ -187,3 +187,6 @@ viewer ports, retained cookies or external display mounts in the production imag
 The pinned edge package is a tested candidate, not a security update guarantee;
 review upstream browser fixes before publication. No MCP contract, schema or
 credential storage changes accompany this runtime replacement.
+
+
+`mcp_periods.go` adapts create_period proposals to the browser-shared `createPeriodTx` service in periods.go. It binds reassignment/version evidence and source/copied budget state to the existing rollback preview, application and audit transaction. Stored YOLO permissions are explicit snapshots; reading an existing connection never regenerates its catalogue.

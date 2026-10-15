@@ -125,6 +125,15 @@ export function MCPProposalCard({
                 </p>
               </>
             )}
+            {p.payload.period_effects && (
+              <>
+                <strong>Period creation · transaction reassignment and recurring budget source</strong>
+                <pre className="mcp-code">{JSON.stringify(p.payload.period_effects, null, 2)}</pre>
+                <strong>After · copied budgets</strong>
+                <pre className="mcp-code">{JSON.stringify(p.payload.period_after, null, 2)}</pre>
+                <p className="footnote">Dates are inclusive. Overlaps use the latest start date, then highest period ID. Manual assignments remain unchanged.</p>
+              </>
+            )}
             {p.payload.budget_after && (
               <>
                 <strong>After · exact group budgets and carry-forward</strong>

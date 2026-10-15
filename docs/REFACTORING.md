@@ -100,3 +100,6 @@ JavaScript stack-overflow and temporary-profile cleanup regressions. Native
 Chromium packaging belongs to the Dockerfile; no syscall preload adapter remains.
 
 `connectors/fnb/owner/virtual-display.mjs` owns per-browser Xvfb startup, random local display authorization and bounded shutdown. `browser-runtime.mjs` selects the Docker virtual-display mode and composes browser/display lifecycle; worker consent and banking navigation remain in their existing modules.
+
+
+`mcp_periods.go` owns typed MCP period creation and exact effect checks; periods.go owns the browser-shared authorized period creation transaction service.

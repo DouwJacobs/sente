@@ -228,3 +228,6 @@ ready; existing loading/failure/retry behavior owns request states. Explicitly e
 positive flows versus net spending when category refunds are negative. Zero/negative
 categories have no ribbon but remain in the table; percentages reference net period
 spending and may exceed 100%, or are unavailable when the total is nonpositive.
+
+
+MCP Permission level includes YOLO · all permissions and automatic approvals. Explain saved-context sharing and automatic changes before explicit consent. Show the active mode and all effective grants. Individual edits switch YOLO to Custom; another preset clears automatic approvals. Period proposals show dates, reassignment and exact copied budgets.

@@ -25,6 +25,7 @@ export function MCPConnectionCard({
         {
           categorization: "Categorisation",
           finance: "Finance editing",
+          yolo: "YOLO · all permissions",
           legacy_finance: "Finance editing",
         } as Record<string, string>
       )[t.permissions.preset] || "Custom permissions"

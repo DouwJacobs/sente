@@ -63,7 +63,7 @@ Legacy read tools take an optional `filters` map of string values. Metadata uses
 - `create_category`: `category` with name and kind (`expense`/`income`). Membership and duplicate-name checks apply.
 - `save_rule`: `id=0` creates; existing IDs require the rule's current version. `rule` uses account_id, pattern, category_id, optional direction/priority/spending_group_id/enabled/version. Pausing uses enabled=false. Negative built-in IDs follow membership/version checks. Rules classify future imports; this operation does not sweep existing entries. Use explicit bulk transaction edits for existing matches.
 - `delete_rule`: id and version.
-- `update_budget`: `id` is the period ID; `budget` includes its current version and targets (category_id, nonnegative amount_cents). Group scopes and merge/replacement behavior follow the exact budget contract below. Period creation/date changes and default start-day edits are not exposed.
+- `update_budget`: `id` is the period ID; `budget` includes its current version and targets (category_id, nonnegative amount_cents). Group scopes and merge/replacement behavior follow the exact budget contract below. Period date changes and default start-day edits remain browser-only. Period creation uses the explicit operation below.
 
 All money is integer ZAR cents. Split sums and signs must match the parent exactly. Source fields remain immutable. Transfer links retain existing constraints. Classification completeness determines Accepted; missing categories remain Needs review, and an agent cannot override this rule. Saving marks the editing user's new version seen; other users' old seen versions become stale.
 
@@ -316,3 +316,31 @@ chart and accessible table. This new field is intentionally absent from the MCP
 output allowlist; `get_budget_summary` retains its existing paged output. No new
 tools, input fields, output fields, account permissions, consent, proposal previews,
 audit behavior or financial write services are introduced.
+
+
+## Budget-period creation and YOLO — issue #107
+
+`prepare_change` supports `{"operation":"create_period","period":{"name":"November 2026","start_date":"2026-11-20","end_date":"2026-12-19"}}`.
+`create_period` is a separate default-off change capability/automatic-approval type.
+Household membership and unrestricted connection account scope are required at
+prepare, approval, apply and replay. Invalid dates and duplicate date ranges reject.
+Overlaps retain the browser policy: latest start wins, highest ID breaks ties.
+The browser proposal displays automatic transaction reassignment, preserved manual
+assignments, the source budget and exact copied recurring limits. Period/transaction
+versions and source budget evidence are bound to approval; changes require a new
+proposal. The browser and MCP call `createPeriodTx` inside the same serialized
+transaction; creation, reassignment, recurring limits, audits and stored result roll
+back together. Apply returns `id`, `name`, `start_date`, `end_date`, `version`, `ok`.
+Successful replay returns that result once current permission is checked.
+
+The explicitly selected **YOLO · all permissions and automatic approvals** preset
+shares context, merchants and personal alerts, enables all currently supported
+change permissions and automatic approval types, and clears optional restrictions.
+It requires ordinary explicit owner consent and OAuth `finance:propose`; read-only
+connections must reconnect to request that scope. Existing connections, legacy and
+finance presets retain their grants. Stored grants are snapshots: future capabilities
+never become enabled just because a connection used YOLO. Editing an individual
+permission changes the mode to Custom. Selecting another preset disables YOLO's
+automatic approvals; revocation/current authorization/financial validation still
+apply to pending and approved proposals. No credentials or additional financial
+read fields are exposed. No schema migration.

@@ -1068,3 +1068,24 @@ Package: https://pkgs.alpinelinux.org/package/edge/community/x86_64/chromium
 MCP impact: existing Savings product mapping and browser runtime only. No tools,
 input/output schemas, consent scopes, financial authorization, monetary parsing,
 proposal/audit behavior or persistence contract changes; no new disclosure fields.
+
+
+## MCP period creation and explicit YOLO consent — 15 October 2026
+
+Issue #107 is implemented on `codex/mcp-period-creation-yolo` from development
+`a3f2aca`. MCP period creation shares the browser transaction service, with exact
+reassignment and recurring-budget effects, stale checks, once-only apply and audit.
+Separate default-off creation consent and automatic approval are included in shared
+OAuth/Settings controls and the owner-approved explicit YOLO preset. Existing
+connections retain stored grants; no migration or financial read-field expansion.
+Verification results are recorded after checks complete. No production data, live
+banking, deployment or manual visual inspection is involved.
+
+Final #107 verification: Go vet passed; affected MCP permission/OAuth/automatic/
+privacy race run completed with only the revoked-token test-helper expectation
+failing. After correcting that assertion, all period tests passed under race
+(31.947s); financial domain packages passed. Frontend 21 tests and production
+build passed (existing bundle-size advisory). Eight existing MCP browser cases
+passed; the new phone/desktop YOLO cases both passed on the final recheck. The
+initial desktop fixture reused the phone period dates, correctly hit the duplicate
+guard and was corrected to use distinct dates. No manual visual inspection.
