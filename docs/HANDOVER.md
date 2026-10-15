@@ -499,3 +499,11 @@ MCP preview now deliberately exposes numeric category/group assignments and one
 fixed classification_state under existing merchant-read consent; free-text browser
 explanations stay excluded. New inherited classification defaults are canonicalized
 at preparation, so changing merchant defaults cannot change approved effects.
+
+
+PR #109 CI follow-up — 15 October 2026: the complete GitHub backend race suite
+found three older PWA/scoped-alert downgrade fixtures that removed migration
+records but retained migration-31 columns. Reused the synthetic column-removal
+helper before those historical replays. Production migration behavior is unchanged.
+All three rollback/retry/history-preservation tests passed under race (13.506s).
+The full CI gate must pass again on the pushed revision before merging.
