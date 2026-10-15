@@ -14,6 +14,7 @@ export const capabilityLabels: Record<string, string> = {
   update_rule: "Edit rules",
   delete_rule: "Delete rules",
   manage_budget_alerts: "Change your personal budget alert switches and thresholds",
+  create_period: "Create shared budget periods and copy recurring budgets",
   update_budget: "Edit shared budget limits",
   change_seen: "Mark your transactions seen or unseen",
 };
@@ -38,8 +39,9 @@ export function selectPreset(p: Row, preset: string): Row {
   const capabilities = Object.fromEntries(
     Object.keys(capabilityLabels).map((k) => [
       k,
-      (preset === "finance" &&
+      preset === "yolo" || (preset === "finance" &&
         ![
+          "create_period",
           "manage_budget_alerts",
           "change_seen",
           "manage_merchants",
@@ -54,12 +56,16 @@ export function selectPreset(p: Row, preset: string): Row {
   return {
     ...p,
     preset,
-    automatic_approval: {},
+    automatic_approval: preset === "yolo" ? { ...capabilities } : {},
+    read_context: preset === "yolo" || p.read_context,
+    read_merchants: preset === "yolo" || p.read_merchants,
+    read_budget_alerts: preset === "yolo" || p.read_budget_alerts,
     capabilities: preset === "custom" ? p.capabilities : capabilities,
     constraints: {
       ...p.constraints,
+      account_ids: preset === "yolo" ? [] : p.constraints.account_ids,
       selected_accounts:
-        preset === "categorization" || p.constraints.selected_accounts,
+        preset !== "yolo" && (preset === "categorization" || p.constraints.selected_accounts),
       missing_categories_only:
         preset === "custom"
           ? p.constraints.missing_categories_only
@@ -147,7 +153,9 @@ export function PermissionSummary({
             ))}
           </ul>
           <p className="footnote">
-            Other change types require your approval in Sente.
+            {automatic.length === Object.keys(capabilityLabels).length
+              ? "All supported change types are automatically approved."
+              : "Other change types require your approval in Sente."}
           </p>
         </>
       ) : (
@@ -162,7 +170,7 @@ export function PermissionSummary({
 }
 export function MCPPermissionFields({
   value,
-  onChange,
+  onChange: updatePermissions,
   accounts,
   canPropose,
 }: {
@@ -171,6 +179,10 @@ export function MCPPermissionFields({
   accounts: Row[];
   canPropose: boolean;
 }) {
+  const onChange = (next: Row) => updatePermissions(
+    value.preset === "yolo" && next.preset === "yolo"
+      ? { ...next, preset: "custom" } : next,
+  );
   const ids: number[] = value.constraints.account_ids || [],
     scopeError =
       value.constraints.selected_accounts && !ids.length
@@ -180,7 +192,7 @@ export function MCPPermissionFields({
             !ids.length
           ? "Select at least one account for new rules."
           : (ids.length || value.constraints.selected_accounts) &&
-              (value.capabilities.update_budget || value.read_budget_alerts || value.capabilities.manage_budget_alerts)
+              (value.capabilities.create_period || value.capabilities.update_budget || value.read_budget_alerts || value.capabilities.manage_budget_alerts)
             ? "Shared budgets and personal budget alerts require all accessible accounts."
             : "";
   const merchantError =
@@ -223,6 +235,7 @@ export function MCPPermissionFields({
               <option value="categorization">Categorisation proposals</option>
               <option value="finance">Finance editing proposals</option>
               <option value="custom">Custom permissions</option>
+              <option value="yolo">YOLO · all permissions and automatic approvals</option>
             </>
           )}
           {value.preset === "legacy_finance" && (
@@ -232,6 +245,9 @@ export function MCPPermissionFields({
           )}
         </select>
       </Field>
+      {value.preset === "yolo" && (
+        <p className="footnote">YOLO shares saved context and all supported reads, and lets this agent apply every supported change without asking for individual approval. Current access, validation and audit checks still apply. Choose another level to turn it off.</p>
+      )}
       <section className="permission-scope">
         <h3>What the agent can read</h3>
         <p className="footnote">
@@ -352,7 +368,7 @@ export function MCPPermissionFields({
               ],
               [
                 "Rules and budgets",
-                ["create_rule", "update_rule", "delete_rule", "update_budget", "manage_budget_alerts"],
+                ["create_rule", "update_rule", "delete_rule", "create_period", "update_budget", "manage_budget_alerts"],
               ],
               ["Transaction details", ["financial_edit", "change_seen"]],
             ].map(([title, keys]) => (

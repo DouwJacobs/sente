@@ -31,6 +31,7 @@ type mcpAllocation struct {
 	Note       *string `json:"note,omitempty"`
 }
 type mcpChange struct {
+	Period          *mcpPeriodInput         `json:"period,omitempty"`
 	BudgetAlerts    []mcpBudgetAlertInput   `json:"budget_alerts,omitempty"`
 	Merchant        *mcpMerchantInput       `json:"merchant,omitempty"`
 	MerchantRule    *merchantRuleInput      `json:"merchant_rule,omitempty"`
@@ -52,6 +53,8 @@ type mcpExactEdit struct {
 	After  transactionInput `json:"after"`
 }
 type mcpExactChange struct {
+	PeriodEffects     any                     `json:"period_effects,omitempty"`
+	PeriodAfter       any                     `json:"period_after,omitempty"`
 	AutomaticApproval bool                    `json:"automatic_approval,omitempty"`
 	Change            mcpChange               `json:"change"`
 	Transactions      []mcpExactEdit          `json:"transactions,omitempty"`
@@ -75,6 +78,9 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 	a.mu.Lock()
 	tx, err := a.DB.Begin()
 	if err == nil {
+		if in.Operation == "create_period" {
+			exact.PeriodEffects, err = prepareMCPPeriod(tx, in.Period)
+		}
 		if in.Operation == "update_budget_alerts" {
 			exact.BudgetAlertBefore, err = prepareMCPBudgetAlerts(tx, identity, in)
 		}
@@ -192,7 +198,11 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 			exact.Before, err = data(tx, "SELECT id,"+accountField+",pattern,category_id,direction,priority,enabled,spending_group_id,version FROM "+table+" WHERE id=?", id)
 		}
 		if err == nil {
-			_, err = a.executeMCPChange(tx, identity, exact, "")
+			var simulated any
+			simulated, err = a.executeMCPChange(tx, identity, exact, "")
+			if err == nil && in.Operation == "create_period" {
+				exact.PeriodAfter, err = budgetEvidenceTx(tx, num(simulated.(map[string]any)["id"]))
+			}
 			if err == nil && in.Operation == "update_budget_alerts" {
 				exact.BudgetAlertAfter, err = readMCPBudgetAlertSelection(tx, identity.User, in.BudgetAlerts)
 			}
@@ -282,6 +292,12 @@ func (a *App) executeMCPChange(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	b := exact.Change
 	result := map[string]any{"ok": true}
 	switch b.Operation {
+	case "create_period":
+		id, err := a.applyMCPPeriod(tx, identity, exact, proposal != "")
+		if err != nil {
+			return nil, err
+		}
+		result["id"], result["name"], result["start_date"], result["end_date"], result["version"] = id, b.Period.Name, b.Period.Start, b.Period.End, int64(1)
 	case "update_budget_alerts":
 		if err := a.applyMCPBudgetAlerts(tx, identity, exact); err != nil {
 			return nil, err
@@ -639,6 +655,8 @@ func (a *App) mcpAuditEvidence(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	evidence := []map[string]any{}
 	b := exact.Change
 	switch b.Operation {
+	case "create_period":
+		evidence = append(evidence, map[string]any{"entity": "period", "id": result["id"], "before": nil, "after": result, "effects": exact.PeriodEffects, "budget": exact.PeriodAfter})
 	case "update_budget_alerts":
 		after, err := readMCPBudgetAlertSelection(tx, identity.User, b.BudgetAlerts)
 		if err != nil {

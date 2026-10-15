@@ -113,3 +113,6 @@ expenses are explicit. The full group/category breakdown is independent of dashb
 pagination. Positive net category amounts form ribbons. Negative/zero amounts stay in
 the accessible breakdown; a refund explanation reconciles positive flows to net spending.
 Percentages use net period spending and are unavailable for zero/negative period totals.
+
+
+MCP connections can explicitly grant shared budget-period creation with exact reassignment and copied recurring-budget previews. The owner can explicitly select YOLO to enable every currently supported read/change permission and automatic approval type; existing grants remain unchanged and current authorization/validation/audit checks remain mandatory.
