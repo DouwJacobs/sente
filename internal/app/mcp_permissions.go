@@ -12,6 +12,7 @@ import (
 )
 
 type mcpCapabilities struct {
+	CreatePeriod        bool `json:"create_period"`
 	ManageBudgetAlerts  bool `json:"manage_budget_alerts"`
 	ManageMerchants     bool `json:"manage_merchants"`
 	ManageMerchantRules bool `json:"manage_merchant_rules"`
@@ -203,6 +204,10 @@ func (a *App) authorizeMCPExact(q queryer, identity mcpIdentity, exact mcpExactC
 				return denied
 			}
 		}
+	case "create_period":
+		if !c.CreatePeriod || !identity.User.Member || p.Constraints.SelectedAccounts || len(p.Constraints.AccountIDs) > 0 {
+			return denied
+		}
 	case "update_budget":
 		if !c.UpdateBudget || !identity.User.Member || len(p.Constraints.AccountIDs) > 0 {
 			return denied
@@ -266,6 +271,11 @@ func (a *App) validateMCPPermissions(q queryer, u User, p mcpPermissions) (mcpPe
 		p.Capabilities = legacyMCPPermissions(true).Capabilities
 		p.Constraints.MissingOnly = false
 		p.Constraints.ConstrainedRules = false
+	case "yolo":
+		p.ReadContext, p.ReadMerchants, p.ReadBudgetAlerts = true, true, true
+		p.Capabilities = allMCPCapabilities()
+		p.Automatic = p.Capabilities
+		p.Constraints = mcpConstraints{}
 	case "custom":
 	default:
 		return p, fail(400, "Choose a permission preset")
@@ -297,7 +307,7 @@ func (a *App) validateMCPPermissions(q queryer, u User, p mcpPermissions) (mcpPe
 	if p.Constraints.MissingOnly && (p.Capabilities.FinancialEdit || p.Capabilities.Recategorize) {
 		return p, fail(400, "Missing-category-only access cannot include financial edits or recategorization")
 	}
-	if len(p.Constraints.AccountIDs) > 0 && p.Capabilities.UpdateBudget {
+	if len(p.Constraints.AccountIDs) > 0 && (p.Capabilities.UpdateBudget || p.Capabilities.CreatePeriod) {
 		return p, fail(400, "Shared budget editing requires all accessible accounts")
 	}
 	if (p.ReadBudgetAlerts || p.Capabilities.ManageBudgetAlerts) && (!u.Member || len(p.Constraints.AccountIDs) > 0) {
@@ -409,6 +419,8 @@ func mcpRequiredCapabilities(exact mcpExactChange) mcpCapabilities {
 		needed.DeleteRule = true
 	case "update_budget_alerts":
 		needed.ManageBudgetAlerts = true
+	case "create_period":
+		needed.CreatePeriod = true
 	case "update_budget":
 		needed.UpdateBudget = true
 	case "edit_transactions":
@@ -457,4 +469,15 @@ func (a *App) mcpAutomaticApproval(q queryer, identity mcpIdentity, exact mcpExa
 	}
 	needed := mcpRequiredCapabilities(exact)
 	return needed != (mcpCapabilities{}) && mcpCapabilitiesContain(p.Automatic, needed), nil
+}
+
+// Explicit preset selection grants the current supported catalogue only. Stored
+// permissions are never regenerated when the catalogue later grows.
+func allMCPCapabilities() mcpCapabilities {
+	var c mcpCapabilities
+	v := reflect.ValueOf(&c).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		v.Field(i).SetBool(true)
+	}
+	return c
 }

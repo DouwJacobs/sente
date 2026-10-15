@@ -3,7 +3,7 @@ import {test,expect,type Page} from '@playwright/test'
 import {createHash} from 'node:crypto'
 test.setTimeout(180000)
 
-async function connect(page:Page,name:string,write=true){
+async function connect(page:Page,name:string,write=true,preset="finance"){
  const metadata=await (await page.request.get('/.well-known/oauth-authorization-server')).json()
  const endpoint=metadata.issuer+'/api/mcp',redirect='http://127.0.0.1:43210/callback'
  const registration=await page.request.post(metadata.registration_endpoint,{data:{client_name:name,redirect_uris:[redirect],token_endpoint_auth_method:'none'}})
@@ -19,7 +19,7 @@ async function connect(page:Page,name:string,write=true){
  }
  await expect(page.getByRole('heading',{name:'Approve agent connection',exact:true})).toBeVisible()
  await expect(page.getByLabel('Permission level',{exact:true})).toHaveValue('review')
- if(write)await page.getByLabel('Permission level',{exact:true}).selectOption('finance')
+ if(write)await page.getByLabel('Permission level',{exact:true}).selectOption(preset)
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
  await page.getByRole('button',{name:'Approve connection',exact:true}).click()
  await page.waitForURL(redirect+'**');const callback=new URL(page.url());expect(callback.searchParams.get('state')).toBe('synthetic-state');expect(callback.searchParams.get('iss')).toBe(metadata.issuer)
@@ -318,4 +318,36 @@ for (const {width, theme} of desktopPhoneCases) test(`MCP personal budget alert 
  expect(defaults.enabled).toBe(true); expect(defaults.threshold).toBeNull();
  await access.getByRole('button', {name:'Revoke', exact:true}).click();
  await expect(access).toHaveCount(0);
+});
+
+for (const {width,theme} of desktopPhoneCases) test(`YOLO period creation and disabling ${width} ${theme}`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme);
+ const name=`YOLO synthetic ${width} ${theme}`;
+ const {token,endpoint}=await connect(page,name,true,'yolo');
+ const call=async(name:string,args:any)=>{
+  const response=await page.request.post(endpoint,{headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json',Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25'},data:{jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}}});
+  expect(response.status()).toBe(200); const body=await response.json();expect(body.error).toBeUndefined();
+  return {error:!!body.result.isError,value:JSON.parse(body.result.content[0].text)};
+ };
+ if(width===360){await page.getByRole('navigation',{name:'Mobile navigation',exact:true}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()}else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click();
+ await page.getByRole('tab',{name:'MCP',exact:true}).click();
+ const access=page.locator('.mcp-access-row').filter({hasText:name});
+ await expect(access).toContainText('YOLO · all permissions');
+ const prepared=await call('prepare_change',{operation:'create_period',period:{name:'Future synthetic',start_date:`${width===360?2040:2042}-11-20`,end_date:`${width===360?2040:2042}-12-19`}});
+ expect(prepared.error).toBe(false);expect(prepared.value.status).toBe('approved');
+ await page.getByRole('button',{name:'Refresh proposals',exact:true}).click();
+ const proposal=page.locator('.mcp-proposal').filter({hasText:prepared.value.proposal_id.slice(0,8)});
+ await proposal.getByText('Inspect exact changes (amounts in cents)',{exact:true}).click();
+ await expect(proposal).toContainText('transaction reassignment and recurring budget source');
+ const applied=await call('apply_change',{proposal_id:prepared.value.proposal_id});expect(applied.error).toBe(false);expect(applied.value.start_date).toBe(`${width===360?2040:2042}-11-20`);
+ expect((await call('apply_change',{proposal_id:prepared.value.proposal_id})).value.id).toBe(applied.value.id);
+ await access.getByRole('button',{name:'Edit permissions',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:`Permissions for ${name}`});
+ await dialog.getByLabel('Permission level',{exact:true}).selectOption('review');
+ await dialog.getByLabel('Confirm permissions',{exact:true}).selectOption('confirmed');
+ await dialog.getByRole('button',{name:'Save permissions',exact:true}).click();
+ await expect(dialog).not.toBeVisible();
+ expect((await call('prepare_change',{operation:'create_period',period:{name:'Denied',start_date:'2041-01-01',end_date:'2041-01-31'}})).error).toBe(true);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

@@ -507,3 +507,31 @@ records but retained migration-31 columns. Reused the synthetic column-removal
 helper before those historical replays. Production migration behavior is unchanged.
 All three rollback/retry/history-preservation tests passed under race (13.506s).
 The full CI gate must pass again on the pushed revision before merging.
+
+## MCP period creation and explicit YOLO consent — 15 October 2026
+
+Issue #107 is implemented on `codex/mcp-period-creation-yolo` from development
+`a3f2aca`. MCP period creation shares the browser transaction service, with exact
+reassignment and recurring-budget effects, stale checks, once-only apply and audit.
+Separate default-off creation consent and automatic approval are included in shared
+OAuth/Settings controls and the owner-approved explicit YOLO preset. Existing
+connections retain stored grants; no migration or financial read-field expansion.
+Verification results are recorded after checks complete. No production data, live
+banking, deployment or manual visual inspection is involved.
+
+Final #107 verification: Go vet passed; affected MCP permission/OAuth/automatic/
+privacy race run completed with only the revoked-token test-helper expectation
+failing. After correcting that assertion, all period tests passed under race
+(31.947s); financial domain packages passed. Frontend 21 tests and production
+build passed (existing bundle-size advisory). Eight existing MCP browser cases
+passed; the new phone/desktop YOLO cases both passed on the final recheck. The
+initial desktop fixture reused the phone period dates, correctly hit the duplicate
+guard and was corrected to use distinct dates. No manual visual inspection.
+
+
+Combined PR integration — 15 October 2026: PR #110 passed its complete GitHub
+verification gate and merged as 7833b27. Resolved the remaining PR #109 overlap
+by retaining both period and merchant proposal evidence, both operation descriptions
+and both documentation additions. Combined period/merchant MCP and the three
+upgrade-fixture race tests passed (65.422s); Go vet, 21 frontend tests and production
+build passed. Final GitHub CI on the integrated #109 revision remains the merge gate.

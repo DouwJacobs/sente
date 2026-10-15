@@ -103,3 +103,5 @@ Chromium packaging belongs to the Dockerfile; no syscall preload adapter remains
 
 
 `merchant_rule_schema.go` owns migration 31 for per-rule classifications; `features/merchants/MerchantRuleEditor.tsx` owns the mounted merchant/rule/logo/classification draft. Organisation composes rule lists and previews; GlobalSearch uses the same editor.
+
+`mcp_periods.go` owns typed MCP period creation and exact effect checks; periods.go owns the browser-shared authorized period creation transaction service.
