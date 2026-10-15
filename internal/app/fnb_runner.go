@@ -62,9 +62,13 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 	var secret []byte
 	var interval int
 	var debug bool
-	var state string
-	if err := a.DB.QueryRow("SELECT secret,interval_hours,state,debug_browser FROM fnb_connections WHERE user_id=?", owner).Scan(&secret, &interval, &state, &debug); err != nil {
+	var state, dailyTime, calendarJSON string
+	if err := a.DB.QueryRow("SELECT secret,interval_hours,state,debug_browser,daily_time,schedule_json FROM fnb_connections WHERE user_id=?", owner).Scan(&secret, &interval, &state, &debug, &dailyTime, &calendarJSON); err != nil {
 		return nil, fail(404, "Connect FNB first")
+	}
+	calendar, calendarErr := parseFNBCalendar(calendarJSON)
+	if calendarErr != nil {
+		return nil, fail(503, "Saved refresh schedule is invalid")
 	}
 	u.fnbCredentialHash = hash(string(secret))
 	if !manual && state != "ready" {
@@ -217,9 +221,9 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 		a.DB.Exec("UPDATE fnb_connections SET state='action_required',last_error=?,last_diagnostics=?,next_due=NULL,version=version+1 WHERE user_id=?", code, fnbDiagnosticJSON(snapshot.Diagnostics), owner)
 		return nil, fail(502, "FNB refresh needs attention: "+code)
 	}
-	var due any = nil
-	if interval > 0 {
-		due = time.Now().Add(time.Duration(interval) * time.Hour).Unix()
+	due := nextFNBDue(time.Now(), interval, dailyTime)
+	if calendar != nil {
+		due = nextFNBCalendarDue(time.Now(), calendar)
 	}
 	if transactions && manual {
 		// Account balance dates and last successful balance refresh remain accurate.

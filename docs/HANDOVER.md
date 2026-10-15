@@ -556,3 +556,33 @@ MCP recheck follow-up: corrected list_rules to honor its advertised q filter ove
 
 
 PR #111 CI follow-up: the first GitHub run passed backend race/static/unit/build gates but found two obsolete transaction-editor browser heading assertions. Updated the heading, scoped transaction/toast locators and explicitly dismissed the new backfill offer. All four transaction-editor cases passed locally with synthetic data. Product/MCP/schema/financial behavior is unchanged; the new PR revision requires its own green CI gate.
+
+
+## Daily FNB clock-time refresh — 15 October 2026
+
+On codex/daily-bank-refresh in the original WSL checkout, Settings → Banking → Automatic refresh adds Daily at a set time (default 12:00, Africa/Johannesburg). Existing interval/off settings remain compatible. Migration 33 appends default-empty daily_time; shared next-due calculation preserves the clock after manual/scheduled completion and advances past missed days. An overdue schedule runs once on the next serving scheduler tick. Attention-required pauses, owner authorization, account grants, serialized connector runs, version checks and audit stay in place. Scheduling drafts survive status polling. Replacing credentials clears both interval/daily schedules.
+
+MCP impact: FNB credentials/settings/scheduling remain browser-only administration. No MCP tools, input schemas, output allowlists, consent, proposal previews or financial services expand; daily_time is exposed only by the existing owner-admin browser status route. No live bank run, production data access, deployment or manual visual inspection. Actual check results are in VERIFICATION.md.
+
+
+## Friendly scheduling and Accounts & banking — 15 October 2026
+
+Continuation on codex/daily-bank-refresh: the owner requested cron-like flexibility with plain-language controls and one combined settings tab. The builder offers daily/selected-weekday/monthly schedules, up to 12 distinct clock times, weekday/weekend shortcuts, explicit monthly dates and/or last day, plus custom whole-hour intervals 1–168. All clock times are SAST; missing month dates skip that month, rather than moving to a different date. Live summaries use readable names/times. One overdue run after downtime, attention-required pauses, owner/access checks, versioning and credential-reset scheduling pauses remain.
+
+Migration 34 appends schedule_json without changing migration 33 or older records. Existing daily_time/interval settings work until explicitly replaced; the status route returns validated structured schedule data, excluding raw storage. Legacy migration fixtures now remove both added schedule columns before replay.
+
+Accounts & banking combines the existing account-workspace shortcut and FNB settings. Former accounts settings sections resolve to banking, without a duplicate tab. Account management, discovery and user grants retain their owning screens/permissions. Scheduling drafts survive tab switches; credential drafts retain the existing clear-on-departure policy. No bank session starts from viewing/saving settings.
+
+MCP assessment: scheduling/account administration remain browser-only. No tools, input/output allowlists, connection consent, financial services or proposal effects expand. New browser schedule fields are owner-admin scoped and audited. No real data, live banking, manual visual inspection or deployment. Actual final verification follows in VERIFICATION.md.
+
+
+## Calm Accounts & banking and pause explanations — 15 October 2026
+
+Owner requested less visual stimulation and a clear pause reason. The tab now has one FNB connection card: plain status, last/next refresh, one stable Refresh now button and quiet Open Accounts/Get transactions footer links. Automatic refresh and Connection options are collapsed; login/browser controls remain reachable, with technical diagnostics and disconnect further collapsed. Removed duplicate account card, status badge and repeated helper/action blocks. Credentials continue clearing on tab departure, and schedule drafts/pending locks remain intact.
+
+Pause copy uses the existing recorded last_error to explain interrupted updates, phone approval, session/logout problems, unavailable runtime/key and verification failures. It gives recovery instructions and explicitly says the saved schedule resumes after success. Unknown reasons use bounded generic copy, without displaying untrusted identifiers in the main explanation. Technical error code/counts remain available under Connection options → Troubleshooting details. Running jobs now display Update in progress instead of the misleading Paused fallback. Saving a schedule still does not unpause a failed connection or initiate a bank run.
+
+FNBConnectionOptions owns optional controls; fnbConnectionStatus owns browser-only readable status/recovery mapping. No backend services, API/MCP fields, grants, consent, proposals or migrations change in this UI follow-up. No live banking, owner data, manual visual inspection or deployment. Actual synthetic verification is recorded in VERIFICATION.md.
+
+
+PR #112 CI follow-up — 15 October 2026: the complete backend race gate passed 467 tests but found the older optional-rule migration-32 fixture using the entire latest migration registry with a fixed target of 32. Pin its registry slice to schema 32 for failure/retry/restart checks, and require the injected rollback error so registry mismatches cannot masquerade as a successful rollback test. Production migration behavior is unchanged. The corrected test passed locally under race (2.459s). The pushed revision requires a fresh complete GitHub gate before merging to development.

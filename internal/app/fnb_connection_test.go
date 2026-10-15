@@ -40,7 +40,7 @@ func TestFNBSecretsPermissionsAndSchedule(t *testing.T) {
 	status(t, e.req(t, 2, "/api/fnb", "GET", nil), 403)
 	status(t, e.req(t, 1, "/api/fnb/schedule", "PUT", map[string]any{"interval_hours": 24, "version": 1}), 200)
 	status(t, e.req(t, 1, "/api/fnb/schedule", "PUT", map[string]any{"interval_hours": 6, "version": 1}), 409)
-	status(t, e.req(t, 1, "/api/fnb/schedule", "PUT", map[string]any{"interval_hours": 1, "version": 2}), 400)
+	status(t, e.req(t, 1, "/api/fnb/schedule", "PUT", map[string]any{"interval_hours": 169, "version": 2}), 400)
 	e.a.DB.Exec("UPDATE users SET admin=1 WHERE id=2")
 	response := e.req(t, 2, "/api/fnb", "GET", nil)
 	status(t, response, 200)

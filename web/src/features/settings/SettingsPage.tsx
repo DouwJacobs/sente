@@ -86,8 +86,7 @@ export function SettingsPage({
           ...(data.user.budget_member
             ? [{ id: "configuration", label: "Configuration" }]
             : []),
-          { id: "banking", label: "Banking" },
-          { id: "accounts", label: "Accounts" },
+          { id: "banking", label: "Accounts & banking" },
           { id: "access", label: "Users & access" },
           { id: "backups", label: "Backups" },
           { id: "network", label: "Network" },
@@ -99,7 +98,10 @@ export function SettingsPage({
     { id: "security", label: "Security" },
     { id: "about", label: "About" },
   ];
-  const active = tabs.some((tab) => tab.id === section) ? section : "general";
+  const resolvedSection = section === "accounts" ? "banking" : section;
+  const active = tabs.some((tab) => tab.id === resolvedSection) ? resolvedSection : "general";
+  const [bankingVisited, setBankingVisited] = useState(resolvedSection === "banking");
+  useEffect(() => { if (active === "banking") setBankingVisited(true); }, [active]);
   const panel = (id: string) => ({
     id: "settings-panel-" + id,
     role: "tabpanel",
@@ -154,15 +156,18 @@ export function SettingsPage({
             </div>
           )}
           <div {...panel("banking")}>
-            {active === "banking" && (
-              <FNBConnection
-                onAccounts={onAccounts}
-                onTransactions={onTransactions}
-                data={data}
-                revision={revision}
-                refresh={refresh}
-                notify={notify}
-              />
+            {(bankingVisited || active === "banking") && (
+              <div className="accounts-banking-settings">
+                <FNBConnection
+                  onAccounts={onAccounts}
+                  active={active === "banking"}
+                  onTransactions={onTransactions}
+                  data={data}
+                  revision={revision}
+                  refresh={refresh}
+                  notify={notify}
+                />
+              </div>
             )}
           </div>
           <div {...panel("network")}>
@@ -173,18 +178,6 @@ export function SettingsPage({
                 refresh={refresh}
                 notify={notify}
               />
-            )}
-          </div>
-          <div {...panel("accounts")}>
-            {active === "accounts" && (
-              <section className="panel">
-                <h2>Manage your accounts</h2>
-                <p className="muted">
-                  Account discovery, names, sharing, balances and visibility are
-                  together on Accounts.
-                </p>
-                <Button onClick={onAccounts}>Open Accounts</Button>
-              </section>
             )}
           </div>
           <div {...panel("access")}>

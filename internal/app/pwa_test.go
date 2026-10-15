@@ -108,7 +108,7 @@ func TestPWAIconValidationAndRevokedActor(t *testing.T) {
 }
 func TestPWAMigrationRollbackRetryPreservation(t *testing.T) {
 	e := setup(t)
-	removeMerchantRuleClassificationFixtureColumns(t, e.a.DB)
+	removePost30FixtureColumns(t, e.a.DB)
 	migrationExec(t, e.a.DB, "DROP TABLE notification_budget_scopes; DROP TABLE notification_budget_preferences; DROP TABLE app_identity; DELETE FROM migrations WHERE version>=28")
 	protected := []string{"SELECT * FROM transactions", "SELECT * FROM allocations", "SELECT * FROM grants", "SELECT * FROM sessions", "SELECT * FROM workspace_branding", "SELECT * FROM audit", "SELECT * FROM mcp_tokens"}
 	before := migrationSnapshot(t, e.a.DB, protected...)

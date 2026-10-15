@@ -122,7 +122,7 @@ func TestScopedBudgetPreferenceValidationAtomicityAndPrivacy(t *testing.T) {
 }
 func TestScopedBudgetPreferenceMigrationPreservesConsumedHistory(t *testing.T) {
 	e := scopedAlertFixture(t)
-	removeMerchantRuleClassificationFixtureColumns(t, e.a.DB)
+	removePost30FixtureColumns(t, e.a.DB)
 	migrationExec(t, e.a.DB, "DROP TABLE notification_budget_scopes; DROP TABLE notification_budget_preferences; DELETE FROM migrations WHERE version>=29")
 	old := fmt.Sprintf("household-budget:%d:category:%d:threshold:75", 1, 1)
 	migrationExec(t, e.a.DB, fmt.Sprintf("INSERT INTO notification_conditions(user_id,type,scope_hash,active,cycle,consumed,last_sent,evaluated_at,evaluated_run) VALUES(1,'budget_threshold','%s',1,1,1,123,456,0)", hash(old)))
@@ -183,7 +183,7 @@ func TestScopedBudgetDisableCancelsQueuedPush(t *testing.T) {
 }
 func TestScopedBudgetMigrationRollbackRetryAndFinancialPreservation(t *testing.T) {
 	e := scopedAlertFixture(t)
-	removeMerchantRuleClassificationFixtureColumns(t, e.a.DB)
+	removePost30FixtureColumns(t, e.a.DB)
 	alertTransaction(t, e, 1, 1, -1234, "2026-10-08")
 	migrationExec(t, e.a.DB, "DROP TABLE notification_budget_scopes; DROP TABLE notification_budget_preferences; DELETE FROM migrations WHERE version>=29; CREATE TRIGGER reject_scope_version BEFORE INSERT ON migrations WHEN NEW.version=30 BEGIN SELECT RAISE(ABORT,'synthetic migration failure'); END")
 	if err := migrate(e.a.DB); err == nil {

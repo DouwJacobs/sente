@@ -13,7 +13,7 @@ func (a *App) fnbStatus(w http.ResponseWriter, r *http.Request) error {
 	if err := requireAdmin(u); err != nil {
 		return err
 	}
-	rows, err := data(a.DB, "SELECT interval_hours,state,last_attempt,last_success,next_due,last_error,last_skipped,debug_browser,last_diagnostics,version FROM fnb_connections WHERE user_id=?", u.ID)
+	rows, err := data(a.DB, "SELECT interval_hours,daily_time,schedule_json,state,last_attempt,last_success,next_due,last_error,last_skipped,debug_browser,last_diagnostics,version FROM fnb_connections WHERE user_id=?", u.ID)
 	if err != nil {
 		return err
 	}
@@ -27,6 +27,12 @@ func (a *App) fnbStatus(w http.ResponseWriter, r *http.Request) error {
 	var connection any = nil
 	if len(rows) > 0 {
 		connection = rows[0]
+		calendar, err := parseFNBCalendar(rows[0]["schedule_json"].(string))
+		if err != nil {
+			return err
+		}
+		rows[0]["schedule"] = calendar
+		delete(rows[0], "schedule_json")
 		var diagnostics map[string]int
 		if text, ok := rows[0]["last_diagnostics"].(string); ok {
 			json.Unmarshal([]byte(text), &diagnostics)
@@ -83,7 +89,7 @@ func (a *App) fnbConnect(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		if exists {
-			res, err := tx.Exec("UPDATE fnb_connections SET secret=?,state='ready',last_error='',next_due=NULL,interval_hours=0,version=version+1 WHERE user_id=? AND version=?", secret, u.ID, b.Version)
+			res, err := tx.Exec("UPDATE fnb_connections SET secret=?,state='ready',last_error='',next_due=NULL,interval_hours=0,daily_time='',schedule_json='',version=version+1 WHERE user_id=? AND version=?", secret, u.ID, b.Version)
 			if err != nil {
 				return err
 			}
@@ -112,31 +118,48 @@ func (a *App) fnbSchedule(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var b struct {
-		Hours   int   `json:"interval_hours"`
-		Version int64 `json:"version"`
+		Hours     int                  `json:"interval_hours"`
+		DailyTime string               `json:"daily_time"`
+		Schedule  *fnbCalendarSchedule `json:"schedule"`
+		Version   int64                `json:"version"`
 	}
 	if err := decode(r, &b); err != nil {
 		return err
 	}
-	if b.Hours != 0 && b.Hours != 6 && b.Hours != 12 && b.Hours != 24 && b.Hours != 168 {
-		return fail(400, "Choose a supported refresh interval")
+	if b.Hours < 0 || b.Hours > 168 {
+		return fail(400, "Choose a whole-hour interval from 1 to 168, or turn automatic refresh off")
 	}
-	var due any = nil
-	if b.Hours > 0 {
-		due = time.Now().Add(time.Duration(b.Hours) * time.Hour).Unix()
+	if b.DailyTime != "" && (!validFNBDailyTime(b.DailyTime) || b.Hours != 0) {
+		return fail(400, "Choose a daily time in HH:MM format without an interval")
+	}
+	due := nextFNBDue(time.Now(), b.Hours, b.DailyTime)
+	calendarJSON := ""
+	if b.Schedule != nil {
+		if b.Hours != 0 || b.DailyTime != "" {
+			return fail(400, "Choose either an interval or a calendar schedule")
+		}
+		if err := b.Schedule.validate(); err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(b.Schedule)
+		if err != nil {
+			return err
+		}
+		calendarJSON = string(encoded)
+		due = nextFNBCalendarDue(time.Now(), b.Schedule)
 	}
 	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		if err := requireAdmin(u); err != nil {
 			return err
 		}
-		res, err := tx.Exec("UPDATE fnb_connections SET interval_hours=?,next_due=?,version=version+1 WHERE user_id=? AND version=? AND state!='refreshing'", b.Hours, due, u.ID, b.Version)
+		res, err := tx.Exec("UPDATE fnb_connections SET interval_hours=?,daily_time=?,schedule_json=?,next_due=?,version=version+1 WHERE user_id=? AND version=? AND state!='refreshing'", b.Hours, b.DailyTime, calendarJSON, due, u.ID, b.Version)
 		if err != nil {
 			return err
 		}
 		if err = affected(res); err != nil {
 			return err
 		}
-		return audit(tx, u, nil, "fnb_connection", u.ID, "schedule_updated", map[string]int{"interval_hours": b.Hours})
+		return audit(tx, u, nil, "fnb_connection", u.ID, "schedule_updated", map[string]any{"interval_hours": b.Hours, "daily_time": b.DailyTime, "schedule": b.Schedule})
 	})
 	if err != nil {
 		return err

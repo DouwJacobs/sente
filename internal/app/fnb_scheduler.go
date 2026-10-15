@@ -23,7 +23,7 @@ func (a *App) StartFNBScheduler() {
 }
 
 func (a *App) refreshDueFNB(now time.Time) {
-	rows, err := data(a.DB, "SELECT c.user_id FROM fnb_connections c JOIN users u ON u.id=c.user_id WHERE c.state='ready' AND c.interval_hours>0 AND c.next_due<=? AND u.admin=1 AND u.disabled=0", now.Unix())
+	rows, err := data(a.DB, "SELECT c.user_id FROM fnb_connections c JOIN users u ON u.id=c.user_id WHERE c.state='ready' AND (c.interval_hours>0 OR c.daily_time!='' OR c.schedule_json!='') AND c.next_due<=? AND u.admin=1 AND u.disabled=0", now.Unix())
 	if err != nil {
 		return
 	}

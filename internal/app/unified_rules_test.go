@@ -219,7 +219,8 @@ func TestOptionalRuleMigrationPreservesAndRollsBack(t *testing.T) {
 		t.Fatal(err)
 	}
 	migrationExec(t, db, "INSERT INTO users(id,username,password) VALUES(1,'synthetic','unused'); INSERT INTO accounts(id,name,bank_id,household) VALUES(1,'Synthetic','synthetic',1); INSERT INTO categories(id,name,group_name,kind) VALUES(1,'Synthetic','','expense'); INSERT INTO rules(id,user_id,account_id,pattern,category_id,version) VALUES(41,1,1,'Synthetic',1,7)")
-	broken := append([]schemaMigration{}, schemaMigrations...)
+	targetSteps := schemaMigrations[:32-migrationBaseline+1]
+	broken := append([]schemaMigration{}, targetSteps...)
 	original := broken[len(broken)-1].apply
 	broken[len(broken)-1].apply = func(tx *sql.Tx, o migrationOrigin) error {
 		if err := original(tx, o); err != nil {
@@ -227,19 +228,19 @@ func TestOptionalRuleMigrationPreservesAndRollsBack(t *testing.T) {
 		}
 		return errors.New("synthetic rollback")
 	}
-	if runSchemaMigrations(db, broken, 32) == nil {
-		t.Fatal("expected failed upgrade")
+	if err = runSchemaMigrations(db, broken, 32); err == nil || !strings.Contains(err.Error(), "synthetic rollback") {
+		t.Fatalf("expected injected rollback, got %v", err)
 	}
 	if queryInt(db, "SELECT MAX(version) FROM migrations") != 31 || queryInt(db, "SELECT version FROM rules WHERE id=41") != 7 {
 		t.Fatal("rollback lost state")
 	}
-	if err = runSchemaMigrations(db, schemaMigrations, 32); err != nil {
+	if err = runSchemaMigrations(db, targetSteps, 32); err != nil {
 		t.Fatal(err)
 	}
 	if queryInt(db, "SELECT category_id FROM rules WHERE id=41") != 1 || queryInt(db, "SELECT version FROM rules WHERE id=41") != 7 {
 		t.Fatal("upgrade changed rule")
 	}
-	if err = runSchemaMigrations(db, schemaMigrations, 32); err != nil {
+	if err = runSchemaMigrations(db, targetSteps, 32); err != nil {
 		t.Fatal(err)
 	}
 }

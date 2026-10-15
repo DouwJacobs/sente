@@ -57,7 +57,7 @@ for(const {width,theme} of [{width:1440,theme:'light'},{width:900,theme:'dark'},
   await expect(page.locator('#page-title')).toHaveText(name)
  }
  // All settings sections share responsive tabs and panels, with roving focus.
- for(const name of ['General','Banking','Accounts','Users & access','Backups','Network','Security']){
+ for(const name of ['General','Accounts & banking','Users & access','Backups','Network','Security']){
   await page.getByRole('tab',{name,exact:true}).click()
   await expect(page.getByRole('tabpanel',{name,exact:true})).toBeVisible()
   await fit(page)

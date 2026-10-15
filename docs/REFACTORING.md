@@ -112,3 +112,10 @@ Unified rules: internal/app/unified_rules.go owns the browser catalogue, complet
 web/src/features/rules owns RulesPage, UnifiedRuleEditor, RuleBackfill and explicit reference adapters. Rules.tsx and the merchant editor path are thin compatibility exports; Categories and GlobalSearch use the shared workflow. TransactionEditor retains its saved-rule offer until the owner closes or applies it, preserving review navigation callbacks.
 
 transaction_rules.go owns future-only category/merchant rule creation from a saved browser transaction; MCP transaction patches do not expose that optional browser input.
+
+
+FNB clock-time scheduling belongs to internal/app/fnb_schedule.go (migration 33, strict HH:MM validation and next-due calculation). The browser schedule form lives in web/src/features/settings/FNBRefreshSchedule.tsx, composed by FNBConnection with its existing request lock.
+
+Calendar scheduling is owned by internal/app/fnb_calendar.go (migration 34, canonical validation, bounded future occurrences), with the existing browser handler/runner/scheduler calling it. features/settings/fnbSchedule.ts owns readable browser summaries/input helpers. SettingsPage composes the merged Accounts & banking panel and retains only its visited content; FNBConnection clears credential drafts on tab departure.
+
+The calm banking overview composes features/settings/FNBConnectionOptions.tsx for optional browser/login/diagnostic/disconnect controls. features/settings/fnbConnectionStatus.ts maps existing state/error fields to readable status and recovery; FNBConnection retains credential drafts, request locks and authorized API callbacks. No transport or financial invariant changes accompany these UI boundaries.
