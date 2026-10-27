@@ -1316,3 +1316,55 @@ Actual verification:
 - git diff --check passed. No full backend-suite rerun, manual visual inspection,
   live bank session, external MCP-client certification, image publication or
   production deployment is claimed.
+
+
+## Local development publication — 27 October 2026 (complete)
+
+Owner authorized committing/pushing the pending split-group and duplicate-cleanup
+work and publishing the development Docker image locally instead of Actions.
+Published `0.1.3-beta.40.local.20261027.1` from `91c0eaa56c49ebfbbb0f8a5f7c7e0c3d92e484ab` to `douwjacobs/sente:development`
+and `:beta`, plus the immutable version/SHA tags. Verified digest:
+`sha256:a555d003f29c703dd087fff56e816fce3ecee911ebc5a459bf5d774cb951a822`. Stable main/latest images and the production homelab
+installation/data were not changed. Commits use [skip ci].
+
+Release and attached local verification/source/checksum evidence:
+https://github.com/DouwJacobs/sente/releases/tag/v0.1.3-beta.40.local.20261027.1
+
+Full local verification covered 302 passing application tests with race detection,
+plus the two configured optional external-fixture skips (public starter pull and
+supplied real exports), all five financial/release domain packages, Go vet, CI and
+release regression checks, active FNB worker/DOM and demo invariants, 30 frontend
+unit tests and all 60 browser specs (274 passing
+cases; 0 skipped browser cases). The initial
+long app-package run was deliberately stopped before its timeout; completed test
+passes were retained and every remaining top-level test ran in two bounded race
+batches. The recorded test-name set covers all 304 application tests.
+
+The initial image build rejected an unavailable Chromium pin; the verified image
+uses native Alpine Chromium 155.0.8059.84-r0. Hardened acceptance passed non-root/
+read-only/namespace/seccomp and private-pipe checks, caught stack overflow,
+synthetic login/loopback networking, fresh onboarding/metadata/MCP, persistence,
+backup/restore/session invalidation, frozen v22 upgrade/integrity/once-only restart
+and FNB key creation/replacement/backup/recovery. No live bank session or manual
+visual/physical-device verification was performed.
+
+Corrected two obsolete test assumptions: image upgrade comparison now preserves
+every original column and separately validates new split defaults/empty removal
+archive; the unassigned-group browser test now verifies the explicit No spending
+group label. The full browser run passed 54 specs before that assertion failure;
+its corrected spec and remaining five specs then passed. An intermediate image
+with stale revision metadata was rejected before publication; the final OCI
+configuration and browser/MCP metadata identify the published source revision.
+
+Migrations 35/36 and the default-off MCP merge/delete capabilities are called out
+in the release notes. Take a pre-upgrade backup before updating a deployed
+installation; reverting an image does not reverse migrations. Detailed local
+logs remain ignored under work/local-release-20261027; the release includes the
+public verification receipt. No financial records or credentials were committed.
+
+Publication tooling: WSL Skopeo 1.4.1 lacked --preserve-digests; publication
+therefore used the official Skopeo 1.22.3 container pinned at
+quay.io/skopeo/stable@sha256:f7010199a5d7d0dcb5e4f5312701b683e8c96976dab621cc2254a177b382039e.
+The exact OCI index/digest, anonymous access, immutable identities and both channel
+digests were verified. Registry credentials were handled privately through a
+temporary auth mount and were not logged, included in builds or committed.

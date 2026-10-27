@@ -666,3 +666,14 @@ unassigned-group filter assertion still expecting hidden labels. The accepted
 split-group UI explicitly shows No spending group; assert that exact label and
 the absence of assigned group names, then run this and the remaining five specs.
 Application behavior is unchanged by this fixture update.
+
+
+Local development publication completed: `0.1.3-beta.40.local.20261027.1` from
+`91c0eaa56c49ebfbbb0f8a5f7c7e0c3d92e484ab` is available as development/beta and immutable version/SHA tags,
+verified at `sha256:a555d003f29c703dd087fff56e816fce3ecee911ebc5a459bf5d774cb951a822`. Release/evidence: https://github.com/DouwJacobs/sente/releases/tag/v0.1.3-beta.40.local.20261027.1
+302 application race tests passed (two configured optional-fixture skips), domain/
+vet/worker/demo checks, 30 frontend unit tests and all 60 browser specs
+(274 cases) passed. Final exact-revision hardened
+image acceptance passed. See VERIFICATION.md for batching, corrected fixtures and
+limits. Stable images and the production homelab were untouched. A documentation-
+only follow-up records the outcome; the image retains its verified source revision.
