@@ -643,3 +643,14 @@ Final cleanup verification: affected backend/domain race tests and vet passed; a
 the final two cleanup rechecks passed. A keeper-tag fixture omission and one
 synthetic server-start timeout were corrected/retried. Exact results and limits
 are recorded in VERIFICATION.md. Changes remain local and uncommitted.
+
+## Local development image publication — 27 October 2026
+
+Owner authorized committing/pushing the pending split-group and duplicate-cleanup
+work and locally building/pushing the development Docker image because Actions
+runtime may be exhausted. The source commit uses [skip ci]; local full source and
+hardened image verification replace the hosted run for this publication. The
+initial build found the old edge Chromium package unavailable; pin the available
+155.0.8059.84-r0 patch and verify the actual resulting image. Production application
+containers/data remain untouched. Local evidence is retained under ignored
+work/local-release-20261027 and publication assets; final results follow.

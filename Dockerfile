@@ -42,7 +42,7 @@ LABEL org.opencontainers.image.version="$SENTE_VERSION" \
       org.opencontainers.image.title="Sente" \
       org.opencontainers.image.description="Self-hosted household finance and budgeting" \
       org.opencontainers.image.source="https://github.com/DouwJacobs/sente"
-RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git chromium=155.0.8059.39-r0 xvfb libstdc++ && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git chromium=155.0.8059.84-r0 xvfb libstdc++ && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
 WORKDIR /app
 COPY --from=fnb /usr/local/bin/node /usr/local/bin/node
 COPY --from=fnb /opt/sente/fnb /opt/sente/fnb
