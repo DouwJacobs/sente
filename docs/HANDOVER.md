@@ -691,3 +691,10 @@ owner update; Settings has direct Update YOLO permissions and visible opt-in.
 Custom edits clear it; revocation/access/proposal-effect checks remain. No migration
 or new financial disclosure; schema 36. Synthetic verification is in progress;
 production financial data and the homelab installation remain untouched.
+
+
+Release browser follow-up: the complete source run found an unscoped Transaction
+actions locator in seen.spec.ts matching the closing editor's inert animation copy
+as well as the list menu. Scope the action to All transactions; product behavior
+is unchanged. Recheck this spec and the six remaining specs before publication.
+The final candidate will identify this fixture-fix commit.

@@ -1394,3 +1394,10 @@ reads/capabilities/automatic approvals without rewriting token snapshots or prop
 effects. Existing browser/OAuth confirmation, scope/version/access/audit checks
 remain. Manual browser DELETE shares the removal service and does not require MCP
 consent. No schema migration or new public financial read fields.
+
+
+Release browser follow-up: the complete source run found an unscoped Transaction
+actions locator in seen.spec.ts matching the closing editor's inert animation copy
+as well as the list menu. Scope the action to All transactions; product behavior
+is unchanged. Recheck this spec and the six remaining specs before publication.
+The final candidate will identify this fixture-fix commit.

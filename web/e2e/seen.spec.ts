@@ -33,7 +33,7 @@ for(const {width,theme} of desktopPhoneCases)test(`automatic acceptance and seen
  await expect(editor).toContainText('Unseen by you')
  await editor.getByRole('button',{name:'Close',exact:true}).first().click()
  await expect(first.getByRole('img',{name:'Unseen',exact:true})).toBeVisible()
- if(width===360){await first.press('Space');await page.getByLabel('Transaction actions',{exact:true}).click()}else await page.getByRole('checkbox',{name:'Select '+descriptions[0],exact:true}).check()
+ if(width===360){await first.press('Space');await page.getByRole('tabpanel',{name:'All transactions',exact:true}).getByLabel('Transaction actions',{exact:true}).click()}else await page.getByRole('checkbox',{name:'Select '+descriptions[0],exact:true}).check()
  await page.getByRole('button',{name:'Mark seen (1)',exact:true}).click()
  await expect(first.getByRole('img',{name:'Seen',exact:true})).toBeVisible()
  await page.getByRole('button',{name:'Filters',exact:true}).click()
