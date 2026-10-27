@@ -144,3 +144,13 @@ numbered group/category/amount fields, full-width group and category tracks and 
 group. Last amount is read-only, calculated in exact cents from preceding values;
 invalid partial input clears it. Retain inline validation, drafts and saved group
 overrides, and use each allocation’s effective group in totals and row metadata.
+
+## Manual deletion and YOLO consent
+
+Follow docs/UI.md's Manual transaction deletion and YOLO updates conventions.
+Keep Delete transaction in the editor's shared actions menu with a nested saved-row
+summary, required reason, unsaved-edit warning and shared pending lock. Cancel must
+preserve drafts; success closes/refetches with a toast. Settings must distinguish
+saved YOLO grants from explicit current-and-future consent, offer direct Update YOLO
+permissions and preserve YOLO when toggling that policy. Never silently expand old
+consent or require switching to another preset and back.

@@ -340,8 +340,15 @@ shares context, merchants and personal alerts, enables all currently supported
 change permissions and automatic approval types, and clears optional restrictions.
 It requires ordinary explicit owner consent and OAuth `finance:propose`; read-only
 connections must reconnect to request that scope. Existing connections, legacy and
-finance presets retain their grants. Stored grants are snapshots: future capabilities
-never become enabled just because a connection used YOLO. Editing an individual
+finance presets retain their grants. Existing stored grants remain snapshots unless the owner explicitly enables
+Include future permissions automatically in browser/OAuth consent. With that
+policy, YOLO resolves every registered read/change grant and automatic approval
+type at authorization time, including tools added later. It still requires
+finance:propose and never grants access beyond the owner's current accounts.
+Settings labels snapshot versus current-and-future YOLO and offers Update YOLO
+permissions directly, without switching presets. Saving uses the usual explicit
+confirmation and version check; the agent cannot enable its own consent. Turning
+off the policy freezes the current displayed grants. Editing an individual
 permission changes the mode to Custom. Selecting another preset disables YOLO's
 automatic approvals; revocation/current authorization/financial validation still
 apply to pending and approved proposals. No credentials or additional financial
@@ -377,8 +384,8 @@ their saved consent; automatic remainder calculation never writes by itself.
 
 `prepare_change` adds `merge_transactions` and `delete_transactions`, both through
 separate default-off capabilities and automatic-approval switches. Existing stored
-permissions (including YOLO snapshots) gain neither capability. Selecting YOLO
-again explicitly includes them; Finance, categorization and legacy grants exclude
+permissions (including YOLO snapshots) gain neither capability. Update YOLO permissions explicitly includes them and offers future permission
+consent; Finance, categorization and legacy grants exclude
 them. Missing-category-only connections cannot remove transactions. Current
 connection scope and enabled-account editor access apply at prepare, browser
 approval, apply and applied-result replay.
@@ -417,3 +424,20 @@ running balance/component/fee match automatically; uncertain changed balances,
 references without sufficient balance evidence, or matching date shifts within
 seven days remain Import activity decisions. Posted-only validation remains in place.
 No broad automatic deduplication or existing financial-data migration occurs.
+
+## Manual browser deletion and future YOLO consent — 27 October 2026
+
+DELETE /api/transactions/{id} accepts version, confirmed=true and a nonblank reason
+of at most 500 bytes. Current session/CSRF, enabled-account editor access and exact
+version are rechecked in the same transaction as archival deletion and audit.
+It calls the same removal service as MCP, including linked-transfer rejection,
+rollback and import recognition. This browser action needs no agent connection
+or MCP grant. Manual merging and archive/restore browsing remain outside this UI.
+
+The new include_future_permissions consent flag is valid only for YOLO. Missing
+or false preserves saved grants. True resolves all registered capabilities,
+automatic approvals and top-level read_* flags without rewriting stored tokens
+or pending proposal effects. Existing consent never expands silently. Custom
+permission edits clear the flag; selecting another preset clears it and YOLO
+automatic approval. Revocation, account access and financial checks remain.
+Schema stays 36; no public financial read fields or proposal effects are added.

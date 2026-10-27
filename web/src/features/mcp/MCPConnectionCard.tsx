@@ -11,7 +11,7 @@ export function MCPConnectionCard({
   connection: Row;
   accounts: Row[];
   busy: boolean;
-  onEdit: (connection: Row) => void;
+  onEdit: (connection: Row, updateYOLO?: boolean) => void;
   onRevoke: (connection: Row) => void;
 }) {
   const granted = Object.keys(capabilityLabels).filter(
@@ -25,7 +25,7 @@ export function MCPConnectionCard({
         {
           categorization: "Categorisation",
           finance: "Finance editing",
-          yolo: "YOLO · all permissions",
+          yolo: t.permissions.include_future_permissions ? "YOLO · current and future permissions" : "YOLO · saved permissions",
           legacy_finance: "Finance editing",
         } as Record<string, string>
       )[t.permissions.preset] || "Custom permissions"
@@ -38,6 +38,7 @@ export function MCPConnectionCard({
           {expired && <Badge tone="bad">Expired</Badge>}
         </div>
         <div className="editor-actions">
+          {t.permissions.preset === "yolo" && !t.permissions.include_future_permissions && <Button disabled={busy || expired} onClick={()=>onEdit(t,true)}>Update YOLO permissions</Button>}
           <Button disabled={busy || expired} onClick={() => onEdit(t)}>
             Edit permissions
           </Button>
@@ -74,6 +75,7 @@ export function MCPConnectionCard({
         </div>
       </dl>
       <p className="footnote mcp-context-status">
+        {t.permissions.preset === "yolo" && <>{t.permissions.include_future_permissions ? "New permissions are included automatically." : "New permissions are not included in this saved YOLO connection."}<br/></>}
         Saved context:{" "}
         {t.permissions.read_context ? "Shared with this agent" : "Not shared"}
       </p>

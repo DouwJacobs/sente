@@ -1,4 +1,5 @@
 import {RuleBackfill} from "../rules/RuleBackfill";
+import { DeleteTransaction } from "./DeleteTransaction";
 import type {RuleRef} from "../rules/types";
 import { TransactionExtras } from "./TransactionExtras";
 import { Allocations } from "./Allocations";
@@ -7,7 +8,7 @@ import { TransactionLabels } from "../../CoreWorkflows";
 import { useEffect, useState, useRef } from "react";
 import { Eye, EyeOff, Plus } from "lucide-react";
 import { api, cents, decimal, money } from "../../api";
-import { Button, Field, Badge, Modal, validateFields } from "../../ui";
+import { ActionMenu, Button, Field, Badge, Modal, validateFields } from "../../ui";
 import { ChoiceField } from "../../Choices";
 import { moneyError } from "../../validation";
 import { proposeRulePattern } from "../../ruleProposal";
@@ -77,6 +78,7 @@ export function TransactionEditor({
     [assignment, setAssignment] = useState(t.assignment),
     [period, setPeriod] = useState(String(t.period_id || ""));
   const [seen, setSeen] = useState(!!t.seen);
+  const [deleting, setDeleting] = useState(false);
   const changeSeen = async () => {
     if (
       await run(
@@ -187,6 +189,7 @@ export function TransactionEditor({
       title={"Transaction #" + t.id}
       onClose={() => requestLeave(onClose)}
     >
+      {deleting && <DeleteTransaction transaction={t} dirty={draft()!==baseline.current} busy={busy} run={run} onClose={()=>setDeleting(false)} onDeleted={()=>{onSaved();refresh();onClose()}}/>}
       {leave && (
         <Modal title="Unsaved changes" onClose={() => setLeave(null)}>
           <p>Save your changes before leaving this transaction?</p>
@@ -253,6 +256,9 @@ export function TransactionEditor({
             {seen ? "Seen by you" : "Unseen by you"}
           </Badge>
           {!t.can_edit && <Badge>View only</Badge>}
+          {t.can_edit && <ActionMenu label="Transaction actions">
+            <Button variant="quiet" disabled={busy} onClick={()=>setDeleting(true)}>Delete transaction</Button>
+          </ActionMenu>}
           <Button
             variant="quiet"
             loading={busy}

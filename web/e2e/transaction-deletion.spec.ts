@@ -1,0 +1,44 @@
+import { test, expect } from '@playwright/test';
+import { desktopPhoneCases } from './coverage-cases';
+
+for (const {width,theme} of desktopPhoneCases) test(`manual deletion preserves drafts, confirms and suppresses re-import ${width} ${theme}`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme);
+ await page.goto('/');
+ await page.getByLabel('Username',{exact:true}).fill('demo');
+ await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');
+ await page.getByRole('button',{name:'Sign in',exact:true}).click();
+ await page.getByRole('navigation',{name:width===360?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:'Transactions',exact:true}).click();
+ const session=await(await page.request.get('/api/me')).json();
+ const headers={'X-CSRF-Token':session.csrf,Origin:new URL(page.url()).origin};
+ const description=`Manual deletion synthetic ${width}`;
+ const row=(id:string,memo:string)=>`<STMTTRN><TRNTYPE>CREDIT\n<DTPOSTED>20261021\n<TRNAMT>1.23\n<FITID>${id}\n<MEMO>${memo}\n</STMTTRN>`;
+ const stage=async(extra=false)=>{
+  const source=`OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\nENCODING:USASCII\nCHARSET:1252\n\n<OFX><BANKMSGSRSV1><STMTRS><CURDEF>ZAR\n<BANKACCTFROM><BANKID>250655\n<ACCTID>12345678901\n<ACCTTYPE>CHECKING\n</BANKACCTFROM><BANKTRANLIST><DTSTART>20261020\n<DTEND>20261119\n${row('manual-delete-'+width,description)}${extra?row('manual-extra-'+width,'Different synthetic entry '+width):''}\n</BANKTRANLIST></STMTRS></BANKMSGSRSV1></OFX>`;
+  const response=await page.request.post('/api/imports/preview',{headers,multipart:{account_id:'1',files:{name:`manual-${width}-${extra}.ofx`,mimeType:'application/x-ofx',buffer:Buffer.from(source)}}});
+  expect(response.ok(),await response.text()).toBe(true);return(await response.json())[0];
+ };
+ const commit=async(p:any)=>{const response=await page.request.post(`/api/imports/${p.id}/commit`,{headers,data:{classification_version:p.classification_version}});expect(response.ok(),await response.text()).toBe(true)};
+ await commit(await stage());
+ const nav=page.getByRole('navigation',{name:width===360?'Mobile navigation':'Main navigation',exact:true});
+ await nav.getByRole('button',{name:'Dashboard',exact:true}).click();await nav.getByRole('button',{name:'Transactions',exact:true}).click();
+ const rowUI=page.locator('.transaction-detail').filter({hasText:description});await expect(rowUI).toHaveCount(1);await rowUI.click();
+ const editor=page.getByRole('dialog',{name:/^Transaction #[0-9]+$/});
+ await editor.getByLabel('Description',{exact:true}).fill('Unsaved manual deletion draft');
+ await editor.getByLabel('Transaction actions',{exact:true}).click();await editor.getByRole('button',{name:'Delete transaction',exact:true}).click();
+ let dialog=page.getByRole('dialog',{name:'Delete transaction?',exact:true});
+ await expect(dialog).toContainText(description);await expect(dialog).toContainText('Your unsaved edits will be discarded');
+ await expect(dialog.getByLabel('Reason for deletion',{exact:true})).not.toHaveAttribute('aria-invalid','true');
+ await dialog.getByRole('button',{name:'Cancel',exact:true}).click();
+ await expect(editor.getByLabel('Description',{exact:true})).toHaveValue('Unsaved manual deletion draft');
+ await editor.getByLabel('Transaction actions',{exact:true}).click();await editor.getByRole('button',{name:'Delete transaction',exact:true}).click();
+ dialog=page.getByRole('dialog',{name:'Delete transaction?',exact:true});
+ await dialog.getByRole('button',{name:'Delete transaction',exact:true}).click();
+ await expect(dialog.getByLabel('Reason for deletion',{exact:true})).toHaveAttribute('aria-invalid','true');
+ await dialog.getByLabel('Reason for deletion',{exact:true}).fill('Duplicate synthetic entry');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await dialog.getByRole('button',{name:'Delete transaction',exact:true}).click();
+ await expect(editor).toBeHidden();await expect(dialog).toBeHidden();await expect(rowUI).toHaveCount(0);
+ const replay=await stage(true);expect(replay.rows[0].duplicate).toBe('exact_id');await commit(replay);
+ const found=await(await page.request.get('/api/transactions?q='+encodeURIComponent(description))).json();expect(found.total).toBe(0);
+});

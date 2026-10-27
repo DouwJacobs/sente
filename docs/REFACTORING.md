@@ -129,3 +129,9 @@ archival deletion and the shared active/retained import-source query projection.
 service. `import_live.go` owns whole-page occurrence matching and uncertain-change
 review; it does not silently merge ledger entries. `MCPProposalCard` presents exact
 cleanup effects; `MCPPermissions` shares the default-off controls with OAuth.
+
+transaction_deletion.go is the browser adapter to the same archival service.
+features/transactions/DeleteTransaction.tsx owns the nested reason/confirmation
+workflow; TransactionEditor retains the draft and request lock. mcp_yolo.go owns
+future-consent resolution; MCPPermissions and MCPConnectionCard own visible policy
+selection and updating an existing saved YOLO connection without preset cycling.

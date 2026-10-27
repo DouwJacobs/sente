@@ -6,7 +6,7 @@ import { api } from "./api";
 import { Button, Field, Loading, Empty, Form, Modal } from "./ui";
 import { useTask } from "./shared/useTask";
 import { type PageProps, type Row } from "./shared/types";
-import { MCPPermissionFields } from "./MCPPermissions";
+import { MCPPermissionFields, selectPreset } from "./MCPPermissions";
 
 export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
   const [state, setState] = useState<Row | null>(null),
@@ -119,9 +119,12 @@ export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
             connection={connection}
             accounts={state.accounts}
             busy={busy}
-            onEdit={(t) => {
+            onEdit={(t, updateYOLO) => {
               setEditing(t);
-              setDraft({
+              setDraft(t.permissions.preset === "yolo" ? {
+                ...selectPreset(t.permissions,"yolo"),
+                include_future_permissions: updateYOLO || !!t.permissions.include_future_permissions,
+              } : {
                 ...t.permissions,
                 preset:
                   t.permissions.preset === "legacy_finance"

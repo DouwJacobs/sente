@@ -37,14 +37,15 @@ type mcpConstraints struct {
 	ConstrainedRules bool    `json:"constrained_rules"`
 }
 type mcpPermissions struct {
-	ReadBudgetAlerts bool            `json:"read_budget_alerts"`
-	ReadContext      bool            `json:"read_context"`
-	ReadMerchants    bool            `json:"read_merchants"`
-	SchemaVersion    int             `json:"schema_version"`
-	Preset           string          `json:"preset"`
-	Automatic        mcpCapabilities `json:"automatic_approval"`
-	Capabilities     mcpCapabilities `json:"capabilities"`
-	Constraints      mcpConstraints  `json:"constraints"`
+	IncludeFuturePermissions bool            `json:"include_future_permissions"`
+	ReadBudgetAlerts         bool            `json:"read_budget_alerts"`
+	ReadContext              bool            `json:"read_context"`
+	ReadMerchants            bool            `json:"read_merchants"`
+	SchemaVersion            int             `json:"schema_version"`
+	Preset                   string          `json:"preset"`
+	Automatic                mcpCapabilities `json:"automatic_approval"`
+	Capabilities             mcpCapabilities `json:"capabilities"`
+	Constraints              mcpConstraints  `json:"constraints"`
 }
 
 func legacyMCPPermissions(write bool) mcpPermissions {
@@ -77,10 +78,10 @@ func readMCPPermissions(q queryer, identity mcpIdentity) (mcpPermissions, error)
 		return legacyMCPPermissions(write), nil
 	}
 	var p mcpPermissions
-	if json.Unmarshal([]byte(raw), &p) != nil || p.SchemaVersion != 1 || (p.Constraints.SelectedAccounts && len(p.Constraints.AccountIDs) == 0) {
+	if json.Unmarshal([]byte(raw), &p) != nil || p.SchemaVersion != 1 || (p.Constraints.SelectedAccounts && len(p.Constraints.AccountIDs) == 0) || (p.IncludeFuturePermissions && (p.Preset != "yolo" || !write)) {
 		return p, fail(403, "MCP connection permissions are unavailable")
 	}
-	return p, nil
+	return resolveMCPPermissions(p), nil
 }
 func (a *App) authorizeMCPExact(q queryer, identity mcpIdentity, exact mcpExactChange) error {
 	p, err := readMCPPermissions(q, identity)
@@ -260,6 +261,9 @@ func accountAccessSQL(u User) string { return "(" + accessSQL + accountScopeSQL(
 func (a *App) validateMCPPermissions(q queryer, u User, p mcpPermissions) (mcpPermissions, error) {
 	if p.SchemaVersion != 1 {
 		return p, fail(400, "Unsupported permission format")
+	}
+	if p.IncludeFuturePermissions && p.Preset != "yolo" {
+		return p, fail(400, "Future permissions require YOLO; turn off future permissions before choosing another level")
 	}
 	switch p.Preset {
 	case "review":

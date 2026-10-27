@@ -62,7 +62,7 @@ func (a *App) transactionRemovalSnapshot(tx *sql.Tx, u User, item mcpSeenItem) (
 		return out, err
 	}
 	if current.Version != item.Version {
-		return out, fail(409, "Transaction changed; prepare a new proposal")
+		return out, fail(409, "Transaction changed; reload it before trying again")
 	}
 	if queryInt(tx, "SELECT COUNT(*) FROM transfer_links WHERE left_id=? OR right_id=?", item.ID, item.ID) != 0 {
 		return out, fail(400, "Unlink the transfer before removing a transaction")
@@ -98,7 +98,7 @@ func (a *App) removeTransactionsTx(tx *sql.Tx, u User, keep *transactionRemovalS
 		before, _ := json.Marshal(expected)
 		now, _ := json.Marshal(actual)
 		if string(before) != string(now) {
-			return fail(409, "Transaction details changed; prepare a new proposal")
+			return fail(409, "Transaction details changed; reload it before trying again")
 		}
 	}
 	var retained any

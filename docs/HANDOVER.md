@@ -677,3 +677,17 @@ vet/worker/demo checks, 30 frontend unit tests and all 60 browser specs
 image acceptance passed. See VERIFICATION.md for batching, corrected fixtures and
 limits. Stable images and the production homelab were untouched. A documentation-
 only follow-up records the outcome; the image retains its verified source revision.
+
+## Manual transaction deletion and future YOLO consent — 27 October 2026
+
+The owner requested browser deletion and YOLO updates without preset cycling.
+Browser DELETE and the nested transaction action reuse authorized archival removal,
+including source recognition, exact versions, linked-transfer guards and atomic
+audit. Cancel retains unsaved edits. No manual merge/bulk-delete/restore is added.
+
+Explicit include_future_permissions consent lets YOLO resolve new reads/change
+grants/automatic approvals when added. Existing connections retain snapshots until
+owner update; Settings has direct Update YOLO permissions and visible opt-in.
+Custom edits clear it; revocation/access/proposal-effect checks remain. No migration
+or new financial disclosure; schema 36. Synthetic verification is in progress;
+production financial data and the homelab installation remain untouched.

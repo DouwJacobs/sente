@@ -138,3 +138,14 @@ that all same-amount purchases are duplicates. Strong live balance/component/fee
 matches tolerate changed references; uncertain metadata or posting-date shifts
 within seven days require Import activity keep/skip decisions. Linked transfers
 must be unlinked first; fee-bearing duplicate pairs require explicit deletion.
+
+Manual deletion is available to transaction editors through the transaction's
+Actions menu. Confirm the saved transaction and supply a reason; cancel preserves
+unsaved edits. Successful deletion discards those edits, removes the entry from
+totals and retains its bank identity/history for import recognition. Unlink linked
+transfers first. There is no manual merge, bulk delete or restore workflow.
+
+YOLO connections can explicitly include future permissions automatically. Existing
+connections keep their saved grants until updated. Settings provides Update YOLO
+permissions without changing presets, visible future-consent controls and the usual
+confirmation before saving. Current account access and validation always apply.

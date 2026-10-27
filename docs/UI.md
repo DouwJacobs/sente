@@ -276,3 +276,20 @@ permissions, disabled on existing connections. Exact proposal review identifies
 the selected keeper, removed entries, retained classifications/metadata and total
 removal effects. Explain archival import recognition and the survivor becoming
 unseen; preserve shared disclosure, permission controls and approval request locks.
+
+## Manual transaction deletion and YOLO updates
+
+The editable transaction's shared Transaction actions menu contains Delete
+transaction. A nested dialog shows the saved description, date, account and signed
+amount; explains retained import recognition and lack of undo; and warns about
+unsaved edits. Require a reason through shared first-blur/live Field/Form validation.
+Cancel preserves the mounted draft. Successful deletion closes the editor, refreshes
+totals/list and shows a toast. Share the editor request lock; block dismissal while
+pending. Linked transfers explain that they must be unlinked first.
+
+Settings labels YOLO as saved permissions or current and future permissions.
+Existing saved connections expose Update YOLO permissions directly. The shared
+Settings/OAuth form visibly offers Include future permissions automatically and
+explains new reads/tools/automatic approvals. The checkbox retains YOLO; individual
+permission changes switch to Custom and clear future consent. Keep explicit
+confirmation before saving. No preset cycling is required.

@@ -7,10 +7,15 @@ describe("explicit MCP permission presets", () => {
   expect(Object.keys(yolo.capabilities)).toEqual(Object.keys(capabilityLabels));
   expect(Object.values(yolo.capabilities).every(Boolean)).toBe(true);
   expect(yolo.automatic_approval).toEqual(yolo.capabilities);
+  expect(yolo.include_future_permissions).toBe(true);
   expect([yolo.read_context,yolo.read_merchants,yolo.read_budget_alerts]).toEqual([true,true,true]);
   expect(yolo.constraints.account_ids).toEqual([]);
   expect(yolo.constraints.selected_accounts).toBe(false);
   expect(selectPreset(yolo,"review").automatic_approval).toEqual({});
+  expect(selectPreset(yolo,"custom").include_future_permissions).toBe(false);
+  const saved = {...yolo, include_future_permissions:false, capabilities:{financial_edit:true},automatic_approval:{financial_edit:true}};
+  expect(selectPreset(saved,"yolo").capabilities.delete_transactions).toBe(true);
+  expect(selectPreset(saved,"yolo").include_future_permissions).toBe(true);
   expect(selectPreset(initial,"finance").capabilities.create_period).toBe(false);
   expect(initial.read_context).toBe(false);
   for (const preset of ["review", "finance", "categorization"]) {

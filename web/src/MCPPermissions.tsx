@@ -1,4 +1,4 @@
-import { Field } from "./ui";
+import { Button, Field } from "./ui";
 import type { Row } from "./shared/types";
 export const capabilityLabels: Record<string, string> = {
 	merge_transactions: "Merge confirmed duplicates, keeping the chosen transaction",
@@ -23,6 +23,7 @@ export const capabilityLabels: Record<string, string> = {
 export const reviewPermissions = () => ({
   schema_version: 1,
   preset: "review",
+  include_future_permissions: false,
   read_budget_alerts: false,
   read_context: false,
   read_merchants: false,
@@ -60,6 +61,7 @@ export function selectPreset(p: Row, preset: string): Row {
   return {
     ...p,
     preset,
+    include_future_permissions: preset === "yolo",
     automatic_approval: preset === "yolo" ? { ...capabilities } : {},
     read_context: preset === "yolo" || p.read_context,
     read_merchants: preset === "yolo" || p.read_merchants,
@@ -109,6 +111,9 @@ export function PermissionSummary({
           : "The agent can read all accounts you currently have access to."}
       </p>
       <ul>
+        {value.preset === "yolo" && <li>{value.include_future_permissions
+          ? "New permissions and tools are included automatically as Sente adds them."
+          : "YOLO uses your saved permissions. New permissions need an update."}</li>}
         <li>
           {value.read_context
             ? "Your saved context is shared as written."
@@ -185,7 +190,7 @@ export function MCPPermissionFields({
 }) {
   const onChange = (next: Row) => updatePermissions(
     value.preset === "yolo" && next.preset === "yolo"
-      ? { ...next, preset: "custom" } : next,
+      ? { ...next, preset: "custom", include_future_permissions: false } : next,
   );
   const ids: number[] = value.constraints.account_ids || [],
     scopeError =
@@ -214,7 +219,7 @@ export function MCPPermissionFields({
       ? "Allow personal budget alert reads before enabling alert changes."
       : "") ||
     (value.constraints.missing_categories_only &&
-    (value.capabilities.financial_edit || value.capabilities.recategorize)
+    (value.capabilities.financial_edit || value.capabilities.recategorize || value.capabilities.merge_transactions || value.capabilities.delete_transactions)
       ? "Missing-category-only access cannot include financial edits or recategorization."
       : value.constraints.constrained_rules &&
           (value.capabilities.update_rule || value.capabilities.delete_rule)
@@ -231,7 +236,7 @@ export function MCPPermissionFields({
       >
         <select
           value={value.preset}
-          onChange={(e) => onChange(selectPreset(value, e.target.value))}
+          onChange={(e) => updatePermissions(selectPreset(value, e.target.value))}
         >
           <option value="review">Read-only</option>
           {canPropose && (
@@ -250,7 +255,18 @@ export function MCPPermissionFields({
         </select>
       </Field>
       {value.preset === "yolo" && (
-        <p className="footnote">YOLO shares saved context and all supported reads, and lets this agent apply every supported change without asking for individual approval. Current access, validation and audit checks still apply. Choose another level to turn it off.</p>
+        <section className="permission-scope">
+          <p>YOLO lets this agent use all enabled permissions and apply changes without individual approval. Your account access, validation and history still apply.</p>
+          <label className="check">
+            <input type="checkbox" checked={!!value.include_future_permissions} onChange={event=>{
+              const next=event.target.checked ? selectPreset(value,"yolo") : {...value,include_future_permissions:false};
+              updatePermissions(next);
+            }}/>
+            Include future permissions automatically
+          </label>
+          <p className="footnote">This includes new reads, tools and automatic approvals as Sente adds them. Turn it off to keep only the permissions saved today.</p>
+          {!value.include_future_permissions && <Button onClick={()=>updatePermissions(selectPreset(value,"yolo"))}>Update YOLO permissions</Button>}
+        </section>
       )}
       <section className="permission-scope">
         <h3>What the agent can read</h3>

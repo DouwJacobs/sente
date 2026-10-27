@@ -333,7 +333,7 @@ for (const {width,theme} of desktopPhoneCases) test(`YOLO period creation and di
  if(width===360){await page.getByRole('navigation',{name:'Mobile navigation',exact:true}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()}else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click();
  await page.getByRole('tab',{name:'MCP',exact:true}).click();
  const access=page.locator('.mcp-access-row').filter({hasText:name});
- await expect(access).toContainText('YOLO · all permissions');
+ await expect(access).toContainText('YOLO · current and future permissions');
  const prepared=await call('prepare_change',{operation:'create_period',period:{name:'Future synthetic',start_date:`${width===360?2040:2042}-11-20`,end_date:`${width===360?2040:2042}-12-19`}});
  expect(prepared.error).toBe(false);expect(prepared.value.status).toBe('approved');
  await page.getByRole('button',{name:'Refresh proposals',exact:true}).click();
@@ -403,4 +403,28 @@ for (const {width,theme} of desktopPhoneCases) test(`MCP duplicate cleanup conse
  const replay=await stage(true);expect(replay.rows[0].duplicate).toBe('exact_id');expect(replay.rows[1].duplicate).toBe('exact_id');
  await commit(replay);
  expect((await call('list_transactions',{filters:{q:description}})).value.total).toBe(0);
+});
+for(const {width,theme} of desktopPhoneCases)test(`YOLO stays current without switching presets ${width} ${theme}`,async({page})=>{
+ await page.setViewportSize({width,height:900});await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme);
+ const name=`Future YOLO ${width}`;await connect(page,name,true,'yolo');
+ if(width===360){await page.getByRole('navigation',{name:'Mobile navigation',exact:true}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()}
+ else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click();
+ await page.getByRole('tab',{name:'MCP',exact:true}).click();
+ const card=page.locator('.mcp-access-row').filter({hasText:name});await expect(card).toContainText('New permissions are included automatically.');
+ await card.getByRole('button',{name:'Edit permissions',exact:true}).click();
+ let dialog=page.getByRole('dialog',{name:`Permissions for ${name}`});
+ await expect(dialog.getByLabel('Include future permissions automatically',{exact:true})).toBeChecked();
+ await dialog.getByLabel('Include future permissions automatically',{exact:true}).uncheck();
+ await expect(dialog.getByLabel('Permission level',{exact:true})).toHaveValue('yolo');
+ await dialog.getByLabel('Confirm permissions',{exact:true}).selectOption('confirmed');await dialog.getByRole('button',{name:'Save permissions',exact:true}).click();await expect(dialog).toBeHidden();
+ await expect(card).toContainText('YOLO · saved permissions');
+ await card.getByRole('button',{name:'Update YOLO permissions',exact:true}).click();
+ dialog=page.getByRole('dialog',{name:`Permissions for ${name}`});
+ await expect(dialog.getByLabel('Permission level',{exact:true})).toHaveValue('yolo');
+ await expect(dialog.getByLabel('Include future permissions automatically',{exact:true})).toBeChecked();
+ await dialog.getByLabel('Confirm permissions',{exact:true}).selectOption('confirmed');await dialog.getByRole('button',{name:'Save permissions',exact:true}).click();await expect(dialog).toBeHidden();
+ await expect(card).toContainText('New permissions are included automatically.');await expect(card.getByRole('button',{name:'Update YOLO permissions',exact:true})).toHaveCount(0);
+ const state=await(await page.request.get('/api/mcp/settings')).json();const current=state.connections.find((t:any)=>t.name===name).permissions;
+ expect(current.include_future_permissions).toBe(true);expect(current.capabilities.delete_transactions).toBe(true);expect(current.automatic_approval.delete_transactions).toBe(true);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

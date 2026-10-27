@@ -527,6 +527,7 @@ func (a *App) routes() http.Handler {
 	m.HandleFunc("DELETE /api/rules/batch", wrap(a.batchRules))
 	m.HandleFunc("GET /api/transactions", wrap(a.transactions))
 	m.HandleFunc("PUT /api/transactions/{id}", wrap(a.editTransaction))
+	m.HandleFunc("DELETE /api/transactions/{id}", wrap(a.deleteTransaction))
 	m.HandleFunc("POST /api/review", wrap(a.review))
 	m.HandleFunc("POST /api/transactions/seen", wrap(a.transactionSeen))
 	m.HandleFunc("POST /api/transfers", wrap(a.linkTransfer))

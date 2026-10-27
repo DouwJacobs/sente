@@ -14,7 +14,7 @@ Frontend workflows live in `web/src/features/<feature>`. App composes session, n
 
 ## Persistence and authorization
 
-The ordered registry in `internal/app/migrate.go` initializes and upgrades SQLite. The current schema is 35. Its one-time compatibility bridge uses the frozen version-22 `schema.sql` snapshot and preserves sparse legacy version history; subsequent upgrades append named, consecutive migrations. Schema/data changes and version records commit in one transaction, with a pinned connection and foreign-key integrity checking for table rebuilds. Current-version startup does not reapply schema or backfills. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser writes refresh the initiating session/CSRF and current actor roles through `browser_write.go` within that same transaction; browser user creation and its audit are atomic. `auth_maintenance.go` bounds login/OAuth rate state and removes expired credentials at serving startup/hourly. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
+The ordered registry in `internal/app/migrate.go` initializes and upgrades SQLite. The current schema is 36. Its one-time compatibility bridge uses the frozen version-22 `schema.sql` snapshot and preserves sparse legacy version history; subsequent upgrades append named, consecutive migrations. Schema/data changes and version records commit in one transaction, with a pinned connection and foreign-key integrity checking for table rebuilds. Current-version startup does not reapply schema or backfills. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser writes refresh the initiating session/CSRF and current actor roles through `browser_write.go` within that same transaction; browser user creation and its audit are atomic. `auth_maintenance.go` bounds login/OAuth rate state and removes expired credentials at serving startup/hourly. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
 
 Budget membership grants editor access to household accounts. Private accounts require explicit grants, including for administrators, and do not participate in shared budgets. Administrative account-management metadata excludes financial records. Hidden accounts are excluded before ordinary reads/aggregates and connector work. Access checks precede search, count, paging, history and aggregates.
 
@@ -225,3 +225,10 @@ occurrences, with canonical survivors for aliases and private tombstone handles.
 metadata/date changes for review. Import inserts allocate IDs above both active and
 archived IDs, preventing stale history/notification links from naming a new entry.
 MCP browser previews show removal effects; agent output remains bounded counts/IDs.
+
+Browser transaction_deletion.go adapts confirmed/versioned DELETE requests to
+transaction_removals.go's shared archival write inside browserWrite. The nested
+DeleteTransaction component retains the editor draft on cancellation and shares
+its request lock. mcp_yolo.go resolves explicitly consented future permissions at
+existing read/authorization boundaries; missing consent preserves token snapshots.
+Pending proposals keep exact effects and current authorization checks. No migration.

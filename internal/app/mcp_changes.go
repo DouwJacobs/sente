@@ -571,7 +571,7 @@ func (a *App) mcpSettings(w http.ResponseWriter, r *http.Request) error {
 				return err
 			}
 		}
-		token["permissions"] = p
+		token["permissions"] = resolveMCPPermissions(p)
 	}
 	accounts, err := a.mcpPermissionAccounts(a.DB, u)
 	if err != nil {

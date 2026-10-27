@@ -1368,3 +1368,29 @@ quay.io/skopeo/stable@sha256:f7010199a5d7d0dcb5e4f5312701b683e8c96976dab621cc225
 The exact OCI index/digest, anonymous access, immutable identities and both channel
 digests were verified. Registry credentials were handled privately through a
 temporary auth mount and were not logged, included in builds or committed.
+
+## Manual deletion and future YOLO consent — 27 October 2026
+
+Implemented in the original WSL checkout. Focused backend race checks for manual
+deletion, future-YOLO consent and removal services passed (95.223s). Coverage
+includes session/CSRF, viewer/revoked/hidden access, stale versions, linked transfers,
+audit-failure rollback, explicit confirmation/reason, source retention/re-import,
+legacy consent isolation, dynamic registered grants and revocation before apply.
+All 30 frontend unit tests and TypeScript/Vite production build passed (existing
+bundle-size advisory). Synthetic phone-360/light and desktop-1440/dark manual
+workflow cases passed, including nested cancel preserving unsaved edits, untouched
+reason validation, explicit deletion and later re-import suppression.
+
+The initial MCP run passed all 12 other cases, including both new future-YOLO
+update cases; two old period cases failed only on the renamed YOLO summary label.
+Their expected text was updated and the complete MCP spec is being rerun. Full
+local release source/image gates are in progress; final publication evidence will
+be recorded separately. All fixtures are synthetic. No manual visual inspection,
+real financial data modification, live banking or production deployment.
+
+MCP assessment: explicit include_future_permissions owner consent is added only
+for YOLO; missing/false retains stored grants. Authorization resolves registered
+reads/capabilities/automatic approvals without rewriting token snapshots or proposal
+effects. Existing browser/OAuth confirmation, scope/version/access/audit checks
+remain. Manual browser DELETE shares the removal service and does not require MCP
+consent. No schema migration or new public financial read fields.
