@@ -654,3 +654,9 @@ initial build found the old edge Chromium package unavailable; pin the available
 155.0.8059.84-r0 patch and verify the actual resulting image. Production application
 containers/data remain untouched. Local evidence is retained under ignored
 work/local-release-20261027 and publication assets; final results follow.
+
+Local image acceptance follow-up: the schema-22 fixture compared SELECT * rows,
+so migration-35 appended allocation fields caused a false preservation failure.
+Compare all original columns explicitly and separately assert inherited split-group
+defaults and an empty removal archive. The candidate passed offline native browser,
+onboarding/MCP, restart and backup/restore checks before that fixture failure.

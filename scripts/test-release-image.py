@@ -100,9 +100,10 @@ class Smoke:
 MCP_TOKEN = 'synthetic-release-agent-token'
 TABLES = ['users','accounts','grants','transactions','allocations','audit','mcp_tokens','mcp_user_context']
 
-def snapshot(path):
+def snapshot(path, columns=None):
     with sqlite3.connect(path) as db:
-        return {table:db.execute('SELECT * FROM '+table+' ORDER BY 1').fetchall() for table in TABLES}
+        selections = columns or {table: [row[1] for row in db.execute('PRAGMA table_info('+table+')')] for table in TABLES}
+        return {table: db.execute('SELECT '+','.join('"'+column+'"' for column in selections[table])+' FROM '+table+' ORDER BY 1').fetchall() for table in TABLES}
 
 def seed_credentials(db):
     expires=int(time.time())+86400
@@ -241,7 +242,10 @@ INSERT INTO mcp_user_context(user_id,content) VALUES(1,'Historical synthetic con
 """)
         seed_credentials(db)
     db.close()
-    before=snapshot(path)
+    # Compare every historical column, while separately validating appended defaults.
+    with sqlite3.connect(path) as db:
+        columns={table: [row[1] for row in db.execute('PRAGMA table_info('+table+')')] for table in TABLES}
+    before=snapshot(path, columns)
     # Create a stopped container to copy the historical database into its new volume.
     docker('create','--name',smoke.name,*smoke.options(),'-p',f'127.0.0.1:{smoke.port}:8080',smoke.image)
     smoke.install_db(path)
@@ -249,7 +253,7 @@ INSERT INTO mcp_user_context(user_id,content) VALUES(1,'Historical synthetic con
     smoke.stop()
     current=smoke.work/'upgraded.sqlite'
     smoke.copy_db(current)
-    assert snapshot(current)==before, 'Upgrade changed financial/source/audit/access/consent data'
+    assert snapshot(current, columns)==before, 'Upgrade changed financial/source/audit/access/consent data'
     with sqlite3.connect(current) as db:
         history=db.execute('SELECT version FROM migrations ORDER BY version').fetchall()
         target=int(re.search(r'const schemaVersion = ([0-9]+)',(ROOT/'internal/app/migrate.go').read_text()).group(1))
@@ -257,12 +261,14 @@ INSERT INTO mcp_user_context(user_id,content) VALUES(1,'Historical synthetic con
         assert [v for (v,) in history if v>=23]==list(range(23,target+1)), history
         assert db.execute('PRAGMA integrity_check').fetchone()[0]=='ok'
         assert not db.execute('PRAGMA foreign_key_check').fetchall()
+        assert db.execute('SELECT COUNT(*) FROM allocations WHERE group_override<>0 OR spending_group_id IS NOT NULL').fetchone()[0]==0, 'Upgrade changed legacy split inheritance'
+        assert db.execute('SELECT COUNT(*) FROM transaction_removals').fetchone()[0]==0, 'Upgrade manufactured transaction removals'
     smoke.restart()
     smoke.stop()
     smoke.copy_db(current)
     with sqlite3.connect(current) as db:
         assert db.execute('SELECT version FROM migrations ORDER BY version').fetchall()==history
-    assert snapshot(current)==before
+    assert snapshot(current, columns)==before
     print('PASS production-image v22 upgrade: money/source/audit/grants/MCP consent preserved, integrity and once-only restart')
 
 def main():
