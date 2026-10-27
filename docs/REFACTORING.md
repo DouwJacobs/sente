@@ -119,3 +119,13 @@ FNB clock-time scheduling belongs to internal/app/fnb_schedule.go (migration 33,
 Calendar scheduling is owned by internal/app/fnb_calendar.go (migration 34, canonical validation, bounded future occurrences), with the existing browser handler/runner/scheduler calling it. features/settings/fnbSchedule.ts owns readable browser summaries/input helpers. SettingsPage composes the merged Accounts & banking panel and retains only its visited content; FNBConnection clears credential drafts on tab departure.
 
 The calm banking overview composes features/settings/FNBConnectionOptions.tsx for optional browser/login/diagnostic/disconnect controls. features/settings/fnbConnectionStatus.ts maps existing state/error fields to readable status and recovery; FNBConnection retains credential drafts, request locks and authorized API callbacks. No transport or financial invariant changes accompany these UI boundaries.
+
+`internal/app/allocation_groups.go` owns split-group migration, effective SQL and snapshot decoding; `features/transactions/splitDraft.ts` owns exact browser remainder calculation.
+
+
+`transaction_removals.go` owns migration 36, authorized exact cleanup snapshots,
+archival deletion and the shared active/retained import-source query projection.
+`mcp_transaction_removals.go` adapts typed merge/delete proposals and consent to that
+service. `import_live.go` owns whole-page occurrence matching and uncertain-change
+review; it does not silently merge ledger entries. `MCPProposalCard` presents exact
+cleanup effects; `MCPPermissions` shares the default-off controls with OAuth.

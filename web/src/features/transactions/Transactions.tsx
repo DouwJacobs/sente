@@ -369,12 +369,9 @@ export function Transactions({
                       {t.household ? "" : " · Private"}
                     </small>
                     <div className="row-meta">
-                      {t.spending_group_name && !(t.is_transfer && t.spending_group_name.trim().toLowerCase() === "transfer") && (
-                        <span className="group-label">
-                          <GroupDot color={t.spending_group_color} />
-                          {t.spending_group_name}
-                        </span>
-                      )}
+                      {!t.is_transfer && [...new Set<string>(t.allocations.map((allocation: Row) => allocation.spending_group_name || "No spending group"))].map((name) => (
+                        <span className="group-label" key={name}><GroupDot color={data.spendingGroups.find((group) => group.name === name)?.color} />{name}</span>
+                      ))}
                       <span>
                         {t.is_transfer
                           ? "Transfer"

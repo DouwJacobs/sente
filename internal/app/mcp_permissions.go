@@ -12,6 +12,8 @@ import (
 )
 
 type mcpCapabilities struct {
+	MergeTransactions   bool `json:"merge_transactions"`
+	DeleteTransactions  bool `json:"delete_transactions"`
 	CreatePeriod        bool `json:"create_period"`
 	ManageBudgetAlerts  bool `json:"manage_budget_alerts"`
 	ManageMerchants     bool `json:"manage_merchants"`
@@ -92,6 +94,8 @@ func (a *App) authorizeMCPExact(q queryer, identity mcpIdentity, exact mcpExactC
 		return denied
 	}
 	switch b.Operation {
+	case "merge_transactions", "delete_transactions":
+		return a.authorizeMCPTransactionRemoval(q, identity, p, exact)
 	case "save_merchant", "save_merchant_rule", "assign_merchants", "delete_merchant_rule":
 		return a.authorizeMCPMerchant(q, identity, p, exact)
 	case "update_budget_alerts":
@@ -130,7 +134,7 @@ func (a *App) authorizeMCPExact(q queryer, identity mcpIdentity, exact mcpExactC
 					continue
 				}
 				original := before.Allocations[index]
-				financial = financial || original.Amount != allocation.Amount || original.Note != allocation.Note
+				financial = financial || original.Amount != allocation.Amount || original.Note != allocation.Note || !reflect.DeepEqual(original.SpendingGroupID, allocation.SpendingGroupID)
 				if !reflect.DeepEqual(original.CategoryID, allocation.CategoryID) {
 					categoryChanged = true
 					if original.CategoryID == nil {
@@ -304,7 +308,7 @@ func (a *App) validateMCPPermissions(q queryer, u User, p mcpPermissions) (mcpPe
 	if p.Constraints.ConstrainedRules && (p.Capabilities.UpdateRule || p.Capabilities.DeleteRule) {
 		return p, fail(400, "Constrained rules permit creation only")
 	}
-	if p.Constraints.MissingOnly && (p.Capabilities.FinancialEdit || p.Capabilities.Recategorize) {
+	if p.Constraints.MissingOnly && (p.Capabilities.FinancialEdit || p.Capabilities.Recategorize || p.Capabilities.MergeTransactions || p.Capabilities.DeleteTransactions) {
 		return p, fail(400, "Missing-category-only access cannot include financial edits or recategorization")
 	}
 	if len(p.Constraints.AccountIDs) > 0 && (p.Capabilities.UpdateBudget || p.Capabilities.CreatePeriod) {
@@ -392,6 +396,10 @@ func mcpRequiredCapabilities(exact mcpExactChange) mcpCapabilities {
 	var needed mcpCapabilities
 	b := exact.Change
 	switch b.Operation {
+	case "merge_transactions":
+		needed.MergeTransactions = true
+	case "delete_transactions":
+		needed.DeleteTransactions = true
 	case "save_merchant":
 		needed.ManageMerchants = true
 	case "save_merchant_rule":
@@ -437,7 +445,7 @@ func mcpRequiredCapabilities(exact mcpExactChange) mcpCapabilities {
 					continue
 				}
 				original := before.Allocations[i]
-				financial = financial || original.Amount != allocation.Amount || original.Note != allocation.Note
+				financial = financial || original.Amount != allocation.Amount || original.Note != allocation.Note || !reflect.DeepEqual(original.SpendingGroupID, allocation.SpendingGroupID)
 				if !reflect.DeepEqual(original.CategoryID, allocation.CategoryID) {
 					changed = true
 					if original.CategoryID == nil {

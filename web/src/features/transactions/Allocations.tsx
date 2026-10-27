@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { Trash2 } from "lucide-react";
 import { cents, money } from "../../api";
 import { Button, Field } from "../../ui";
-import { CategoryChoice } from "../../Choices";
+import { ChoiceField, CategoryChoice } from "../../Choices";
 import { moneyError } from "../../validation";
 import type { Row, PageProps } from "../../shared/types";
 export function Allocations({
@@ -16,6 +16,7 @@ export function Allocations({
   original,
   allocated,
   busy,
+  spendingGroup,
 }: {
   transaction: Row;
   data: PageProps["data"];
@@ -27,6 +28,7 @@ export function Allocations({
   original: number;
   allocated: number;
   busy: boolean;
+  spendingGroup: number | null;
 }) {
   return (
     <>
@@ -39,6 +41,16 @@ export function Allocations({
           }
           key={i}
         >
+          {alloc.length > 1 && <div className="split-group-field">
+            <ChoiceField
+              source="/spending-groups"
+              label={"Spending group " + (i + 1)}
+              value={a.spending_group_override === undefined || a.spending_group_override === null ? spendingGroup : a.spending_group_override || null}
+              options={data.spendingGroups.map((g) => ({ id: g.id, name: g.name, color: g.color }))}
+              onChange={(id) => update(i, "spending_group_override", id ?? 0)}
+              disabled={!t.can_edit || busy}
+            />
+          </div>}
           <CategoryChoice
             label={alloc.length === 1 ? "Category" : "Category " + (i + 1)}
             data={data}
@@ -50,7 +62,8 @@ export function Allocations({
           />
           {(alloc.length > 1 || allocated !== original) && (
             <Field
-              label="Amount"
+              label={alloc.length > 1 ? "Amount " + (i + 1) : "Amount"}
+              hint={alloc.length > 1 && i === alloc.length - 1 ? "Automatically fills the remaining amount." : undefined}
               validate={(value) => {
                 const error = moneyError(value);
                 if (error) return error;
@@ -60,6 +73,13 @@ export function Allocations({
                   (original > 0 && parsed < 0)
                 )
                   return "Use the same sign as the transaction.";
+                if (alloc.length > 1 && i === alloc.length - 2) {
+                  try {
+                    const remainder = cents(alloc[alloc.length - 1].amount);
+                    if ((original < 0 && remainder > 0) || (original > 0 && remainder < 0))
+                      return "Split amounts exceed the transaction amount. Reduce an earlier amount.";
+                  } catch {}
+                }
                 if (i === alloc.length - 1 && allocated !== original)
                   return (
                     "Category amounts must add up to " + money(original) + "."
@@ -69,6 +89,7 @@ export function Allocations({
             >
               <input
                 inputMode="decimal"
+                readOnly={alloc.length > 1 && i === alloc.length - 1}
                 required
                 value={a.amount}
                 onChange={(e) => update(i, "amount", e.target.value)}

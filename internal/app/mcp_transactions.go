@@ -238,7 +238,7 @@ func mcpReviewAllocations(q queryer, items []map[string]any) (map[int64][]map[st
 		placeholders[i], args[i] = "?", id
 		grouped[id] = []map[string]any{}
 	}
-	rows, err := data(q, "SELECT l.transaction_id,l.id,l.category_id,l.amount_cents,c.name category_name,c.kind FROM allocations l LEFT JOIN categories c ON c.id=l.category_id WHERE l.transaction_id IN ("+strings.Join(placeholders, ",")+") ORDER BY l.transaction_id,l.id", args...)
+	rows, err := data(q, "SELECT l.transaction_id,l.id,l.category_id,l.amount_cents,"+allocationGroupSQL("l", "t")+" spending_group_id,g.name spending_group_name,c.name category_name,c.kind FROM allocations l JOIN transactions t ON t.id=l.transaction_id LEFT JOIN spending_groups g ON g.id="+allocationGroupSQL("l", "t")+" LEFT JOIN categories c ON c.id=l.category_id WHERE l.transaction_id IN ("+strings.Join(placeholders, ",")+") ORDER BY l.transaction_id,l.id", args...)
 	if err != nil {
 		return nil, err
 	}

@@ -48,7 +48,7 @@ func (a *App) evaluateBudgetAlertsTx(tx *sql.Tx, u User, now time.Time, baseline
 	if len(ids) == 0 {
 		return nil
 	}
-	rows, err := data(tx, `SELECT t.id,t.account_id,t.date,t.is_transfer,COALESCE(t.spending_group_id,0) group_id,l.amount_cents,c.id category_id,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id WHERE a.household=1 AND a.sync_hidden=0 AND t.period_id=?`+accountScopeSQL(u), pid)
+	rows, err := data(tx, `SELECT t.id,t.account_id,t.date,t.is_transfer,COALESCE((CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END),0) group_id,l.amount_cents,c.id category_id,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id WHERE a.household=1 AND a.sync_hidden=0 AND t.period_id=?`+accountScopeSQL(u), pid)
 	if err != nil {
 		return err
 	}

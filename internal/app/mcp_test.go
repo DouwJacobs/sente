@@ -399,6 +399,7 @@ func TestMCPRejectInvalidSplitsAndRevokedEditor(t *testing.T) {
 func TestMCPPartialEditPreservesSourceAndHiddenSplitNotes(t *testing.T) {
 	e := setup(t)
 	seedMCPTransactions(t, e)
+	migrationExec(t, e.a.DB, "UPDATE allocations SET spending_group_id=2,group_override=1 WHERE transaction_id=1")
 	token := mcpToken(t, e, 1, true)
 	id := mcpPrepare(t, e, token, map[string]any{"operation": "edit_transactions", "edits": []any{map[string]any{"id": 1, "version": 1, "date": "2026-10-24", "amount_cents": -105, "description": "Updated merchant", "allocations": []any{map[string]any{"category_id": 1, "amount_cents": -55}, map[string]any{"category_id": 1, "amount_cents": -50}}}}})
 	mcpApprove(t, e, 1, id)
@@ -409,6 +410,9 @@ func TestMCPPartialEditPreservesSourceAndHiddenSplitNotes(t *testing.T) {
 	var amount, sourceAmount int64
 	e.a.DB.QueryRow("SELECT date,description,amount_cents,source_amount FROM transactions WHERE id=1").Scan(&date, &description, &amount, &sourceAmount)
 	e.a.DB.QueryRow("SELECT note FROM allocations WHERE transaction_id=1 ORDER BY id LIMIT 1").Scan(&note)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM allocations WHERE transaction_id=1 AND spending_group_id=2 AND group_override=1") != 1 {
+		t.Fatal("MCP amount/category edit lost split group")
+	}
 	if date != "2026-10-24" || description != "Updated merchant" || amount != -105 || sourceAmount != -101 || note != "secret note" {
 		t.Fatal(date, description, amount, sourceAmount, note)
 	}

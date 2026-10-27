@@ -55,12 +55,14 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 			continue
 		}
 		if row.FITID != "" {
-			matches, err := data(q, "SELECT id,source_date date,source_amount amount_cents,source_description description FROM transactions WHERE account_id=? AND fitid=?", account, row.FITID)
+			matches, err := data(q, "SELECT id,source_date date,source_amount amount_cents,source_description description FROM "+transactionImportSources+" WHERE account_id=? AND fitid=?", account, row.FITID)
 			if err != nil {
 				return err
 			}
 			if len(matches) > 0 {
-				row.Candidates = matches
+				for _, candidate := range matches {
+					row.Candidates = append(row.Candidates, publicImportCandidate(candidate))
+				}
 				v := matches[0]
 				if v["date"] == row.Date && num(v["amount_cents"]) == row.Amount && normalize(v["description"].(string)) == normalize(row.Description) {
 					row.Duplicate = "exact_id"
@@ -78,23 +80,25 @@ func (a *App) annotate(q queryer, account int64, p *ParsedFile) error {
 			seen[row.FITID] = *row
 		}
 		if row.Duplicate == "" {
-			matches, err := data(q, "SELECT id,source_date date,source_amount amount_cents,source_description description FROM transactions WHERE account_id=? AND source_key=? LIMIT 5", account, fingerprint(*row))
+			matches, err := data(q, "SELECT id,source_date date,source_amount amount_cents,source_description description FROM "+transactionImportSources+" WHERE account_id=? AND source_key=? LIMIT 5", account, fingerprint(*row))
 			if err != nil {
 				return err
 			}
 			for _, m := range matches {
 				if normalize(m["description"].(string)) == normalize(row.Description) {
-					row.Candidates = append(row.Candidates, m)
+					row.Candidates = append(row.Candidates, publicImportCandidate(m))
 				}
 			}
 			// Some exports combine the bank amount and fee into one debit.
 			// Flag that record on both components so neither silently duplicates it.
 			if row.SourceNetKey != "" && row.SourceNetKey != fingerprint(*row) {
-				netMatches, err := data(q, "SELECT id,source_date date,source_amount amount_cents,source_description description FROM transactions WHERE account_id=? AND source_key=? LIMIT 5", account, row.SourceNetKey)
+				netMatches, err := data(q, "SELECT id,source_date date,source_amount amount_cents,source_description description FROM "+transactionImportSources+" WHERE account_id=? AND source_key=? LIMIT 5", account, row.SourceNetKey)
 				if err != nil {
 					return err
 				}
-				row.Candidates = append(row.Candidates, netMatches...)
+				for _, candidate := range netMatches {
+					row.Candidates = append(row.Candidates, publicImportCandidate(candidate))
+				}
 			}
 			row.Candidates = append(row.Candidates, fingerprints[fingerprint(*row)]...)
 			if len(row.Candidates) > 0 {
@@ -354,7 +358,7 @@ func (a *App) commitStagedImport(tx *sql.Tx, u User, id int64, b importCommitOpt
 			fit = row.FITID
 		}
 		period := autoPeriod(tx, account, row.Date)
-		res, err := tx.Exec("INSERT INTO transactions(account_id,date,amount_cents,description,fitid,source_date,source_amount,source_description,source_key,provenance,import_id,period_id,spending_group_id,merchant_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", account, row.Date, row.Amount, row.Description, fit, row.Date, row.Amount, row.Description, fingerprint(*row), string(source), id, period, row.SpendingGroupID, row.MerchantID)
+		res, err := tx.Exec("INSERT INTO transactions(id,account_id,date,amount_cents,description,fitid,source_date,source_amount,source_description,source_key,provenance,import_id,period_id,spending_group_id,merchant_id) VALUES((SELECT MAX(n)+1 FROM (SELECT COALESCE(MAX(id),0) n FROM transactions UNION ALL SELECT COALESCE(MAX(original_id),0) FROM transaction_removals)),?,?,?,?,?,?,?,?,?,?,?,?,?,?)", account, row.Date, row.Amount, row.Description, fit, row.Date, row.Amount, row.Description, fingerprint(*row), string(source), id, period, row.SpendingGroupID, row.MerchantID)
 		if err != nil {
 			return err
 		}

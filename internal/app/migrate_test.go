@@ -78,7 +78,7 @@ INSERT INTO mcp_tokens(id,user_id,name,token_hash,permissions,expires_at) VALUES
 			}
 			protected := []string{
 				"SELECT id,account_id,date,amount_cents,description,fitid,source_date,source_amount,source_description,provenance,import_id,review_state,reviewed_by,reviewed_at,version,period_id,assignment FROM transactions ORDER BY id",
-				"SELECT * FROM allocations ORDER BY id", "SELECT * FROM grants ORDER BY user_id,account_id",
+				"SELECT id,transaction_id,category_id,amount_cents,note FROM allocations ORDER BY id", "SELECT * FROM grants ORDER BY user_id,account_id",
 				"SELECT id,user_id,account_id,name,hash,format,status,data,created_at FROM imports ORDER BY id",
 				"SELECT * FROM audit ORDER BY id", "SELECT * FROM sessions ORDER BY token",
 				"SELECT * FROM targets ORDER BY period_id,category_id",
@@ -361,7 +361,8 @@ func removePostBaselineFixtureTables(t *testing.T, db *sql.DB) {
 // Synthetic downgrade fixtures remove later schema before replaying history.
 func removePost30FixtureColumns(t *testing.T, db *sql.DB) {
 	t.Helper()
-	migrationExec(t, db, "ALTER TABLE fnb_connections DROP COLUMN schedule_json; ALTER TABLE fnb_connections DROP COLUMN daily_time")
+	migrationExec(t, db, "DROP TABLE transaction_removals")
+	migrationExec(t, db, "ALTER TABLE allocations DROP COLUMN group_override; ALTER TABLE allocations DROP COLUMN spending_group_id; ALTER TABLE fnb_connections DROP COLUMN schedule_json; ALTER TABLE fnb_connections DROP COLUMN daily_time")
 	columns, err := data(db, "PRAGMA table_info(merchant_rules)")
 	if err != nil {
 		t.Fatal(err)

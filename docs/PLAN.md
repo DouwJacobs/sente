@@ -24,7 +24,7 @@ Supported ZAR types include Cheque, Savings (including Money Maximizer/Maximiser
 
 ## Classification and review
 
-Categories are flat expense/income records. Spending groups are optional labels on parent transactions, independent of allocation categories. A category can appear in several groups; all splits share the parent group. Retain historical category IDs/metadata without merging records. Categories support rename/archive/restore; group names/colors are editable.
+Categories are flat expense/income records. Spending groups are optional labels independent of allocation categories. Each split can override the parent spending group, including an explicit No spending group. Splits without an override inherit the parent/default group; a category can appear in several groups. Group budgets, reports, alerts and drill-downs use each allocation’s effective group. Retain historical category IDs/metadata without merging records. Categories support rename/archive/restore; group names/colors are editable.
 
 Complete categorized allocations accept transactions automatically on import, edit and explicitly applied rule backfill. Explicit transfers are category-exempt. Missing categories, incomplete splits and rule conflicts remain in Needs review. Acceptance depends on category completeness, not manual approval or agent confidence.
 
@@ -38,7 +38,7 @@ The transaction editor can explicitly save an account/direction rule for a singl
 
 ## Money, transfers and periods
 
-Store signed integer minor units with currency. Same-sign split allocations must exactly total the parent. Spending/income totals use allocations; cash movement counts each parent once. Refunds reduce expense spending. Explicit transfer principal is excluded from income/spending; fees are separate expenses and linked counterpart details follow account access.
+Store signed integer minor units with currency. Same-sign split allocations must exactly total the parent. In the browser editor, the final split automatically fills the exact remainder after entering earlier amounts; adding/removing splits or changing the transaction amount recalculates it. Invalid/incomplete earlier values leave the remainder empty; over-allocation must be corrected before saving. Spending/income totals use allocations; cash movement counts each parent once. Refunds reduce expense spending. Explicit transfer principal is excluded from income/spending; fees are separate expenses and linked counterpart details follow account access.
 
 In the browser editor, selecting the group named Transfer sets the explicit transfer flag on save; selecting another group or Not set clears it. Existing explicit transfers keep their flag until the group is changed. Linked transfers require unlinking first. Opening a record, renaming a group or assigning that group through import/rule/API does not itself rewrite transfer status.
 
@@ -123,3 +123,18 @@ MCP connections can explicitly grant shared budget-period creation with exact re
 ## Unified rule management — 15 October 2026
 
 Categories has one Rules tab with server-side search over patterns, merchant names, per-rule categories and spending groups before paging. Active/paused, assignment type, direction and account filters retain complete grouped account definitions. One shared editor serves list and global-search entry points. A merchant is optional; category-only and spending-group-only rules require at least one assignment. New rules default to the current editable accounts (explicit saved account copies); global scope explicitly includes future accounts. Existing scope is retained on edit. Merchant rules retain advanced-pattern/highest-priority/tie handling and run first. Category/group fallback rules retain literal matching, custom-over-global precedence and conflicts across all matching custom outputs, regardless of priority. Naming-only merchant rules still permit category fallback. Merchant group-only assignments fill a missing group after category fallback, matching the existing import commit behavior. Import previews now describe that final group effect as well. Test example uses the same authorized writes inside a rolled-back savepoint and the same evaluator as imports/backfill. It never persists draft rules or audits.
+
+Split spending-group overrides are independent labels: choosing a group named Transfer on a split does not designate part of a transaction as a transfer. The existing parent transfer flag still excludes the whole transaction. Bulk group assignment replaces every split’s group explicitly.
+
+
+## Confirmed transaction cleanup
+
+MCP can propose merging confirmed duplicates or deleting selected transactions with
+separate explicit permissions, exact browser approval and current editor access.
+Keep the selected survivor's metadata and classifications; archive removed entries
+and their source identities with reason/audit, excluding them from totals and
+recognising their later imports. Preserve source occurrence counts and never infer
+that all same-amount purchases are duplicates. Strong live balance/component/fee
+matches tolerate changed references; uncertain metadata or posting-date shifts
+within seven days require Import activity keep/skip decisions. Linked transfers
+must be unlinked first; fee-bearing duplicate pairs require explicit deletion.

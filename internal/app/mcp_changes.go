@@ -31,21 +31,22 @@ type mcpAllocation struct {
 	Note       *string `json:"note,omitempty"`
 }
 type mcpChange struct {
-	Period          *mcpPeriodInput         `json:"period,omitempty"`
-	BudgetAlerts    []mcpBudgetAlertInput   `json:"budget_alerts,omitempty"`
-	Merchant        *mcpMerchantInput       `json:"merchant,omitempty"`
-	MerchantRule    *merchantRuleInput      `json:"merchant_rule,omitempty"`
-	MerchantItems   []mcpMerchantAssignment `json:"merchant_items,omitempty"`
-	Seen            *bool                   `json:"seen,omitempty"`
-	SeenItems       []mcpSeenItem           `json:"seen_items,omitempty"`
-	Operation       string                  `json:"operation"`
-	Categorizations []mcpCategoryAssignment `json:"categorizations,omitempty"`
-	Edits           []mcpPatch              `json:"edits,omitempty"`
-	Category        *categoryInput          `json:"category,omitempty"`
-	Rule            *ruleInput              `json:"rule,omitempty"`
-	Budget          *targetsInput           `json:"budget,omitempty"`
-	ID              int64                   `json:"id,omitempty"`
-	Version         int64                   `json:"version,omitempty"`
+	Removal         *mcpTransactionRemovalInput `json:"removal,omitempty"`
+	Period          *mcpPeriodInput             `json:"period,omitempty"`
+	BudgetAlerts    []mcpBudgetAlertInput       `json:"budget_alerts,omitempty"`
+	Merchant        *mcpMerchantInput           `json:"merchant,omitempty"`
+	MerchantRule    *merchantRuleInput          `json:"merchant_rule,omitempty"`
+	MerchantItems   []mcpMerchantAssignment     `json:"merchant_items,omitempty"`
+	Seen            *bool                       `json:"seen,omitempty"`
+	SeenItems       []mcpSeenItem               `json:"seen_items,omitempty"`
+	Operation       string                      `json:"operation"`
+	Categorizations []mcpCategoryAssignment     `json:"categorizations,omitempty"`
+	Edits           []mcpPatch                  `json:"edits,omitempty"`
+	Category        *categoryInput              `json:"category,omitempty"`
+	Rule            *ruleInput                  `json:"rule,omitempty"`
+	Budget          *targetsInput               `json:"budget,omitempty"`
+	ID              int64                       `json:"id,omitempty"`
+	Version         int64                       `json:"version,omitempty"`
 }
 type mcpExactEdit struct {
 	ID     int64            `json:"id"`
@@ -53,6 +54,7 @@ type mcpExactEdit struct {
 	After  transactionInput `json:"after"`
 }
 type mcpExactChange struct {
+	Removal                           *mcpTransactionRemoval  `json:"removal,omitempty"`
 	PeriodEffects                     any                     `json:"period_effects,omitempty"`
 	PeriodAfter                       any                     `json:"period_after,omitempty"`
 	MerchantRuleClassificationVersion int                     `json:"merchant_rule_classification_version,omitempty"`
@@ -82,6 +84,9 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 	a.mu.Lock()
 	tx, err := a.DB.Begin()
 	if err == nil {
+		if in.Operation == "merge_transactions" || in.Operation == "delete_transactions" {
+			exact.Removal, err = a.prepareMCPTransactionRemoval(tx, identity, in)
+		}
 		if in.Operation == "create_period" {
 			exact.PeriodEffects, err = prepareMCPPeriod(tx, in.Period)
 		}
@@ -166,7 +171,11 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 							if allocation.Note != nil {
 								note = *allocation.Note
 							}
-							after.Allocations[index] = Allocation{CategoryID: allocation.CategoryID, Amount: allocation.Amount, Note: note}
+							var group *int64
+							if index < len(before.Allocations) {
+								group = before.Allocations[index].SpendingGroupID
+							}
+							after.Allocations[index] = Allocation{CategoryID: allocation.CategoryID, Amount: allocation.Amount, Note: note, SpendingGroupID: group}
 						}
 					}
 					if patch.CategoryID != nil {
@@ -281,12 +290,12 @@ func (a *App) mcpTransaction(tx *sql.Tx, u User, id int64) (transactionInput, er
 	if !ruleAccess(tx, a, u, account) {
 		return b, fail(403, "Enabled account editor access required")
 	}
-	rows, err := data(tx, "SELECT category_id,amount_cents,note FROM allocations WHERE transaction_id=? ORDER BY id", id)
+	rows, err := data(tx, "SELECT category_id,amount_cents,note,spending_group_id,group_override FROM allocations WHERE transaction_id=? ORDER BY id", id)
 	if err != nil {
 		return b, err
 	}
 	for _, row := range rows {
-		v := Allocation{Amount: num(row["amount_cents"]), Note: row["note"].(string)}
+		v := Allocation{Amount: num(row["amount_cents"]), Note: row["note"].(string), SpendingGroupID: allocationGroupFromRow(row)}
 		if row["category_id"] != nil {
 			id := num(row["category_id"])
 			v.CategoryID = &id
@@ -304,6 +313,15 @@ func (a *App) executeMCPChange(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	b := exact.Change
 	result := map[string]any{"ok": true}
 	switch b.Operation {
+	case "merge_transactions", "delete_transactions":
+		if err := a.removeTransactionsTx(tx, u, exact.Removal.Keep, exact.Removal.Removed, b.Removal.Reason); err != nil {
+			return nil, err
+		}
+		result["removed"] = len(exact.Removal.Removed)
+		if exact.Removal.Keep != nil {
+			result["retained_id"] = exact.Removal.Keep.ID
+			result["version"] = num(exact.Removal.Keep.Record["version"]) + 1
+		}
 	case "create_period":
 		id, err := a.applyMCPPeriod(tx, identity, exact, proposal != "")
 		if err != nil {
@@ -564,8 +582,19 @@ func (a *App) mcpSettings(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	for _, p := range proposals {
-		var payload any
-		json.Unmarshal([]byte(p["payload"].(string)), &payload)
+		var payload mcpExactChange
+		if err := json.Unmarshal([]byte(p["payload"].(string)), &payload); err != nil {
+			return err
+		}
+		// Removal snapshots contain private archival evidence. Recheck access
+		// before returning them in the owner's browser, even after revocation.
+		if payload.Removal != nil {
+			identity := mcpIdentity{User: u, TokenID: queryInt(a.DB, "SELECT token_id FROM mcp_proposals WHERE id=?", p["id"])}
+			if err := a.authorizeMCPExact(a.DB, identity, payload); err != nil {
+				p["payload"] = map[string]any{"change": map[string]any{"operation": payload.Change.Operation}, "unavailable": true}
+				continue
+			}
+		}
 		p["payload"] = payload
 	}
 	send(w, map[string]any{"endpoint": a.PublicURL + "/api/mcp", "connections": tokens, "proposals": proposals, "accounts": accounts})
@@ -670,6 +699,8 @@ func (a *App) mcpAuditEvidence(tx *sql.Tx, identity mcpIdentity, exact mcpExactC
 	evidence := []map[string]any{}
 	b := exact.Change
 	switch b.Operation {
+	case "merge_transactions", "delete_transactions":
+		evidence = append(evidence, map[string]any{"entity": "transaction_removal", "before": exact.Removal, "after": result, "reason": b.Removal.Reason})
 	case "create_period":
 		evidence = append(evidence, map[string]any{"entity": "period", "id": result["id"], "before": nil, "after": result, "effects": exact.PeriodEffects, "budget": exact.PeriodAfter})
 	case "update_budget_alerts":

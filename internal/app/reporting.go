@@ -221,14 +221,16 @@ func (a *App) reportData(tx *sql.Tx, u User, r *http.Request) (budgetReport, err
 		}
 		extra := ""
 		if g := p.Get("spending_group"); g != "" {
-			extra += " AND COALESCE(t.spending_group_id,0)=?"
-			args = append(args, g)
+			extra += " AND COALESCE((CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END),0)=?"
+			groupID, _ := strconv.ParseInt(g, 10, 64)
+			args = append(args, groupID)
 		}
 		if c := p.Get("category"); c != "" {
 			extra += " AND COALESCE(l.category_id,0)=?"
-			args = append(args, c)
+			categoryID, _ := strconv.ParseInt(c, 10, 64)
+			args = append(args, categoryID)
 		}
-		rows, e := data(tx, `SELECT COALESCE(t.spending_group_id,0) group_id,COALESCE(g.name,'No spending group') group_name,COALESCE(l.category_id,0) category_id,COALESCE(c.name,'Uncategorized') category_name,COALESCE(SUM(CASE WHEN c.kind='expense' OR c.id IS NULL AND l.amount_cents<0 THEN -l.amount_cents ELSE 0 END),0) spent_cents,COALESCE(SUM(CASE WHEN c.kind='income' OR c.id IS NULL AND l.amount_cents>0 THEN l.amount_cents ELSE 0 END),0) income_cents FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id LEFT JOIN categories c ON c.id=l.category_id LEFT JOIN spending_groups g ON g.id=t.spending_group_id WHERE `+accountAccessSQL(u)+" AND t.is_transfer=0 AND ("+scope+")"+extra+" GROUP BY t.spending_group_id,l.category_id ORDER BY group_name,category_name", args...)
+		rows, e := data(tx, `SELECT COALESCE((CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END),0) group_id,COALESCE(g.name,'No spending group') group_name,COALESCE(l.category_id,0) category_id,COALESCE(c.name,'Uncategorized') category_name,COALESCE(SUM(CASE WHEN c.kind='expense' OR c.id IS NULL AND l.amount_cents<0 THEN -l.amount_cents ELSE 0 END),0) spent_cents,COALESCE(SUM(CASE WHEN c.kind='income' OR c.id IS NULL AND l.amount_cents>0 THEN l.amount_cents ELSE 0 END),0) income_cents FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id LEFT JOIN categories c ON c.id=l.category_id LEFT JOIN spending_groups g ON g.id=(CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END) WHERE `+accountAccessSQL(u)+" AND t.is_transfer=0 AND ("+scope+")"+extra+" GROUP BY (CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END),l.category_id ORDER BY group_name,category_name", args...)
 		if e != nil {
 			return out, e
 		}
@@ -248,7 +250,8 @@ func (a *App) reportData(tx *sql.Tx, u User, r *http.Request) (budgetReport, err
 			ba := []any{pid}
 			if g := p.Get("spending_group"); g != "" {
 				where += " AND COALESCE(gt.spending_group_id,0)=?"
-				ba = append(ba, g)
+				groupID, _ := strconv.ParseInt(g, 10, 64)
+				ba = append(ba, groupID)
 			}
 			if c := p.Get("category"); c != "" {
 				where += " AND gt.category_id=?"
@@ -391,7 +394,7 @@ func (a *App) rebalanceState(tx *sql.Tx, u User, id int64, b rebalanceInput) ([]
 		if len(rows) != 1 {
 			return nil, fail(400, "Choose existing budget entries")
 		}
-		spentRows, e := data(tx, "SELECT COALESCE(SUM(-l.amount_cents),0) spent FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id JOIN categories c ON c.id=l.category_id WHERE "+accountAccessSQL(u)+" AND a.household=1 AND t.is_transfer=0 AND c.kind='expense' AND t.period_id=? AND COALESCE(t.spending_group_id,0)=? AND l.category_id=?", u.Member, u.ID, id, key[0], key[1])
+		spentRows, e := data(tx, "SELECT COALESCE(SUM(-l.amount_cents),0) spent FROM allocations l JOIN transactions t ON t.id=l.transaction_id JOIN accounts a ON a.id=t.account_id JOIN categories c ON c.id=l.category_id WHERE "+accountAccessSQL(u)+" AND a.household=1 AND t.is_transfer=0 AND c.kind='expense' AND t.period_id=? AND COALESCE((CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END),0)=? AND l.category_id=?", u.Member, u.ID, id, key[0], key[1])
 		if e != nil {
 			return nil, e
 		}

@@ -13,5 +13,10 @@ describe("explicit MCP permission presets", () => {
   expect(selectPreset(yolo,"review").automatic_approval).toEqual({});
   expect(selectPreset(initial,"finance").capabilities.create_period).toBe(false);
   expect(initial.read_context).toBe(false);
+  for (const preset of ["review", "finance", "categorization"]) {
+   const value = selectPreset(initial, preset);
+   expect(value.capabilities.merge_transactions).toBe(false);
+   expect(value.capabilities.delete_transactions).toBe(false);
+  }
  });
 });

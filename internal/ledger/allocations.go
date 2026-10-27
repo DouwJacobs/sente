@@ -4,9 +4,11 @@ package ledger
 import "finance-tracker/internal/problem"
 
 type Allocation struct {
-	CategoryID *int64 `json:"category_id"`
-	Amount     int64  `json:"amount_cents"`
-	Note       string `json:"note,omitempty"`
+	// Nil inherits the parent group; zero explicitly selects No spending group.
+	SpendingGroupID *int64 `json:"spending_group_id,omitempty"`
+	CategoryID      *int64 `json:"category_id"`
+	Amount          int64  `json:"amount_cents"`
+	Note            string `json:"note,omitempty"`
 }
 
 func ValidateAllocations(amount int64, alloc []Allocation, approve, transfer bool, categoryExists func(int64) bool) error {

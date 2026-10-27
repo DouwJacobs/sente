@@ -81,9 +81,9 @@ for (const [width, height] of [[360, 800], [640, 360]]) {
       const editor = page.getByRole('dialog', { name: 'Transaction #5', exact: true });
       await editor.getByLabel('Description', { exact: true }).fill('Synthetic long description with a preserved mobile draft');
       await editor.getByRole('button', { name: 'Add split', exact: true }).click();
-      await editor.getByLabel('Amount', { exact: true }).nth(0).fill('-750.00');
-      await editor.getByLabel('Amount', { exact: true }).nth(1).fill('-400.00');
-      for (const field of await editor.getByLabel('Amount', { exact: true }).all()) await fits(page, field, 'split amount');
+      await editor.getByLabel('Amount 1', { exact: true }).fill('-750.00');
+      await editor.getByLabel('Amount 1', { exact: true }).fill('-1350.00');
+      for (const field of await editor.getByLabel(/^Amount [0-9]+$/).all()) await fits(page, field, 'split amount');
       for (const button of await editor.getByRole('button', { name: /Remove allocation/ }).all()) await fits(page, button, 'remove split', true);
       const category = editor.getByLabel('Category 1', { exact: true });
       await category.click();
@@ -93,10 +93,11 @@ for (const [width, height] of [[360, 800], [640, 360]]) {
       await expect(category).toBeFocused();
       await expect(editor.getByLabel('Description', { exact: true })).toHaveValue('Synthetic long description with a preserved mobile draft');
       await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
-      await expect(editor.getByLabel('Amount', { exact: true }).nth(1)).toHaveAttribute('aria-invalid', 'true');
-      await expect(editor.getByLabel('Amount', { exact: true }).nth(1)).toBeFocused();
-      await editor.getByLabel('Amount', { exact: true }).nth(1).fill('-500.00');
-      await expect(editor.getByLabel('Amount', { exact: true }).nth(1)).not.toHaveAttribute('aria-invalid', 'true');
+      await expect(editor.getByLabel('Amount 1', { exact: true })).toHaveAttribute('aria-invalid', 'true');
+      await expect(editor.getByLabel('Amount 1', { exact: true })).toBeFocused();
+      await editor.getByLabel('Amount 1', { exact: true }).fill('-750.00');
+      await expect(editor.getByLabel('Amount 2', { exact: true })).toHaveValue('-500.00');
+      await expect(editor.getByLabel('Amount 1', { exact: true })).not.toHaveAttribute('aria-invalid', 'true');
       const save = editor.getByRole('button', { name: 'Save changes', exact: true });
       await save.scrollIntoViewIfNeeded();
       await fits(page, save, 'save', true);

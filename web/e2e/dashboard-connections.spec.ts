@@ -26,7 +26,7 @@ for(const width of [1280,360])test(`dashboard budget connections and inline edit
  await branch.locator('.dashboard-transaction').click()
  const editor=page.getByRole('dialog',{name:'Transaction #2',exact:true})
  await expect(editor).toBeVisible();await editor.getByLabel('Description',{exact:true}).fill('Dashboard edited groceries '+width)
- await editor.getByLabel('Amount',{exact:true}).nth(0).fill('-600.00');await editor.getByLabel('Amount',{exact:true}).nth(1).fill('-246.50')
+ await editor.getByLabel('Amount 1', { exact: true }).fill('-600.00');await expect(editor.getByLabel('Amount 2', { exact: true })).toHaveValue('-246.50')
  await editor.getByRole('button',{name:'Save changes',exact:true}).click();await expect(editor).toHaveCount(0)
  await expect(day).toHaveAttribute('open','');await expect(branch).toBeVisible()
  await expect(branch.locator('.dashboard-transaction')).toContainText('Dashboard edited groceries '+width)

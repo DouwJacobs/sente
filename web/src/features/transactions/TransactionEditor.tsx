@@ -2,6 +2,7 @@ import {RuleBackfill} from "../rules/RuleBackfill";
 import type {RuleRef} from "../rules/types";
 import { TransactionExtras } from "./TransactionExtras";
 import { Allocations } from "./Allocations";
+import { balanceLastSplit } from "./splitDraft";
 import { TransactionLabels } from "../../CoreWorkflows";
 import { useEffect, useState, useRef } from "react";
 import { Eye, EyeOff, Plus } from "lucide-react";
@@ -62,10 +63,10 @@ export function TransactionEditor({
     [amount, setAmount] = useState(decimal(t.amount_cents)),
     [description, setDescription] = useState(t.description);
   const [alloc, setAlloc] = useState<Row[]>(
-    t.allocations.map((a: Row) => ({ ...a, amount: decimal(a.amount_cents) })),
+    t.allocations.map((a: Row) => ({ ...a, spending_group_override: t.allocations.length === 1 ? null : a.spending_group_override, amount: decimal(a.amount_cents) })),
   );
   const [spendingGroup, setSpendingGroup] = useState<number | null>(
-    t.spending_group_id || null,
+    (t.allocations.length === 1 ? t.allocations[0].spending_group_id : t.spending_group_id) || null,
   );
   const [transfer, setTransfer] = useState(
       !!t.is_transfer ||
@@ -108,7 +109,7 @@ export function TransactionEditor({
     original = cents(amount);
   } catch {}
   const update = (i: number, key: string, value: unknown) =>
-    setAlloc((v) => v.map((a, n) => (n === i ? { ...a, [key]: value } : a)));
+    setAlloc((v) => balanceLastSplit(v.map((a, n) => (n === i ? { ...a, [key]: value } : a)), amount));
   const canSaveRule =
     alloc.length === 1 &&
     !!alloc[0]?.category_id &&
@@ -149,6 +150,7 @@ export function TransactionEditor({
         tag_ids: tags.map((tag) => tag.id),
         allocations: alloc.map((a) => ({
           category_id: a.category_id ? Number(a.category_id) : null,
+          spending_group_id: a.spending_group_override ?? null,
           amount_cents: cents(a.amount),
           note: a.note || "",
         })),
@@ -279,14 +281,14 @@ export function TransactionEditor({
               <h3>Classification</h3>
               <Button
                 disabled={alloc.length >= 100 || !t.can_edit || busy}
-                onClick={() => setAlloc([...alloc, { category_id: null, amount: "0.00", note: "" }])}
+                onClick={() => setAlloc(balanceLastSplit([...alloc, { category_id: null, amount: "0.00", note: "" }], amount))}
               >
                 <Plus size={16} />Add split
               </Button>
             </div>
             <ChoiceField
               source="/spending-groups"
-              label="Spending group"
+              label={alloc.length > 1 ? "Default spending group" : "Spending group"}
               value={spendingGroup}
               onChange={(id, group) => {
                 const isTransfer =
@@ -303,6 +305,7 @@ export function TransactionEditor({
                   return;
                 }
                 setSpendingGroup(id);
+                if (alloc.length === 1) setAlloc((current) => current.map((allocation) => ({ ...allocation, spending_group_override: null })));
                 setTransfer(isTransfer);
               }}
               options={data.spendingGroups.map((g) => ({
@@ -318,7 +321,14 @@ export function TransactionEditor({
               refresh={refresh}
               notify={notify}
               alloc={alloc}
-              setAlloc={setAlloc}
+              setAlloc={(next) => {
+                const updated = typeof next === "function" ? next(alloc) : next;
+                if (updated.length === 1) {
+                  setSpendingGroup((updated[0].spending_group_override ?? spendingGroup) || null);
+                  setAlloc(updated.map((allocation) => ({ ...allocation, amount, spending_group_override: null })));
+                } else setAlloc(balanceLastSplit(updated, amount));
+              }}
+              spendingGroup={spendingGroup}
               update={update}
               original={original}
               allocated={allocated}
@@ -401,6 +411,7 @@ export function TransactionEditor({
                   onChange={(e) => {
                     setAmount(e.target.value);
                     if (alloc.length === 1) update(0, "amount", e.target.value);
+                    else setAlloc((current) => balanceLastSplit(current, e.target.value));
                   }}
                 />
               </Field>

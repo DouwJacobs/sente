@@ -1222,3 +1222,97 @@ Only synthetic services and data were used. These checks are automated structura
 
 
 PR #112 CI follow-up — 15 October 2026: the complete backend race gate passed 467 tests but found the older optional-rule migration-32 fixture using the entire latest migration registry with a fixed target of 32. Pin its registry slice to schema 32 for failure/retry/restart checks, and require the injected rollback error so registry mismatches cannot masquerade as a successful rollback test. Production migration behavior is unchanged. The corrected test passed locally under race (2.459s). The pushed revision requires a fresh complete GitHub gate before merging to development.
+
+
+## Independent split spending groups and automatic remainder — 19 October 2026
+
+Implemented in the original WSL source on `codex/split-spending-groups`. Synthetic
+fixtures only; no owner data, bank sessions, production deployment or manual UI inspection.
+
+- Production frontend build passed; existing 500 kB bundle advisory remains.
+- All 30 frontend unit tests passed, including exact two/three-way remainder arithmetic,
+  partial input, over-allocation, transaction total changes and classification preservation.
+- Go vet passed. Ledger, money, classification and statements package tests passed.
+- Affected backend group/dashboard/report/notification/migration tests passed (301.456s).
+  Includes historical upgrades, schema-35 failed-upgrade rollback/retry/restart,
+  legacy money/history/access preservation, independent/no-group split accounting,
+  private/viewer authorization, invalid-group/stale-write rejection and exact filters.
+- Focused bulk/rebalance/report/MCP capability/queue/partial-edit/shared snapshot checks
+  passed (163.648s). The strengthened real MCP partial-edit group-preservation check
+  passed separately after its added assertion (10.204s).
+- 28 distinct synthetic browser cases passed: editor-layout (4), transaction-editor (4),
+  mobile-core (13), dashboard-connections (4), workflows (3). Final affected batch:
+  `web/test-results/run-p2nhzjzj`; existing editor/transfer checks:
+  `web/test-results/run-2yyln7si/02-transaction-editor.spec`.
+  Covers 360/390/900/1440 split geometry, both themes, three-way group save/reopen,
+  automatic remainder, partial drafts, removal, nested-picker focus, phone/short landscape
+  over-allocation validation/focus, breakpoint layout, transfer protection and real saves.
+- Initial checks found SQL expression/string ID comparison and inherited grid-selector
+  issues; these were corrected before the passing batches. Phone checks also caught
+  browser read-only validity exemption: over-allocation now marks/focuses the preceding
+  editable amount instead. Historical downgrade helpers remove migration-35 columns;
+  old protected-data snapshots compare original financial columns explicitly.
+- `git diff --check` passed. Complete backend race suite, physical devices and manual
+  visual sign-off were not run.
+
+MCP assessment: split-group assignment/remainder calculation remain browser workflows;
+no MCP input or consent expansion. Existing group ID/name read fields apply to allocations
+under existing authorized financial access. Shared exact snapshots, audits, financial
+capability checks and unchanged-note/category edits preserve split overrides. Budget,
+report, rebalance, alert and export calculations use effective allocation groups.
+
+
+## Duplicate import protection and MCP cleanup — 26 October 2026
+
+All mutations/tests used disposable synthetic databases. Production was read through
+the owner's authorized MCP connection only. The owner deferred deployment and real
+cleanup; neither was performed. Existing uncommitted split-group work is preserved.
+
+Implemented default-off MCP merge/delete capabilities, exact snapshot proposals,
+current editor/account/consent checks, manual or explicitly configured automatic
+approval, atomic archive/deletion/survivor version/audit and once-only replay.
+Schema 36 retains private import identities and complete removed metadata. Canonical
+aliases remain one occurrence even after their merged survivor is deleted. New
+imports allocate IDs above both live and archived records. Private archival data
+is excluded from agent results; browser proposal snapshots recheck current access.
+No existing consent expands and no production duplicate is automatically removed.
+
+Live matching now consumes strong whole-page balance/component/fee evidence before
+weak reference matches. Changed references with equal balances are skipped;
+uncertain balance/reference/fee changes and matching date shifts within seven days
+remain explicit Import activity decisions. Existing posted-only validation remains.
+
+Actual verification:
+
+- Focused MCP cleanup tests passed without race (61.958s), then under race
+  (42.648s). A later combined race run for cleanup, clearing metadata and migration
+  completed with one new-fixture failure: the keeper-tag fixture omitted required
+  tags.account_id. Corrected it; all final TestMCPRemoval cases passed under race
+  (127.223s), including split/group/note/tag preservation, alias grouping after
+  deleting a merged keeper, totals, preview rollback, exact/stale metadata,
+  pending approval, scope/consent revocation, automatic-consent revocation,
+  invalid selections/amounts, linked transfers, audit-failure atomic rollback/retry,
+  FITID/live re-import suppression and removed-ID non-reuse. Other tests in the
+  combined run passed, including five clearing-evidence variants and schema-36
+  upgrade failure/rollback/retry/restart/preservation.
+- Affected race batch matched
+  Test(TransactionRemoval|SplitGroupMigration|FNBRestart|FNBLiveClearing|MCPRemoval|MCPPrivacy|MCP.*Permissions|MCP.*Automatic|Import)
+  and passed (220.053s). The earlier all-FNB run found one stale downgrade-fixture
+  error (new table retained while migration history was rewound); the shared
+  synthetic downgrade helper now removes it. The affected batch rechecked that
+  restart fixture and the schema-35 registry fixture. No production migration
+  idempotence workaround was added.
+- Final automatic overlapping-page/multiplicity/fees/classification and concurrent
+  FNB import race recheck passed (29.201s). Statements, ledger, money and
+  classification domain race tests passed. Final go vet ./... passed; an earlier
+  invocation had a CRLF shell-script argument error and was corrected/repeated.
+- All 30 frontend unit tests passed; production builds passed, including the final
+  browser-preview change. Existing bundle-size advisory remains.
+- All 12 MCP browser cases passed (360px light and 1440px dark for paired cases),
+  including the two new real upload → permission change → merge approval/apply →
+  delete approval/apply → changed-file re-import cases. On final source, both new
+  cases passed again (30.0s). One preceding final recheck timed out during synthetic
+  server startup before executing tests; a fresh retry passed.
+- git diff --check passed. No full backend-suite rerun, manual visual inspection,
+  live bank session, external MCP-client certification, image publication or
+  production deployment is claimed.

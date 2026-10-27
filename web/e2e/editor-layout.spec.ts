@@ -1,19 +1,67 @@
-import {test,expect} from '@playwright/test'
-for(const width of [1440,900,390,360])test(`compact transaction editor ${width}`,async({page})=>{
- await page.setViewportSize({width,height:900});await page.addInitScript(t=>localStorage.setItem('finance-theme',t),width===390||width===900?'dark':'light');await page.goto('/');await page.getByLabel('Username',{exact:true}).fill('demo');await page.getByLabel('Password',{exact:true}).fill('synthetic-browser-password');await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('heading',{name:'Dashboard',exact:true})).toBeVisible();const me=await (await page.request.get('/api/me')).json(),t=(await (await page.request.get('/api/transactions?id=5')).json()).items[0];await page.request.put('/api/transactions/5',{headers:{'X-CSRF-Token':me.csrf},data:{version:t.version,date:t.date,amount_cents:t.amount_cents,description:t.description,assignment:'auto',is_transfer:false,allocations:[{category_id:null,amount_cents:t.amount_cents}]}});await page.getByRole('navigation',{name:width<=760?'Mobile navigation':'Main navigation',exact:true}).getByRole('button',{name:'Transactions',exact:true}).click();await expect(page.getByText('Loading transactions',{exact:true})).toBeHidden();await page.locator('.transaction-detail').filter({hasText:'Synthetic long description'}).click();const editor=page.getByRole('dialog',{name:'Transaction #5',exact:true});await expect(editor.getByLabel('Category',{exact:true})).toBeVisible();await expect(editor.getByLabel('Amount',{exact:true})).toHaveCount(0)
-
- const classification=editor.getByRole('region',{name:'Classification',exact:true});
- const add=classification.getByRole('button',{name:'Add split',exact:true});
- await expect(add).toHaveCount(1);
- const head=(await classification.locator('.transaction-classification-head').boundingBox())!,action=(await add.boundingBox())!;
- expect(Math.abs(action.x+action.width-head.x-head.width)).toBeLessThan(2);
- expect(action.height).toBeGreaterThanOrEqual(44);
- const group=(await editor.getByLabel('Spending group',{exact:true}).boundingBox())!,category=(await editor.getByLabel('Category',{exact:true}).boundingBox())!;
- expect(Math.abs(group.x-category.x)).toBeLessThan(2);
- expect(Math.abs(group.width-category.width)).toBeLessThan(2);
- expect(category.y).toBeGreaterThan(group.y+group.height);
- expect(category.y-group.y-group.height).toBeLessThan(50);
- expect(action.y+action.height).toBeLessThanOrEqual(group.y);
- await editor.getByLabel('Signed amount (ZAR)',{exact:true}).fill('-1250.00');await editor.getByRole('button',{name:'Add split',exact:true}).click();if(width<=700){const split=(await editor.getByLabel('Category 1',{exact:true}).boundingBox())!;expect(Math.abs(split.width-group.width)).toBeLessThan(2)};await editor.getByLabel('Amount',{exact:true}).nth(0).fill('-750.00');await editor.getByLabel('Amount',{exact:true}).nth(1).fill('-500.00');await editor.getByRole('button',{name:'Save changes',exact:true}).click();await expect(editor).toBeHidden();await expect(page.getByText('Loading transactions',{exact:true})).toBeHidden();await page.locator('.transaction-detail').filter({hasText:'Synthetic long description'}).click();await expect(editor.getByLabel('Amount',{exact:true}).nth(0)).toHaveValue('-750.00');await editor.getByLabel('Amount',{exact:true}).nth(1).fill('-400.00');await editor.getByRole('button',{name:'Save changes',exact:true}).click();await expect(editor).toBeVisible();await expect(editor.getByLabel('Amount',{exact:true}).nth(1)).toHaveAttribute('aria-invalid','true');expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
- await editor.getByLabel('Remove allocation 2',{exact:true}).click();await editor.getByLabel('Amount',{exact:true}).fill('-1250.00');await editor.getByRole('button',{name:'Save changes',exact:true}).click();await expect(editor).toBeHidden()
-})
+import { test, expect } from '@playwright/test';
+for (const width of [1440, 900, 390, 360]) test(`split groups and automatic remainder ${width}`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.addInitScript(theme => localStorage.setItem('finance-theme', theme), width === 390 || width === 900 ? 'dark' : 'light');
+  await page.goto('/');
+  await page.getByLabel('Username', { exact: true }).fill('demo');
+  await page.getByLabel('Password', { exact: true }).fill('synthetic-browser-password');
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  const me = await (await page.request.get('/api/me')).json();
+  const transaction = (await (await page.request.get('/api/transactions?id=5')).json()).items[0];
+  expect((await page.request.put('/api/transactions/5', { headers: { 'X-CSRF-Token': me.csrf }, data: {
+    version: transaction.version, date: transaction.date, amount_cents: -50000,
+    description: transaction.description, assignment: 'auto', is_transfer: false, spending_group_id: 1,
+    allocations: [{ category_id: 1, amount_cents: -50000 }],
+  } })).ok()).toBe(true);
+  await page.getByRole('navigation', { name: width <= 760 ? 'Mobile navigation' : 'Main navigation', exact: true }).getByRole('button', { name: 'Transactions', exact: true }).click();
+  await expect(page.getByText('Loading transactions', { exact: true })).toBeHidden();
+  const open = () => page.locator('.transaction-detail').filter({ hasText: 'Synthetic long description' }).click();
+  await open();
+  const editor = page.getByRole('dialog', { name: 'Transaction #5', exact: true });
+  const add = editor.getByRole('button', { name: 'Add split', exact: true });
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveCount(0);
+  await add.click();
+  await editor.getByLabel('Amount 1', { exact: true }).fill('-300');
+  await expect(editor.getByLabel('Amount 2', { exact: true })).toHaveValue('-200.00');
+  await expect(editor.getByLabel('Amount 2', { exact: true })).toHaveAttribute('readonly', '');
+  await editor.getByLabel('Spending group 2', { exact: true }).click();
+  const picker = page.getByRole('dialog', { name: 'Select spending group 2', exact: true });
+  await picker.getByRole('button', { name: /^Recurring(?: Selected)?$/ }).click();
+  await expect(editor.getByLabel('Spending group 2', { exact: true })).toBeFocused();
+  await add.click();
+  await editor.getByLabel('Amount 2', { exact: true }).fill('-125.45');
+  await expect(editor.getByLabel('Amount 3', { exact: true })).toHaveValue('-74.55');
+  await editor.getByLabel('Amount 1', { exact: true }).fill('-');
+  await expect(editor.getByLabel('Amount 3', { exact: true })).toHaveValue('');
+  await editor.getByLabel('Amount 1', { exact: true }).fill('-300');
+  await expect(editor.getByLabel('Amount 3', { exact: true })).toHaveValue('-74.55');
+  for (const split of await editor.locator('.split-allocation').all()) {
+    const group = (await split.locator('.split-group-field button').first().boundingBox())!;
+    const category = (await split.getByRole('button', { name: /Category [0-9]/ }).boundingBox())!;
+    expect(Math.abs(group.x - category.x)).toBeLessThan(2);
+    expect(Math.abs(group.width - category.width)).toBeLessThan(2);
+    expect(category.y).toBeGreaterThan(group.y);
+    const remove = (await split.getByRole('button', { name: /Remove allocation/ }).boundingBox())!;
+    expect(remove.width).toBeGreaterThanOrEqual(44);
+    expect(remove.height).toBeGreaterThanOrEqual(44);
+  }
+  await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(editor).toBeHidden();
+  const saved = (await (await page.request.get('/api/transactions?id=5')).json()).items[0];
+  expect(saved.allocations.map((a: any) => a.amount_cents)).toEqual([-30000, -12545, -7455]);
+  expect(saved.allocations[1].spending_group_name).toBe('Recurring');
+  expect(saved.allocations[0].spending_group_id).toBe(1);
+  await expect(page.getByText('Loading transactions', { exact: true })).toBeHidden();
+  await open();
+  await expect(editor.getByLabel('Amount 2', { exact: true })).toHaveValue('-125.45');
+  await expect(editor.getByLabel('Spending group 2', { exact: true })).toContainText('Recurring');
+  await editor.getByRole('button', { name: 'Remove allocation 2', exact: true }).click();
+  await expect(editor.getByLabel('Amount 2', { exact: true })).toHaveValue('-200.00');
+  await editor.getByRole('button', { name: 'Remove allocation 2', exact: true }).click();
+  await expect(editor.getByLabel('Amount', { exact: true })).toHaveCount(0);
+  expect(await editor.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await expect(editor).toBeHidden();
+});

@@ -251,3 +251,28 @@ Settings has one administrator-only Accounts & banking tab with one connection c
 Refresh schedule offers Off, existing intervals, Every … hours (whole 1–168 hours), Every day at chosen times, On selected days of the week, and On selected dates each month. Calendar modes offer 1–12 required, distinct time fields and a readable live SAST summary. Weekly mode has named checkboxes plus Weekdays/Weekends/Every day shortcuts; at least one day is required. Monthly mode uses comma-separated dates 1–31 and a separate last-day checkbox; missing calendar dates are skipped, which is explained beneath the field. Selecting only the last day permits an empty date list. Show timezone guidance, pending locks, first-blur/live inline validation and first-invalid submit focus using shared Field/Form. Preserve drafts during status polling and after request failures. Saved summaries and next refresh identify SAST. Clock schedules keep their times after manual updates, and downtime triggers one overdue run. Saving does not initiate a bank session or resume attention-required connections.
 
 The connection card keeps a compact plain-text connection status, two equal last/next update tracks, and one stable Refresh now action. Optional Automatic refresh and Connection options disclosures are closed initially. Connection options contains login/browser controls, with diagnostics and disconnect each in a further closed disclosure. Avoid badges, repeated introductory paragraphs and repeated actions. Pauses use a plain in-flow heading, the fixed human-readable reason, and the relevant recovery instruction; identify unavailable keys/browser dependencies and other banking sessions when recorded. Keep raw error codes/counts in Troubleshooting details. A saved schedule explicitly resumes after a successful refresh. A running update says Update in progress rather than Paused; Off and not-yet-scheduled states remain distinct. Use existing full-width card edges, natural heights and muted helper text without extra surfaces or separator lines. Weekdays use four desktop/two phone columns with 44px labels; time rows use a full flexible field plus a separate 44px removal action. Use existing themes and form tokens, without trailing separators or cron syntax.
+
+## Independent split groups and calculated remainder — 19 October 2026
+
+Every split places its numbered Spending group and Category selectors across the
+classification card width, then its numbered Amount beside the 44px removal action.
+Split notes stay below. The parent selector reads Default spending group while split;
+new splits inherit it until explicitly changed, including Not set. Each split's selected
+group survives save/reopen and unrelated edits. A single allocation uses its effective
+group and full transaction amount again after removing other splits.
+
+The last split amount is read-only and says Automatically fills the remaining amount.
+Earlier amount changes, total changes and removals recalculate exact cents. Incomplete
+input clears the remainder; over-allocation exposes existing inline sign/total errors
+and prevents save. Keep first-blur/live validation, full signed money, draft guards,
+request locks, accessible numbered labels and shared pickers in both themes/phone sizes.
+Changing a split group alone does not designate a transaction transfer.
+
+
+## Agent transaction cleanup
+
+Settings/OAuth expose separate merge-confirmed-duplicates and delete-transactions
+permissions, disabled on existing connections. Exact proposal review identifies
+the selected keeper, removed entries, retained classifications/metadata and total
+removal effects. Explain archival import recognition and the survivor becoming
+unseen; preserve shared disclosure, permission controls and approval request locks.

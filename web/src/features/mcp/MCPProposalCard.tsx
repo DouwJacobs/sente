@@ -48,6 +48,23 @@ export function MCPProposalCard({
       </div>
       <details>
         <summary>Inspect exact changes (amounts in cents)</summary>
+        {p.payload.unavailable && <p>Access to these transaction details has changed. Reject this proposal or restore the required permissions before reviewing it.</p>}
+        {p.payload.removal && (
+          <>
+            <p>
+              {p.payload.removal.keep
+                ? `Keep transaction #${p.payload.removal.keep.id} with its current categories, splits, notes and tags. Remove the selected duplicates from totals.`
+                : "Delete the selected transactions from totals."}
+              {" "}Removed entries are archived for audit and import matching. Future bank refreshes recognise their original source entries.
+            </p>
+            <strong>Before · selected transactions and classifications</strong>
+            <pre className="mcp-code">{JSON.stringify(p.payload.removal, null, 2)}</pre>
+            <strong>After</strong>
+            <p>{p.payload.removal.removed.length} transaction(s) removed.
+              {p.payload.removal.keep && ` Transaction #${p.payload.removal.keep.id} remains; its version advances and it becomes unseen.`}
+            </p>
+          </>
+        )}
         {p.payload.transactions?.map((t: Row) => (
           <div key={t.id}>
             <button

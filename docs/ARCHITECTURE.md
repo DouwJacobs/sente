@@ -14,7 +14,7 @@ Frontend workflows live in `web/src/features/<feature>`. App composes session, n
 
 ## Persistence and authorization
 
-The ordered registry in `internal/app/migrate.go` initializes and upgrades SQLite. The current schema is 34. Its one-time compatibility bridge uses the frozen version-22 `schema.sql` snapshot and preserves sparse legacy version history; subsequent upgrades append named, consecutive migrations. Schema/data changes and version records commit in one transaction, with a pinned connection and foreign-key integrity checking for table rebuilds. Current-version startup does not reapply schema or backfills. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser writes refresh the initiating session/CSRF and current actor roles through `browser_write.go` within that same transaction; browser user creation and its audit are atomic. `auth_maintenance.go` bounds login/OAuth rate state and removes expired credentials at serving startup/hourly. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
+The ordered registry in `internal/app/migrate.go` initializes and upgrades SQLite. The current schema is 35. Its one-time compatibility bridge uses the frozen version-22 `schema.sql` snapshot and preserves sparse legacy version history; subsequent upgrades append named, consecutive migrations. Schema/data changes and version records commit in one transaction, with a pinned connection and foreign-key integrity checking for table rebuilds. Current-version startup does not reapply schema or backfills. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser writes refresh the initiating session/CSRF and current actor roles through `browser_write.go` within that same transaction; browser user creation and its audit are atomic. `auth_maintenance.go` bounds login/OAuth rate state and removes expired credentials at serving startup/hourly. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
 
 Budget membership grants editor access to household accounts. Private accounts require explicit grants, including for administrators, and do not participate in shared budgets. Administrative account-management metadata excludes financial records. Hidden accounts are excluded before ordinary reads/aggregates and connector work. Access checks precede search, count, paging, history and aggregates.
 
@@ -205,3 +205,23 @@ FNB daily scheduling: migration 33 appends a default-empty daily_time column wit
 
 
 Calendar refresh scheduling: migration 34 adds default-empty schedule_json, preserving legacy daily_time/interval schedules. fnb_calendar.go validates and canonicalizes daily/weekly/monthly schedules, and computes the next future SAST occurrence used by saves and job completion. Invalid stored schedules fail closed. The owner-admin status route exposes structured schedule only, not raw JSON storage. Each schedule has at most 12 times; weekly dates are distinct 0–6, monthly dates distinct 1–31 plus optional last day. Next-run search is bounded to 62 days, skipping absent dates and avoiding catch-up replay.
+
+
+Migration 35 appends nullable allocations.spending_group_id (foreign key) and
+group_override (default 0). Legacy allocations inherit their parent without data,
+version or grant rewrites; override=1 with NULL explicitly means No spending group.
+allocation_groups.go owns migration/effective-group queries and shared snapshot decoding.
+Dashboard/Sankey, report/rebalance spending, scoped alerts, allocation CSVs and ledger
+filters use effective allocation groups. splitDraft.ts owns browser remainder arithmetic.
+MCP/bulk snapshots preserve overrides; financial consent checks include their differences.
+
+
+Transaction cleanup: `transaction_removals.go` owns schema-36 private archival source
+retention, authorized exact snapshot/deletion service and import-source projection.
+`mcp_transaction_removals.go` owns typed cleanup proposals and independent
+merge/delete consent. Shared import annotation consumes active and archived source
+occurrences, with canonical survivors for aliases and private tombstone handles.
+`import_live.go` matches strongest whole-page evidence first, then stages ambiguous
+metadata/date changes for review. Import inserts allocate IDs above both active and
+archived IDs, preventing stale history/notification links from naming a new entry.
+MCP browser previews show removal effects; agent output remains bounded counts/IDs.

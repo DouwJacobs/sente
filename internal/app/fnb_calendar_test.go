@@ -118,7 +118,7 @@ func TestFNBCalendarUpgradePreservesLegacyAndRollsBack(t *testing.T) {
  INSERT INTO fnb_connections(user_id,secret,interval_hours,daily_time,next_due,version) VALUES(1,x'1234',0,'12:00',12345,7);`)
 	protected := []string{"SELECT user_id,secret,interval_hours,daily_time,next_due,version FROM fnb_connections", "SELECT * FROM users", "SELECT * FROM grants"}
 	before := migrationSnapshot(t, db, protected...)
-	steps := append([]schemaMigration{}, schemaMigrations...)
+	steps := append([]schemaMigration{}, schemaMigrations[:34-migrationBaseline+1]...)
 	steps[34-migrationBaseline].apply = func(tx *sql.Tx, origin migrationOrigin) error {
 		if err := migrateFNBCalendarSchedule(tx, origin); err != nil {
 			return err

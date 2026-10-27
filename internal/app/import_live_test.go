@@ -7,6 +7,56 @@ import (
 	"time"
 )
 
+func TestFNBLiveClearingMetadataChangesRequireEvidence(t *testing.T) {
+	for _, kind := range []string{"reference", "balance", "no_balance", "fee", "date"} {
+		t.Run(kind, func(t *testing.T) {
+			e := setup(t)
+			targets := transactionTargets(t, e)[:1]
+			r := transactionReport(targets[0].BankID, "first")
+			r.Transactions = r.Transactions[:1]
+			r.Transactions[0].Balance = fnbDecimal("100.00")
+			if kind == "no_balance" {
+				r.Transactions[0].Balance = nil
+			}
+			ps, err := e.a.stageFNBTransactions(e.owner, targets, fnbSnapshot{Reports: []FNBReport{r}}, r.RunID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = e.a.autoCommitFNB(e.owner, ps); err != nil {
+				t.Fatal(err)
+			}
+			r.RunID = "cleared"
+			switch kind {
+			case "reference", "no_balance":
+				r.Transactions[0].Reference = "cleared reference"
+			case "balance":
+				r.Transactions[0].Balance = fnbDecimal("99.00")
+			case "fee":
+				r.Transactions[0].ServiceFee = "0.05"
+			case "date":
+				r.Transactions[0].Date = "2026-10-02"
+			}
+			ps, err = e.a.stageFNBTransactions(e.owner, targets, fnbSnapshot{Reports: []FNBReport{r}}, r.RunID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = e.a.autoCommitFNB(e.owner, ps); err != nil {
+				t.Fatal(err)
+			}
+			if queryInt(e.a.DB, "SELECT COUNT(*) FROM transactions") != 1 || queryInt(e.a.DB, "SELECT SUM(amount_cents) FROM transactions") != -29 {
+				t.Fatal("clearing duplicated money", ps)
+			}
+			if kind == "reference" {
+				if ps[0].Skipped != 1 || !ps[0].AlreadyImported {
+					t.Fatal("balance evidence did not match", ps)
+				}
+			} else if ps[0].Rows[0].Duplicate != "possible" || ps[0].AlreadyImported {
+				t.Fatal("uncertain identity not held for review", ps)
+			}
+		})
+	}
+}
+
 func TestFNBAutomaticOverlappingPagesPreserveMultiplicityFeesAndClassification(t *testing.T) {
 	e := setup(t)
 	targets := transactionTargets(t, e)[:1]

@@ -70,6 +70,13 @@ func (a *App) transactionQuery(q queryer, r *http.Request, u User) (string, []an
 				args = append(args, category)
 			}
 		}
+		if group := params.Get("spending_group"); group == "unassigned" {
+			sqlText += " AND " + allocationGroupSQL("dl", "t") + " IS NULL"
+		} else if group != "" {
+			sqlText += " AND " + allocationGroupSQL("dl", "t") + "=?"
+			groupID, _ := strconv.ParseInt(group, 10, 64)
+			args = append(args, groupID)
+		}
 		sqlText += ")"
 	}
 	filters, err := readLedgerFilters(r)
@@ -184,7 +191,7 @@ func (a *App) transactions(w http.ResponseWriter, r *http.Request) error {
 	}
 	for _, item := range items {
 		id := num(item["id"])
-		alloc, err := data(tx, "SELECT l.category_id,l.amount_cents,l.note,c.name category_name,c.group_name,c.kind FROM allocations l LEFT JOIN categories c ON c.id=l.category_id WHERE l.transaction_id=? ORDER BY l.id", id)
+		alloc, err := data(tx, "SELECT l.category_id,l.amount_cents,l.note,CASE WHEN l.group_override=1 THEN COALESCE(l.spending_group_id,0) ELSE NULL END spending_group_override,"+allocationGroupSQL("l", "t")+" spending_group_id,g.name spending_group_name,c.name category_name,c.group_name,c.kind FROM allocations l JOIN transactions t ON t.id=l.transaction_id LEFT JOIN spending_groups g ON g.id="+allocationGroupSQL("l", "t")+" LEFT JOIN categories c ON c.id=l.category_id WHERE l.transaction_id=? ORDER BY l.id", id)
 		if err != nil {
 			return err
 		}
@@ -197,6 +204,13 @@ func (a *App) transactions(w http.ResponseWriter, r *http.Request) error {
 					continue
 				}
 				if category != "" && category != "uncategorized" && num(allocation["category_id"]) != categoryID {
+					continue
+				}
+				group := params.Get("spending_group")
+				if group == "unassigned" && num(allocation["spending_group_id"]) != 0 {
+					continue
+				}
+				if group != "" && group != "unassigned" && fmt.Sprint(num(allocation["spending_group_id"])) != group {
 					continue
 				}
 				amount := num(allocation["amount_cents"])

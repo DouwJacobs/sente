@@ -46,10 +46,11 @@ func (f transactionFilters) sql(alias string) (string, []any) {
 		args = append(args, f.Category)
 	}
 	if f.Group == "unassigned" {
-		clauses = append(clauses, alias+".spending_group_id IS NULL")
+		clauses = append(clauses, "EXISTS(SELECT 1 FROM allocations gl WHERE gl.transaction_id="+alias+".id AND "+allocationGroupSQL("gl", alias)+" IS NULL"+f.groupCategorySQL()+")")
 	} else if f.Group != "" {
-		clauses = append(clauses, alias+".spending_group_id=?")
-		args = append(args, f.Group)
+		clauses = append(clauses, "EXISTS(SELECT 1 FROM allocations gl WHERE gl.transaction_id="+alias+".id AND "+allocationGroupSQL("gl", alias)+"=?"+f.groupCategorySQL()+")")
+		groupID, _ := strconv.ParseInt(f.Group, 10, 64)
+		args = append(args, groupID)
 	}
 	if f.Direction == "in" {
 		clauses = append(clauses, alias+".amount_cents>0")
@@ -60,6 +61,15 @@ func (f transactionFilters) sql(alias string) (string, []any) {
 		return "1=1", args
 	}
 	return "(" + strings.Join(clauses, ") AND (") + ")", args
+}
+func (f transactionFilters) groupCategorySQL() string {
+	if f.Category == "uncategorized" {
+		return " AND gl.category_id IS NULL"
+	}
+	if f.Category != "" {
+		return " AND gl.category_id=" + f.Category
+	}
+	return ""
 }
 func (f transactionFilters) matches(row SourceRow) bool {
 	if row.Error != "" {
@@ -177,6 +187,19 @@ func readLedgerFilters(r *http.Request) (ledgerFilters, error) {
 func (f ledgerFilters) sql(alias string) (string, []any) {
 	base, args := f.transactionFilters.sql(alias)
 	clauses := []string{base}
+	if f.Group != "" && len(f.CategoryIDs) > 0 {
+		ids := make([]string, len(f.CategoryIDs))
+		for i, id := range f.CategoryIDs {
+			ids[i] = strconv.FormatInt(id, 10)
+		}
+		group := allocationGroupSQL("gl", alias) + " IS NULL"
+		if f.Group != "unassigned" {
+			group = allocationGroupSQL("gl", alias) + "=?"
+			groupID, _ := strconv.ParseInt(f.Group, 10, 64)
+			args = append(args, groupID)
+		}
+		clauses = append(clauses, "EXISTS(SELECT 1 FROM allocations gl WHERE gl.transaction_id="+alias+".id AND "+group+" AND gl.category_id IN ("+strings.Join(ids, ",")+"))")
+	}
 	if f.Merchant != "" {
 		clauses = append(clauses, alias+".merchant_id=?")
 		args = append(args, f.Merchant)

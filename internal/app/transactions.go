@@ -11,6 +11,11 @@ import (
 type Allocation = ledger.Allocation
 
 func validateAllocations(q queryer, amount int64, alloc []Allocation, approve, transfer bool) error {
+	for _, allocation := range alloc {
+		if group := allocation.SpendingGroupID; group != nil && (*group < 0 || *group > 0 && queryInt(q, "SELECT COUNT(*) FROM spending_groups WHERE id=?", *group) != 1) {
+			return fail(400, "Choose an existing split spending group")
+		}
+	}
 	return ledger.ValidateAllocations(amount, alloc, approve, transfer, func(id int64) bool {
 		return queryInt(q, "SELECT COUNT(*) FROM categories WHERE id=?", id) == 1
 	})
@@ -119,7 +124,7 @@ func (a *App) editTransactionTx(tx *sql.Tx, u User, id int64, b transactionInput
 		return application, err
 	}
 	for _, l := range b.Allocations {
-		if _, err := tx.Exec("INSERT INTO allocations(transaction_id,category_id,amount_cents,note) VALUES(?,?,?,?)", id, l.CategoryID, l.Amount, l.Note); err != nil {
+		if _, err := tx.Exec("INSERT INTO allocations(transaction_id,category_id,amount_cents,note,spending_group_id,group_override) VALUES(?,?,?,?,NULLIF(?,0),?)", id, l.CategoryID, l.Amount, l.Note, l.SpendingGroupID, l.SpendingGroupID != nil); err != nil {
 			return application, err
 		}
 	}

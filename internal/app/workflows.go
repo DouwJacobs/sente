@@ -237,6 +237,16 @@ func (a *App) prepareBulk(tx *sql.Tx, u User, b bulkRequest) (bulkExact, []map[s
 				after = before
 			} else {
 				changed = !sameID(before.SpendingGroupID, after.SpendingGroupID) || before.Transfer != after.Transfer
+				for i, allocation := range after.Allocations {
+					if allocation.SpendingGroupID != nil {
+						effective := allocation.SpendingGroupID
+						if *effective == 0 {
+							effective = nil
+						}
+						changed = changed || !sameID(effective, b.GroupID)
+						after.Allocations[i].SpendingGroupID = nil
+					}
+				}
 			}
 		case "merchant", "clear_merchant", "add_tag", "remove_tag":
 			var note string
@@ -350,6 +360,16 @@ func bulkDisplay(q queryer, b transactionInput) map[string]any {
 	row["tag_names"] = names
 	for _, v := range row["allocations"].([]any) {
 		l := v.(map[string]any)
+		group := b.SpendingGroupID
+		if l["spending_group_id"] != nil {
+			id := num(l["spending_group_id"])
+			group = &id
+		}
+		name := "No spending group"
+		if group != nil && *group > 0 {
+			q.QueryRow("SELECT name FROM spending_groups WHERE id=?", *group).Scan(&name)
+		}
+		l["spending_group_name"] = name
 		if l["category_id"] != nil {
 			var name string
 			q.QueryRow("SELECT name FROM categories WHERE id=?", l["category_id"]).Scan(&name)
@@ -484,14 +504,14 @@ func (a *App) exportTransactions(w http.ResponseWriter, r *http.Request) error {
 		return e
 	}
 	cw = csv.NewWriter(alloc)
-	cw.Write([]string{"transaction_id", "allocation_id", "category_id", "category", "amount_cents", "currency", "note"})
+	cw.Write([]string{"transaction_id", "allocation_id", "category_id", "category", "amount_cents", "currency", "note", "spending_group"})
 	for _, row := range rows {
-		entries, e := data(tx, "SELECT l.id,l.category_id,c.name,l.amount_cents,l.note FROM allocations l LEFT JOIN categories c ON c.id=l.category_id WHERE transaction_id=? ORDER BY l.id", row["id"])
+		entries, e := data(tx, "SELECT l.id,l.category_id,c.name,l.amount_cents,l.note,g.name spending_group_name FROM allocations l JOIN transactions t ON t.id=l.transaction_id LEFT JOIN spending_groups g ON g.id="+allocationGroupSQL("l", "t")+" LEFT JOIN categories c ON c.id=l.category_id WHERE l.transaction_id=? ORDER BY l.id", row["id"])
 		if e != nil {
 			return e
 		}
 		for _, l := range entries {
-			cw.Write([]string{fmt.Sprint(row["id"]), fmt.Sprint(l["id"]), csvText(l["category_id"]), csvText(l["name"]), fmt.Sprint(l["amount_cents"]), "ZAR", csvText(l["note"])})
+			cw.Write([]string{fmt.Sprint(row["id"]), fmt.Sprint(l["id"]), csvText(l["category_id"]), csvText(l["name"]), fmt.Sprint(l["amount_cents"]), "ZAR", csvText(l["note"]), csvText(l["spending_group_name"])})
 		}
 	}
 	cw.Flush()

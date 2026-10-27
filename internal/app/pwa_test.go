@@ -110,7 +110,7 @@ func TestPWAMigrationRollbackRetryPreservation(t *testing.T) {
 	e := setup(t)
 	removePost30FixtureColumns(t, e.a.DB)
 	migrationExec(t, e.a.DB, "DROP TABLE notification_budget_scopes; DROP TABLE notification_budget_preferences; DROP TABLE app_identity; DELETE FROM migrations WHERE version>=28")
-	protected := []string{"SELECT * FROM transactions", "SELECT * FROM allocations", "SELECT * FROM grants", "SELECT * FROM sessions", "SELECT * FROM workspace_branding", "SELECT * FROM audit", "SELECT * FROM mcp_tokens"}
+	protected := []string{"SELECT * FROM transactions", "SELECT id,transaction_id,category_id,amount_cents,note FROM allocations", "SELECT * FROM grants", "SELECT * FROM sessions", "SELECT * FROM workspace_branding", "SELECT * FROM audit", "SELECT * FROM mcp_tokens"}
 	before := migrationSnapshot(t, e.a.DB, protected...)
 	steps := append([]schemaMigration(nil), schemaMigrations...)
 	steps[28-migrationBaseline].apply = func(tx *sql.Tx, origin migrationOrigin) error {

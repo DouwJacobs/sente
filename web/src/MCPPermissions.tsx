@@ -1,6 +1,8 @@
 import { Field } from "./ui";
 import type { Row } from "./shared/types";
 export const capabilityLabels: Record<string, string> = {
+	merge_transactions: "Merge confirmed duplicates, keeping the chosen transaction",
+	delete_transactions: "Delete transactions from totals and prevent their re-import",
   manage_merchants: "Create/edit merchants and logos",
   manage_merchant_rules: "Create/edit merchant naming rules",
   delete_merchant_rule: "Delete merchant naming rules",
@@ -41,6 +43,8 @@ export function selectPreset(p: Row, preset: string): Row {
       k,
       preset === "yolo" || (preset === "finance" &&
         ![
+          "merge_transactions",
+          "delete_transactions",
           "create_period",
           "manage_budget_alerts",
           "change_seen",
@@ -370,7 +374,7 @@ export function MCPPermissionFields({
                 "Rules and budgets",
                 ["create_rule", "update_rule", "delete_rule", "create_period", "update_budget", "manage_budget_alerts"],
               ],
-              ["Transaction details", ["financial_edit", "change_seen"]],
+              ["Transaction details", ["financial_edit", "change_seen", "merge_transactions", "delete_transactions"]],
             ].map(([title, keys]) => (
               <fieldset key={title as string}>
                 <legend>{title}</legend>

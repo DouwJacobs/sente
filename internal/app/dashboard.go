@@ -50,7 +50,7 @@ func (a *App) dashboard(w http.ResponseWriter, r *http.Request) error {
 		}
 		showTargets = false
 	}
-	rows, err := data(tx, "SELECT t.id,t.spending_group_id,g.name spending_group_name,g.color spending_group_color,t.review_state,t.is_transfer,l.amount_cents,c.id category_id,c.name,c.group_name,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id LEFT JOIN spending_groups g ON g.id=t.spending_group_id WHERE a.sync_hidden=0 AND "+condition+accountScopeSQL(u), args...)
+	rows, err := data(tx, "SELECT t.id,(CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END) spending_group_id,g.name spending_group_name,g.color spending_group_color,t.review_state,t.is_transfer,l.amount_cents,c.id category_id,c.name,c.group_name,c.kind FROM transactions t JOIN accounts a ON a.id=t.account_id JOIN allocations l ON l.transaction_id=t.id LEFT JOIN categories c ON c.id=l.category_id LEFT JOIN spending_groups g ON g.id=(CASE WHEN l.group_override=1 THEN l.spending_group_id ELSE t.spending_group_id END) WHERE a.sync_hidden=0 AND "+condition+accountScopeSQL(u), args...)
 	if err != nil {
 		return err
 	}

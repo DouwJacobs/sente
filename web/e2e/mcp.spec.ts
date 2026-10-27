@@ -351,3 +351,56 @@ for (const {width,theme} of desktopPhoneCases) test(`YOLO period creation and di
  expect((await call('prepare_change',{operation:'create_period',period:{name:'Denied',start_date:'2041-01-01',end_date:'2041-01-31'}})).error).toBe(true);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+for (const {width,theme} of desktopPhoneCases) test(`MCP duplicate cleanup consent and exact preview ${width} ${theme}`, async ({page}) => {
+ await page.setViewportSize({width,height:900});
+ await page.addInitScript(t=>localStorage.setItem('finance-theme',t),theme);
+ const name=`Synthetic cleanup ${width}`;
+ const {token,endpoint}=await connect(page,name);
+ const me=await (await page.request.get('/api/me')).json();
+ const headers={'X-CSRF-Token':me.csrf,Origin:new URL(page.url()).origin};
+ const description=`Synthetic duplicate cleanup ${width}`;
+ const row=(suffix:string,memo=description)=>`<STMTTRN><TRNTYPE>CREDIT\n<DTPOSTED>20261021\n<TRNAMT>1.23\n<FITID>cleanup-${width}-${suffix}\n<MEMO>${memo}\n</STMTTRN>`;
+ const stage=async(extra=false)=>{
+  const source=`OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\nENCODING:USASCII\nCHARSET:1252\n\n<OFX><BANKMSGSRSV1><STMTRS><CURDEF>ZAR\n<BANKACCTFROM><BANKID>250655\n<ACCTID>12345678901\n<ACCTTYPE>CHECKING\n</BANKACCTFROM><BANKTRANLIST><DTSTART>20261020\n<DTEND>20261119\n${row('one')}${row('two')}${extra?row('fresh','Fresh synthetic cleanup entry '+width):''}\n</BANKTRANLIST></STMTRS></BANKMSGSRSV1></OFX>`;
+  const response=await page.request.post('/api/imports/preview',{headers,multipart:{account_id:'1',files:{name:`cleanup-${width}-${extra}.ofx`,mimeType:'application/x-ofx',buffer:Buffer.from(source)}}});
+  expect(response.ok(),await response.text()).toBe(true);return (await response.json())[0];
+ };
+ const commit=async(p:any)=>{const response=await page.request.post(`/api/imports/${p.id}/commit`,{headers,data:{classification_version:p.classification_version,decisions:{'2':'keep'}}});expect(response.ok(),await response.text()).toBe(true);return response.json()};
+ await commit(await stage());
+ const call=async(tool:string,args:any)=>{
+  const response=await page.request.post(endpoint,{headers:{Authorization:`Bearer ${token}`,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25'},data:{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:tool,arguments:args}}});
+  expect(response.status()).toBe(200);const body=await response.json();expect(body.error).toBeUndefined();return {error:!!body.result.isError,value:JSON.parse(body.result.content[0].text)};
+ };
+ const found=await call('list_transactions',{filters:{q:description}});expect(found.value.items).toHaveLength(2);
+ const [keeper,duplicate]=found.value.items;
+ const merge={operation:'merge_transactions',removal:{keep:{id:keeper.id,version:keeper.version},items:[{id:duplicate.id,version:duplicate.version}],reason:'Confirmed synthetic duplicate'}};
+ expect((await call('prepare_change',merge)).error).toBe(true);
+ if(width===360){await page.getByRole('navigation',{name:'Mobile navigation',exact:true}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()}
+ else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click();
+ await page.getByRole('tab',{name:'MCP',exact:true}).click();
+ const access=page.locator('.mcp-access-row').filter({hasText:name});
+ await access.getByRole('button',{name:'Edit permissions',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:`Permissions for ${name}`});
+ await dialog.getByLabel('Permission level',{exact:true}).selectOption('custom');
+ await dialog.getByLabel('Merge confirmed duplicates, keeping the chosen transaction',{exact:true}).check();
+ await dialog.getByLabel('Delete transactions from totals and prevent their re-import',{exact:true}).check();
+ await dialog.getByLabel('Confirm permissions',{exact:true}).selectOption('confirmed');
+ await dialog.getByRole('button',{name:'Save permissions',exact:true}).click();await expect(dialog).toBeHidden();
+ const approve=async(input:any,wording:string)=>{
+  const prepared=await call('prepare_change',input);expect(prepared.error).toBe(false);expect(prepared.value.status).toBe('pending');
+  await page.getByRole('button',{name:'Refresh proposals',exact:true}).click();
+  const article=page.locator('.mcp-proposal').filter({hasText:prepared.value.proposal_id.slice(0,8)});
+  await article.getByText('Inspect exact changes (amounts in cents)',{exact:true}).click();
+  await expect(article).toContainText(wording);await expect(article).toContainText('123');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await article.getByRole('button',{name:'Approve exact changes',exact:true}).click();await expect(article).toContainText('approved');
+  const applied=await call('apply_change',{proposal_id:prepared.value.proposal_id});expect(applied.error).toBe(false);return applied.value;
+ };
+ const merged=await approve(merge,`Keep transaction #${keeper.id}`);expect(merged.retained_id).toBe(keeper.id);
+ const current=await call('list_transactions',{filters:{q:description}});expect(current.value.items).toHaveLength(1);
+ await approve({operation:'delete_transactions',removal:{items:[{id:keeper.id,version:merged.version}],reason:'Synthetic deletion check'}},'Delete the selected transactions from totals.');
+ expect((await call('list_transactions',{filters:{q:description}})).value.total).toBe(0);
+ const replay=await stage(true);expect(replay.rows[0].duplicate).toBe('exact_id');expect(replay.rows[1].duplicate).toBe('exact_id');
+ await commit(replay);
+ expect((await call('list_transactions',{filters:{q:description}})).value.total).toBe(0);
+});

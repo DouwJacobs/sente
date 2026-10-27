@@ -134,3 +134,13 @@ Follow docs/UI.md's Unified Rules section. One visible search and one shared edi
 ## Accounts & banking schedules
 
 Use the unified administrator Accounts & banking settings tab, preserving the main Accounts workspace and its callbacks. Use one connection card with a plain status, equal last/next update tracks, one stable Refresh now button and quiet Open Accounts/Get transactions footer links. Automatic refresh and Connection options stay collapsed by default; diagnostics/disconnect sit in further closed disclosures. Avoid a separate account shortcut card, badges and duplicate explanatory copy. A pause shows its existing recorded reason and recovery above the overview, including saved-schedule resumption after success. Running updates say Update in progress, never Paused. Keep raw codes/counts in Troubleshooting details. Retain scheduling drafts during tab changes/polling; clear credential drafts on tab departure. The friendly builder uses named weekdays/presets, monthly dates plus last day, 1–12 times and a readable SAST summary. Preserve shared Field/Form validation, dependent revalidation, request locks and 44px checkbox labels/actions. Missing monthly dates are skipped; explain that behavior. See docs/UI.md for current choices and layout.
+
+
+## Split spending groups and remainder
+
+For transaction splits, follow docs/UI.md's Independent split groups section. Use
+numbered group/category/amount fields, full-width group and category tracks and a
+44px remove button beside the amount. The parent group becomes Default spending
+group. Last amount is read-only, calculated in exact cents from preceding values;
+invalid partial input clears it. Retain inline validation, drafts and saved group
+overrides, and use each allocation’s effective group in totals and row metadata.

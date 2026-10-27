@@ -586,3 +586,60 @@ FNBConnectionOptions owns optional controls; fnbConnectionStatus owns browser-on
 
 
 PR #112 CI follow-up — 15 October 2026: the complete backend race gate passed 467 tests but found the older optional-rule migration-32 fixture using the entire latest migration registry with a fixed target of 32. Pin its registry slice to schema 32 for failure/retry/restart checks, and require the injected rollback error so registry mismatches cannot masquerade as a successful rollback test. Production migration behavior is unchanged. The corrected test passed locally under race (2.459s). The pushed revision requires a fresh complete GitHub gate before merging to development.
+
+
+## Independent split groups and automatic remainder — 19 October 2026
+
+Implemented in `/home/douw/finance-tracker`, branch `codex/split-spending-groups`.
+Each browser split can select its own spending group or Not set; unchanged splits
+inherit the parent's Default spending group. Numbered group/category controls stack
+above signed amounts/removal. The last amount is calculated/read-only using integer
+cents; earlier inputs, total changes and split removals rebalance it. Incomplete input
+clears it; over-allocation validates/focuses the preceding editable amount (read-only
+inputs are exempt from browser constraint validation). Returning to one allocation
+restores the parent amount and that allocation's effective group.
+
+Schema 35 adds allocation group reference plus an explicit-override flag, preserving
+all legacy parent inheritance without financial/version/access rewrites. Dashboard,
+Sankey, scoped transaction filters/matched totals, reports, rebalance, notifications
+and allocation CSVs use effective groups. Bulk group reassignment explicitly replaces
+all split groups; unrelated shared edits preserve them. Split Transfer labels never
+change the whole-transaction transfer flag. Module ownership and product/UI contracts
+are recorded in architecture, refactoring, PLAN/UI and the repository experience skill.
+
+MCP: no new input schema or permission. Existing financial read fields expose effective
+allocation group ID/name; private notes/raw storage flags remain excluded. Exact
+proposal snapshots/audits and financial consent comparisons retain split overrides;
+existing MCP allocation replacements preserve overrides by position. See docs/MCP.md.
+
+Verification: frontend build, 30 unit tests, Go vet/domain tests, affected backend
+financial/migration/MCP checks and 28 distinct synthetic browser cases passed; see
+VERIFICATION.md for exact coverage/repair notes. No manual visual inspection, real
+financial data, live banking or production deployment. Changes remain uncommitted.
+
+
+## Duplicate import protection and MCP cleanup — 26 October 2026
+
+Implemented in the original WSL checkout, preserving the uncommitted split-group
+work. Owner deferred production deployment/cleanup (Docker runs on another homelab
+PC) and requested MCP merge/delete support instead. Production was inspected only
+through authorized MCP reads; no production records, credentials or data files are
+copied into fixtures or committed. The pending-to-posted explanation is unconfirmed:
+the existing connector already excludes explicitly pending entries.
+
+Live matching now prioritizes whole-page strong source/balance/component/fee
+matches and tolerates changed references when running-balance evidence agrees.
+Uncertain metadata and matching posting-date shifts within seven days stage for
+explicit review. Separate identical purchases and service fees retain occurrence
+counts. Schema 36 archives deliberately removed transaction/source snapshots;
+merge/delete proposals require separate default-off grants, exact versions/current
+access, atomic audit and re-import suppression. Existing MCP consent does not expand.
+Keeper metadata remains; removed metadata is archived. Linked transfers and
+fee-bearing merge limitations are documented in MCP.md. No browser cleanup editor
+or public archive/restore read is added. Validation results follow in VERIFICATION.md.
+
+Final cleanup verification: affected backend/domain race tests and vet passed; all
+30 frontend unit tests and production build passed; all 12 MCP browser cases and
+the final two cleanup rechecks passed. A keeper-tag fixture omission and one
+synthetic server-start timeout were corrected/retried. Exact results and limits
+are recorded in VERIFICATION.md. Changes remain local and uncommitted.

@@ -356,3 +356,64 @@ Historical rule application is browser-only through authenticated, CSRF-protecte
 
 
 Rule-search follow-up: list_rules now actually filters description patterns, category names and spending-group names before grouped pagination, retaining every visible account copy in a matched definition. Assignment renames invalidate list versions. Its tool description removes the obsolete immediate historical-application claim. This is a correction to the existing q filter, not a new tool or consent scope. The browser's unified Rules catalogue does not combine separately consented MCP merchant reads.
+
+
+### Split spending groups — 19 October 2026
+
+Independent split-group assignment and automatic remainder entry are browser workflows.
+No new MCP input field or permission is added. Existing transaction/review reads expose
+allocation effective spending_group_id/name under the existing financial read scope and
+allowlist; notes/raw override storage remain excluded. Budget/dashboard/report reads
+use those same effective groups. Shared exact transaction snapshots bind/preserve
+per-allocation overrides, including explicit No spending group, during unrelated edits,
+category assignment and allocation amount/category replacements (by existing position).
+Parent spending_group_id changes the inherited default only; browser bulk group changes
+explicitly replace all split groups. Proposal/audit evidence includes overrides and
+financial-edit consent checks compare them. Existing connections/automatic grants retain
+their saved consent; automatic remainder calculation never writes by itself.
+
+
+## Confirmed duplicates and transaction deletion — 26 October 2026
+
+`prepare_change` adds `merge_transactions` and `delete_transactions`, both through
+separate default-off capabilities and automatic-approval switches. Existing stored
+permissions (including YOLO snapshots) gain neither capability. Selecting YOLO
+again explicitly includes them; Finance, categorization and legacy grants exclude
+them. Missing-category-only connections cannot remove transactions. Current
+connection scope and enabled-account editor access apply at prepare, browser
+approval, apply and applied-result replay.
+
+Both operations take `removal` with 1–100 distinct `items: [{id, version}]` and a
+nonblank `reason` of at most 500 bytes. Merge additionally requires
+`keep: {id, version}`; deletion rejects a keeper. Every duplicate must share the
+keeper's account, current amount, original amount/date/normalized description and
+transfer flag. Unlink linked transfers first. Fee-bearing merges are rejected;
+inspect and explicitly delete the duplicate principal and fee together instead.
+These are confirmed cleanup operations, not a heuristic declaration that matching
+amounts/descriptions prove duplication.
+
+Merge retains the keeper's full classification, split groups, merchant, notes,
+tags and period assignment. Removed entries' differing metadata is archived rather
+than copied over the keeper. Its version advances and personal seen markers become
+stale. Delete removes the selected parents and cascading allocations/tags/seen
+markers from current totals. Original bank identities and full private snapshots
+remain in schema-36 `transaction_removals` with author/reason/time and audit; this
+is archival removal, not erasure of financial history. There is no restore tool.
+
+The browser exact preview shows selected complete snapshots, the keeper, removed
+count and metadata/total effects; apply compares the complete snapshots, including
+allocation notes/tags, and rolls back all archival, delete, version and audit effects
+on any failure. Access-revoked snapshot details are withheld from the browser.
+MCP results expose only `ok`, `removed`, and (for merge) `retained_id`/`version`.
+Private snapshots, notes, bank references and provenance remain outside MCP reads.
+Existing stored proposals cannot acquire cleanup effects.
+
+Import matching reads active sources plus retained aliases/tombstones, scoped by
+account. FITIDs remain conflict-checked; live matches consume occurrences once,
+sharing the keeper identity across merged aliases. Deleted occurrences have private
+handles, never clickable ledger IDs. Uploads without stable FITIDs still require
+explicit decisions for ambiguous source matches. Changed references with equal
+running balance/component/fee match automatically; uncertain changed balances,
+references without sufficient balance evidence, or matching date shifts within
+seven days remain Import activity decisions. Posted-only validation remains in place.
+No broad automatic deduplication or existing financial-data migration occurs.
