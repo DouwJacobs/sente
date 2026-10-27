@@ -698,3 +698,42 @@ actions locator in seen.spec.ts matching the closing editor's inert animation co
 as well as the list menu. Scope the action to All transactions; product behavior
 is unchanged. Recheck this spec and the six remaining specs before publication.
 The final candidate will identify this fixture-fix commit.
+
+
+## Manual deletion / future YOLO local publication — 27 October 2026 (complete)
+
+Published `0.1.3-beta.40.local.20261027.2` from `3025f115fea9d37fe34ec95abf54e5a0cefc2c81` to
+`douwjacobs/sente:development` and `:beta`, with immutable version/SHA tags.
+Verified digest: `sha256:71d7af2fa55869c5e78ebfd92293f1902b130bf00139306b446b7002f3d640ec`.
+Release, source archive, checksum and local-verification.json: https://github.com/DouwJacobs/sente/releases/tag/v0.1.3-beta.40.local.20261027.2
+Commits use [skip ci]; all verification/build/publication ran locally.
+
+All 306 application race tests passed in four complete
+bounded batches; 2 configured optional
+external-fixture checks skipped. Financial/release domain and command packages,
+Go vet, CI/release regressions, active worker/DOM and demo invariants passed.
+All 30 frontend unit tests and production build passed with the existing bundle-size
+advisory. All 61 synthetic browser specs passed
+(278 cases, 0 skipped cases).
+Manual deletion and future-YOLO updates cover 360px/light and 1440px/dark. The two
+old MCP period assertions were updated for the new visible YOLO label; the complete
+14-case MCP spec passed on the final rerun. No product change was needed for that
+fixture correction. The full browser run later found an unscoped seen-workflow
+locator matching the closing editor animation copy; its list-scoped fix and the
+remaining six specs passed in a continuation batch. Backend application code was
+unchanged by this test/docs-only follow-up. An earlier manual test used a nonexistent Refresh action;
+its corrected navigation reload passed both cases before publication.
+
+The exact OCI revision and hardened production-image acceptance passed, including
+sandboxed native browser checks, onboarding/build/MCP metadata, persistence,
+backup/restore/credential invalidation, frozen v22 upgrade/integrity/once-only
+restart and FNB key/recovery. Logs remain ignored under work/local-release-20261027-2.
+No real financial data, live bank session, manual visual inspection, physical-device
+certification, external MCP-client certification or production homelab deployment.
+
+MCP: existing saved YOLO connections must be explicitly updated once using Settings
+→ MCP → Update YOLO permissions. Include future permissions automatically then
+keeps registered reads/change grants/automatic approvals current without preset
+cycling. Existing grants never expand silently. Manual browser deletion uses the
+same archival service, independently of MCP consent. No migration; schema stays 36.
+A documentation-only follow-up records publication; the image retains its source SHA.
