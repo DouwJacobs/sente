@@ -660,3 +660,9 @@ so migration-35 appended allocation fields caused a false preservation failure.
 Compare all original columns explicitly and separately assert inherited split-group
 defaults and an empty removal archive. The candidate passed offline native browser,
 onboarding/MCP, restart and backup/restore checks before that fixture failure.
+
+Complete local browser verification reached 54 passing specs, then found the old
+unassigned-group filter assertion still expecting hidden labels. The accepted
+split-group UI explicitly shows No spending group; assert that exact label and
+the absence of assigned group names, then run this and the remaining five specs.
+Application behavior is unchanged by this fixture update.
