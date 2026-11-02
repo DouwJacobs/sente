@@ -1,4 +1,4 @@
-FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS web
+FROM node:26.13.0-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS web
 WORKDIR /src/web
 COPY web/package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY scripts/dependency-notices.py /src/scripts/dependency-notices.py
 RUN npm run build
 RUN apk add --no-cache python3 && python3 /src/scripts/dependency-notices.py web /licenses/web
 
-FROM node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS fnb
+FROM node:26.13.0-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS fnb
 WORKDIR /opt/sente/fnb
 COPY connectors/fnb/owner/package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
@@ -15,7 +15,7 @@ COPY connectors/fnb/owner/refresh.mjs connectors/fnb/owner/accounts.mjs connecto
 COPY scripts/dependency-notices.py /src/scripts/dependency-notices.py
 RUN apk add --no-cache python3 && python3 /src/scripts/dependency-notices.py web /licenses/fnb
 
-FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS backend
+FROM golang:1.27.3-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS backend
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
