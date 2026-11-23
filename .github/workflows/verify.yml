@@ -35,7 +35,7 @@ jobs:
         env:
           SENTE_FULL_VERIFICATION: ${{ inputs.full }}
       - if: (steps.scope.outputs.source == 'true' && steps.reused.outputs.backend != 'true') || (steps.scope.outputs.frontend == 'true' && steps.reused.outputs.full_browser != 'true')
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5
         with:
           go-version-file: go.mod
           cache: true
