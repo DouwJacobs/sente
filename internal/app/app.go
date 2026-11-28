@@ -45,6 +45,7 @@ type App struct {
 	fnbMu                  sync.Mutex
 	fnbCancelMu            sync.Mutex
 	fnbCancelOwner         int64
+	fnbCancelConnection    int64
 	fnbCancel              context.CancelFunc
 	fnbRefreshAccount      atomic.Int64
 	fnbRefreshTransactions atomic.Bool
@@ -75,6 +76,7 @@ type App struct {
 	lock                   *os.File
 }
 type User struct {
+	bankRefresh       *bankRefreshActor
 	browserSession    string
 	fnbCredentialHash string
 	browserCSRF       string

@@ -105,6 +105,7 @@ export function UnifiedRuleEditor({
   const payload = (merchantID = merchant, version = logoVersion) => ({
     kind,
     scope,
+    ...(!saved && kind === "merchant" && !merchantID ? { merchant_name: name.trim() } : {}),
     refs: saved ? ruleRefs(rule!) : [],
     rule: {
       account_id: account,
@@ -184,7 +185,7 @@ export function UnifiedRuleEditor({
                 focusAssignment();
                 return;
               }
-              let id = merchant,
+              const id = merchant,
                 version = logoVersion;
               if (kind === "merchant" && !id) {
                 if (!name.trim()) {
@@ -193,15 +194,6 @@ export function UnifiedRuleEditor({
                   );
                   return;
                 }
-                const result = await api("/labels", "POST", {
-                  kind: "merchant",
-                  account_id: account,
-                  name,
-                });
-                id = result.id;
-                version = result.logo_version || 1;
-                setMerchant(id);
-                setLogoVersion(version);
               }
               const result = await api(
                 "/unified-rules",
@@ -426,7 +418,7 @@ export function UnifiedRuleEditor({
               loading={busy}
               disabled={
                 !example.trim() ||
-                (kind === "merchant" && !merchant) ||
+                (kind === "merchant" && !merchant && !name.trim()) ||
                 logoBusy ||
                 loading
               }

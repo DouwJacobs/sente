@@ -128,7 +128,7 @@ See docs/UI.md for node labels, proportional sizing and responsive/table behavio
 
 ## Unified Rules and explicit historical application
 
-Follow docs/UI.md's Unified Rules section. One visible search and one shared editor cover optional merchant/category/group assignments. Preserve complete grouped account scopes and original matching policies; current accounts never silently become global. Save affects future imports only. A new active rule offers optional historical application, and active rows expose the same manual action. Historical effects require exact named before/after preview, all previous matches or a selected saved period, explicit apply, missing-only assignments and stale/access rechecks. Preserve cancellation, loading locks, keyboard focus, merchant logos and review navigation. Existing MCP consent remains separate; browser historical application never inherits agent rule grants.
+Follow docs/UI.md's Unified Rules section. One visible search and one shared editor cover optional merchant/category/group assignments. Preserve complete grouped account scopes and original matching policies; current accounts never silently become global. Save affects future imports only. A new active rule offers optional historical application, and active rows expose the same manual action. Historical effects require exact named before/after preview, all previous matches, an inclusive transaction date range or a selected saved period, explicit apply, missing-only assignments and stale/access rechecks. Preserve cancellation, loading locks, keyboard focus, merchant logos and review navigation. Existing MCP consent remains separate; browser historical application never inherits agent rule grants.
 
 
 ## Accounts & banking schedules
@@ -154,3 +154,14 @@ preserve drafts; success closes/refetches with a toast. Settings must distinguis
 saved YOLO grants from explicit current-and-future consent, offer direct Update YOLO
 permissions and preserve YOLO when toggling that policy. Never silently expand old
 consent or require switching to another preset and back.
+
+
+## Transaction workflow refinements
+
+Follow docs/UI.md's Transaction workflow refinements conventions. Transfer actions
+guard drafts and retain the selected counterpart through the rule-backfill offer.
+Merchant defaults track category/group ownership independently and preserve saved
+assignments, explicit clears and splits. End-of-pass review counts recheck the
+original scope and reset actual ledger pagination. Draft merchant examples roll
+back and merchant/rule creation is atomic. Date-bound changes clear historical
+previews. Import previews keep one calculated status in the disclosure summary.

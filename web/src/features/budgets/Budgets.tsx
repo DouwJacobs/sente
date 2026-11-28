@@ -2,7 +2,7 @@ import { BudgetTrends, Rebalance } from "../../CoreWorkflows";
 import { useTransactionAccess } from "../../TransactionAccess";
 import { BudgetGroups } from "./BudgetGroups";
 import { usePagedList, ListStatus, ListNavigation } from "../../PagedList";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { api, money } from "../../api";
 import {
@@ -47,12 +47,22 @@ export function Budgets({
       ? [selectedPeriod, ...periods.items]
       : periods.items;
   const [previewPage, setPreviewPage] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const previewGeneration = useRef(0);
+  useEffect(() => () => { previewGeneration.current++; }, []);
+  const closeEditor = () => {
+    if (saving) return;
+    previewGeneration.current++;
+    setEditing(null);
+  };
   const startEdit = (p: Row) => {
+    previewGeneration.current++;
     setEditing({ ...p });
     setPreview(null);
     setPreviewPage(0);
   };
   const update = (key: string, value: string) => {
+    previewGeneration.current++;
     setEditing((v) => (v ? { ...v, [key]: value } : null));
     setPreview(null);
     setPreviewPage(0);
@@ -159,10 +169,11 @@ export function Budgets({
       {editing && (
         <Modal
           title={editing.id ? "Edit budget period" : "New budget period"}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
         >
           <Field label="Period name">
             <input
+              disabled={saving}
               required
               maxLength={100}
               value={editing.name || ""}
@@ -172,6 +183,7 @@ export function Budgets({
           <div className="form-grid">
             <Field label="Start date">
               <input
+                disabled={saving}
                 type="date"
                 required
                 value={editing.start_date || ""}
@@ -187,6 +199,7 @@ export function Budgets({
               }
             >
               <input
+                disabled={saving}
                 type="date"
                 required
                 value={editing.end_date || ""}
@@ -205,15 +218,14 @@ export function Budgets({
             onClick={(e) => {
               if (validateFields(e.currentTarget.closest(".modal-body")!))
                 run(async () => {
-                  setPreview(
-                    await api(
-                      "/periods/" +
-                        (editing.id || "new") +
-                        "/preview?page=0&page_size=50",
-                      "POST",
-                      payload(),
-                    ),
+                  const generation = previewGeneration.current;
+                  const next = await api(
+                    "/periods/" + (editing.id || "new") + "/preview?page=0&page_size=50",
+                    "POST",
+                    payload(),
                   );
+                  if (generation !== previewGeneration.current) return;
+                  setPreview(next);
                   setPreviewPage(0);
                 });
             }}
@@ -261,6 +273,7 @@ export function Budgets({
                     loading={busy}
                     onChange={(page) =>
                       run(async () => {
+                        const generation = previewGeneration.current;
                         const next = await api(
                           "/periods/" +
                             (editing.id || "new") +
@@ -270,6 +283,7 @@ export function Budgets({
                           "POST",
                           payload(),
                         );
+                        if (generation !== previewGeneration.current) return;
                         setPreview(next);
                         setPreviewPage(page);
                       })
@@ -285,25 +299,27 @@ export function Budgets({
               loading={busy}
               disabled={busy || !preview}
               onClick={async () => {
-                if (
-                  await run(
-                    () =>
-                      api(
-                        "/periods" + (editing.id ? "/" + editing.id : ""),
-                        editing.id ? "PUT" : "POST",
-                        payload(),
-                      ),
+                setSaving(true);
+                try {
+                  if (await run(
+                    () => api(
+                      "/periods" + (editing.id ? "/" + editing.id : ""),
+                      editing.id ? "PUT" : "POST",
+                      payload(),
+                    ),
                     "Budget period saved",
-                  )
-                ) {
-                  setEditing(null);
-                  refresh();
+                  )) {
+                    setEditing(null);
+                    refresh();
+                  }
+                } finally {
+                  setSaving(false);
                 }
               }}
             >
               Save period
             </Button>
-            <Button onClick={() => setEditing(null)}>Cancel</Button>
+            <Button disabled={saving} onClick={closeEditor}>Cancel</Button>
           </div>
         </Modal>
       )}

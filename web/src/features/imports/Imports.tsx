@@ -1,6 +1,6 @@
 import { ActivityRun, ActivityAccounts, importedCountLabel } from "./Activity";
 import { ImportPreview } from "./ImportPreview";
-import { PagedSelect } from "../../PagedList";
+import { PagedSelect, usePagedList } from "../../PagedList";
 import { useEffect, useRef, useState } from "react";
 import { Upload, FileText } from "lucide-react";
 import { api } from "../../api";
@@ -26,6 +26,7 @@ export function Imports({
 }) {
   const [connection, setConnection] = useState<Row | null>(null),
     [connectionLoading, setConnectionLoading] = useState(true),
+    [connectionRetry, setConnectionRetry] = useState(0),
     [connectionError, setConnectionError] = useState("");
   const processed = useRef(new Set<number>());
   const [processing, setProcessing] = useState(false);
@@ -52,7 +53,7 @@ export function Imports({
     return () => {
       alive = false;
     };
-  }, [revision, data.user.admin]);
+  }, [revision, data.user.admin, connectionRetry]);
   const register = (id: number, action: (() => Promise<boolean>) | null) =>
     setReadyImports((old) => {
       if (old[id] === action) return old;
@@ -68,28 +69,42 @@ export function Imports({
       );
       if (pending.total) onReview(ids);
       else onTransactions(ids);
+      return true;
     } catch (e) {
       notify((e as Error).message, true);
+      return false;
     }
   };
+  const [addedImports, setAddedImports] = useState<number[]>([]);
+  const addingLock = useRef(false);
   const addReady = async () => {
-    if (adding) return;
+    if (addingLock.current) return;
+    addingLock.current = true;
     setAdding(true);
     const added: number[] = [];
     try {
-      for (const [id, commit] of Object.entries(readyImports).slice(0, 100)) {
+      const batch = Object.entries(readyImports).slice(0, 100);
+      for (const [id, commit] of batch) {
         if (!(await commit())) break;
         added.push(Number(id));
       }
       if (added.length) {
         refresh();
-        await continueImported(added);
+        const completed = [...addedImports, ...added];
+        setAddedImports(completed);
+        if (added.length === batch.length && added.length === previews.length) {
+          if (await continueImported(completed)) setAddedImports([]);
+        } else {
+          notify("Some files were added. Resolve the remaining imports to continue.");
+        }
       }
     } finally {
+      addingLock.current = false;
       setAdding(false);
     }
   };
   const readyCount = Math.min(100, Object.keys(readyImports).length);
+  const editorAccounts = usePagedList("/accounts?role=editor", revision, 50);
   const editors = data.accounts.filter((a) => a.role === "editor");
   const [account, setAccount] = useState(String(editors[0]?.id || "")),
     [files, setFiles] = useState<File[]>([]),
@@ -246,7 +261,7 @@ export function Imports({
   // Older staged imports follow the same rules when this workspace is opened.
   // Attempt each ID once per visit; conflicts remain available for explicit decisions.
   useEffect(() => {
-    if (loading || busy || processing) return;
+    if (loading || busy || processing || adding) return;
     const pending = (filterQuery ? autoHistory : history).filter(
       (h) => h.status === "staged" && !processed.current.has(h.id),
     );
@@ -264,9 +279,10 @@ export function Imports({
       }
       if (reports.length) await processPreviews(reports, false);
     })().finally(() => setProcessing(false));
-  }, [history, autoHistory, filterQuery, loading, busy, processing]);
+  }, [history, autoHistory, filterQuery, loading, busy, processing, adding]);
   return (
     <>
+      {addedImports.length > 0 && <Button disabled={adding || busy || processing} onClick={() => continueImported(addedImports)}>View successfully added transactions</Button>}
       {processing && <Loading>Processing pending imports</Loading>}
       <section className="panel import-start">
         <div className="section-head">
@@ -306,13 +322,13 @@ export function Imports({
               >
                 Get transactions
               </Button>}
-              <Button variant={connection?.connection ? 'secondary' : 'primary'} onClick={onBanking}>
-                {connection?.connection ? "Connection settings" : "Connect FNB"}
+              <Button variant={connectionLoading || connectionError || connection?.connection ? 'secondary' : 'primary'} onClick={onBanking}>
+                {connectionLoading || connectionError || connection?.connection ? "Connection settings" : "Connect FNB"}
               </Button>
             </div>
           </div>
         )}
-        {connectionError && <p role="alert">{connectionError}</p>}
+        {connectionError && <Button loading={connectionLoading} disabled={connectionLoading} onClick={() => setConnectionRetry(value => value + 1)}>Retry connection status</Button>}
         <p className="footnote">
           Categorized transactions are accepted automatically and start unseen.
           Only transactions with missing categories appear in Needs review. Mark
@@ -334,7 +350,7 @@ export function Imports({
             </div>
             <Upload size={22} />
           </div>
-          {editors.length ? (
+          {editorAccounts.loading ? <Loading>Loading editable accounts</Loading> : editorAccounts.error ? <Button onClick={editorAccounts.retry}>Retry accounts</Button> : editorAccounts.total > 0 ? (
             <>
               <PagedSelect
                 url="/accounts?role=editor"

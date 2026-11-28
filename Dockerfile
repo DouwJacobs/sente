@@ -29,7 +29,7 @@ ARG SENTE_BUILD_TIME=""
 COPY scripts/build-metadata.sh ./scripts/build-metadata.sh
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w $(sh scripts/build-metadata.sh)" -o /finance ./cmd/finance
 
-# Native Chromium 155 fixes the reproduced Alpine 152 renderer trap.
+# Pin native Chromium and verify its sandboxed runtime through image acceptance.
 # Keep all runtime packages on edge; never mix stable and edge repositories.
 FROM alpine:edge@sha256:020dfcbaaf4cc1078bf2d9c7ba31a8466e334061dcd2f248001d68f79e52c000
 ARG SENTE_VERSION=dev
@@ -42,7 +42,7 @@ LABEL org.opencontainers.image.version="$SENTE_VERSION" \
       org.opencontainers.image.title="Sente" \
       org.opencontainers.image.description="Self-hosted household finance and budgeting" \
       org.opencontainers.image.source="https://github.com/DouwJacobs/sente"
-RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git chromium=155.0.8059.84-r0 xvfb libstdc++ && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
+RUN apk upgrade --no-cache && apk add --no-cache ca-certificates tzdata git chromium=157.0.8103.50-r0 xvfb libstdc++ && addgroup -g 10001 finance && adduser -D -u 10001 -G finance finance && mkdir -p /app/data /app/backups && chown -R finance:finance /app && mkdir -p /config/fnb && chown finance:finance /config/fnb && chmod 0700 /config/fnb
 WORKDIR /app
 COPY --from=fnb /usr/local/bin/node /usr/local/bin/node
 COPY --from=fnb /opt/sente/fnb /opt/sente/fnb

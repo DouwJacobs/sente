@@ -60,8 +60,9 @@ func TestScopedBudgetAlertsExactBoundariesRefundsAndIndependentGroups(t *testing
 }
 func TestScopedBudgetPreferenceSaveBaselineDefaultsAndGlobalPrecedence(t *testing.T) {
 	e := scopedAlertFixture(t)
-	now := alertTestTime()
-	alertTransaction(t, e, 1, 1, -8000, "2026-10-08")
+	now := time.Now().UTC()
+	alignAlertPeriod(t, e, now)
+	alertTransaction(t, e, 1, 1, -8000, now.Format("2006-01-02"))
 	saveBudgetAlerts(t, e, 1, 200, budgetAlertInput(0, 0, true, 70))
 	evaluateAlerts(t, e, now)
 	if alertCount(e, "budget_threshold") != 0 {
@@ -159,6 +160,7 @@ func TestScopedBudgetSaveDoesNotEvaluateOtherCombinations(t *testing.T) {
 func TestScopedBudgetDisableCancelsQueuedPush(t *testing.T) {
 	e := scopedAlertFixture(t)
 	now := time.Now().UTC()
+	alignAlertPeriod(t, e, now)
 	date := now.Format("2006-01-02")
 	registerSyntheticPush(t, e, 1, syntheticPush(t, "scoped-budget"))
 	enablePushType(t, e, "budget_threshold")

@@ -176,7 +176,7 @@ func TestMCPRemovalDeleteTombstonesFITIDMultiplicityAndIDReuse(t *testing.T) {
 
 func TestTransactionRemovalMigrationRollbackRetryAndRestart(t *testing.T) {
 	db := migrationDB(t)
-	previous := schemaMigrations[:len(schemaMigrations)-1]
+	previous := schemaMigrations[:35-migrationBaseline+1]
 	if err := runSchemaMigrations(db, previous, 35); err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +187,7 @@ func TestTransactionRemovalMigrationRollbackRetryAndRestart(t *testing.T) {
  INSERT INTO allocations(transaction_id,amount_cents,note,group_override) VALUES(1,10001,'Keep',1);`)
 	queries := []string{"SELECT * FROM users ORDER BY id", "SELECT * FROM transactions ORDER BY id", "SELECT * FROM mcp_tokens ORDER BY id"}
 	before := migrationSnapshot(t, db, queries...)
-	steps := append([]schemaMigration(nil), schemaMigrations...)
+	steps := append([]schemaMigration(nil), schemaMigrations[:36-migrationBaseline+1]...)
 	original := steps[len(steps)-1].apply
 	steps[len(steps)-1].apply = func(tx *sql.Tx, origin migrationOrigin) error {
 		if err := original(tx, origin); err != nil {

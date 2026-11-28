@@ -16,6 +16,8 @@ for(const width of [1440,360])test(`live FNB preview requires duplicate decision
  await imports();await page.getByRole('button',{name:'Get transactions',exact:true}).click()
  await expect(page.locator('section.preview')).toHaveCount(1)
  expect(fetched).toBe(1);expect(committed).toBe(0)
+ await expect(page.locator("section.preview").getByText("Needs attention", {exact:true})).toHaveCount(1)
+
  await expect(page.getByText(/FNB returned its maximum of 150 transactions/)).toBeVisible()
  await expect(page.getByRole('button',{name:'Continue to review',exact:true})).toBeDisabled()
  await page.reload();await imports()
@@ -23,6 +25,8 @@ for(const width of [1440,360])test(`live FNB preview requires duplicate decision
  await page.getByRole('button',{name:'Resolve import issues',exact:true}).click()
  await expect(page.getByText('Description rule',{exact:true})).toBeVisible()
  await page.getByLabel('Decision for row 2').selectOption('keep')
+ await expect(page.locator("section.preview").getByText("Ready to add", {exact:true})).toHaveCount(1)
+ await expect(page.locator("section.preview").getByText("Needs attention", {exact:true})).toHaveCount(0)
  await page.getByRole('button',{name:'Continue to review',exact:true}).click()
  await expect(page.locator('.toast:popover-open')).toContainText('2 transactions added; 0 skipped. Categorized transactions are accepted and unseen.')
  expect(committed).toBe(1);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)

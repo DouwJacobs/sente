@@ -26,7 +26,7 @@ export function NotificationCentre({ notify, onPreferences, onSource }: Pick<Pag
   }, []);
   const reload = () => { setPage(0); setRevision(v => v + 1); refreshNotifications(); };
   useEffect(() => {
-    const changed = () => { setPage(0); setRevision(v => v + 1); };
+    const changed = () => { setRevision(v => v + 1); };
     const focused = () => { if (!document.hidden) changed(); };
     window.addEventListener("notifications-changed", changed);
     window.addEventListener("focus", focused);
@@ -49,7 +49,12 @@ export function NotificationCentre({ notify, onPreferences, onSource }: Pick<Pag
     }
     setLoading(true); setFailed(false); setInbox(null);
     api<Inbox>(`/notifications?page=${page}&page_size=20&state=${state}`)
-      .then(result => { if (alive.current && current === request.current) setInbox(result); })
+      .then(result => {
+        if (!alive.current || current !== request.current) return;
+        const lastPage = Math.max(0, Math.ceil(result.total / 20) - 1);
+        if (page > lastPage) { setPage(lastPage); return; }
+        setInbox(result);
+      })
       .catch(e => { if (alive.current && current === request.current) { setFailed(true); notify(e.message, true); } })
       .finally(() => { if (alive.current && current === request.current) setLoading(false); });
     return () => { ++request.current; };

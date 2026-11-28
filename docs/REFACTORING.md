@@ -135,3 +135,12 @@ features/transactions/DeleteTransaction.tsx owns the nested reason/confirmation
 workflow; TransactionEditor retains the draft and request lock. mcp_yolo.go owns
 future-consent resolution; MCPPermissions and MCPConnectionCard own visible policy
 selection and updating an existing saved YOLO connection without preset cycling.
+
+
+MCP bank refresh ownership: `bank_refresh_schema.go` owns schema 37;
+`mcp_bank_refresh.go` owns typed intents, authorization and safe status reads;
+`bank_refresh_jobs.go` owns reservation/admission, replay, stage receipts and
+retention; `fnb_mapped_balances.go` owns mapped balances and schedule completion;
+`bank_refresh_browser.go` owns the Settings result adapter. Frontend
+`features/mcp/BankRefreshJobs.tsx` separates execution results from approval;
+shared MCPPermissions/OAuth and MCPProposalCard own consent/intent review.

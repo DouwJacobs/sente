@@ -31,6 +31,7 @@ type mcpAllocation struct {
 	Note       *string `json:"note,omitempty"`
 }
 type mcpChange struct {
+	Refresh         *bankRefreshInput           `json:"refresh,omitempty"`
 	Removal         *mcpTransactionRemovalInput `json:"removal,omitempty"`
 	Period          *mcpPeriodInput             `json:"period,omitempty"`
 	BudgetAlerts    []mcpBudgetAlertInput       `json:"budget_alerts,omitempty"`
@@ -54,6 +55,7 @@ type mcpExactEdit struct {
 	After  transactionInput `json:"after"`
 }
 type mcpExactChange struct {
+	Refresh                           *bankRefreshIntent      `json:"refresh_evidence,omitempty"`
 	Removal                           *mcpTransactionRemoval  `json:"removal,omitempty"`
 	PeriodEffects                     any                     `json:"period_effects,omitempty"`
 	PeriodAfter                       any                     `json:"period_after,omitempty"`
@@ -84,6 +86,11 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 	a.mu.Lock()
 	tx, err := a.DB.Begin()
 	if err == nil {
+		if in.Operation == "refresh_bank" {
+			exact.Refresh, err = a.prepareBankRefresh(tx, identity, in)
+		} else if in.Refresh != nil {
+			err = fail(400, "Refresh input requires refresh_bank")
+		}
 		if in.Operation == "merge_transactions" || in.Operation == "delete_transactions" {
 			exact.Removal, err = a.prepareMCPTransactionRemoval(tx, identity, in)
 		}
@@ -218,7 +225,7 @@ func (a *App) mcpPrepareTool(ctx context.Context, _ *mcp.CallToolRequest, in mcp
 			}
 			exact.Before, err = data(tx, "SELECT id,"+accountField+",pattern,category_id,direction,priority,enabled,spending_group_id,version FROM "+table+" WHERE id=?", id)
 		}
-		if err == nil {
+		if err == nil && in.Operation != "refresh_bank" {
 			var simulated any
 			simulated, err = a.executeMCPChange(tx, identity, exact, "")
 			if err == nil && in.Operation == "create_period" {
@@ -483,6 +490,11 @@ func (a *App) mcpTokenActive(q queryer, i mcpIdentity) bool {
 }
 func (a *App) mcpApplyTool(ctx context.Context, _ *mcp.CallToolRequest, in mcpProposalID) (*mcp.CallToolResult, any, error) {
 	identity := ctx.Value(mcpKey).(mcpIdentity)
+	var operation string
+	_ = a.DB.QueryRow("SELECT operation FROM mcp_proposals WHERE id=? AND token_id=? AND user_id=?", in.ProposalID, identity.TokenID, identity.User.ID).Scan(&operation)
+	if operation == "refresh_bank" {
+		return a.applyBankRefresh(identity, in.ProposalID)
+	}
 	var result any
 	err := a.write(func(tx *sql.Tx) error {
 		if !identity.Write || !a.mcpTokenActive(tx, identity) {
@@ -588,16 +600,21 @@ func (a *App) mcpSettings(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Removal snapshots contain private archival evidence. Recheck access
 		// before returning them in the owner's browser, even after revocation.
-		if payload.Removal != nil {
+		if payload.Removal != nil || payload.Refresh != nil {
 			identity := mcpIdentity{User: u, TokenID: queryInt(a.DB, "SELECT token_id FROM mcp_proposals WHERE id=?", p["id"])}
 			if err := a.authorizeMCPExact(a.DB, identity, payload); err != nil {
 				p["payload"] = map[string]any{"change": map[string]any{"operation": payload.Change.Operation}, "unavailable": true}
 				continue
 			}
 		}
+		payload.Refresh = nil // Private credential/mapping evidence never leaves storage.
 		p["payload"] = payload
 	}
-	send(w, map[string]any{"endpoint": a.PublicURL + "/api/mcp", "connections": tokens, "proposals": proposals, "accounts": accounts})
+	jobs, err := a.browserBankRefreshJobs(u)
+	if err != nil {
+		return err
+	}
+	send(w, map[string]any{"endpoint": a.PublicURL + "/api/mcp", "connections": tokens, "proposals": proposals, "accounts": accounts, "bank_refresh_jobs": jobs})
 	return nil
 }
 func (a *App) revokeMCPToken(w http.ResponseWriter, r *http.Request) error {
@@ -614,6 +631,7 @@ func (a *App) revokeMCPToken(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	a.cancelAgentBankRefresh(Current(r).ID, parseID(r))
 	success(w)
 	return nil
 }

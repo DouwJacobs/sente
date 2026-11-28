@@ -37,7 +37,7 @@ export function Dashboard({
   onReview: () => void;
   onUnassigned: () => void;
   onImport: () => void;
-  stagedCount: number;
+  stagedCount: number | null;
   onAccounts: () => void;
   onBudgets: (id: number) => void;
   onSpendingFlow: () => void;
@@ -322,7 +322,7 @@ export function Dashboard({
                 <ArrowUpRight size={17} />
               </button>
             )}
-            {stagedCount > 0 && (
+            {stagedCount !== null && stagedCount > 0 && (
               <button className="action-row" onClick={onImport}>
                 <Upload size={20} />
                 <span>
@@ -348,7 +348,7 @@ export function Dashboard({
                 <ArrowUpRight size={17} />
               </button>
             )}
-            {data.accounts.length > 0 && !stagedCount && (
+            {data.accounts.length > 0 && stagedCount === 0 && (
               <button className="action-row" onClick={onImport}>
                 <Upload size={20} />
                 <span>

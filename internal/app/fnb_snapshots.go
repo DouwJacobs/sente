@@ -10,7 +10,7 @@ import (
 	"finance-tracker/internal/statements"
 )
 
-func (a *App) applyFNBSnapshot(u User, snapshot fnbSnapshot, observed string) error {
+func validateFNBSnapshot(snapshot fnbSnapshot) error {
 	if len(snapshot.Accounts) == 0 || len(snapshot.Accounts) > 100 || snapshot.Skipped < 0 || snapshot.Skipped > 100 {
 		return fmt.Errorf("invalid discovery")
 	}
@@ -25,6 +25,13 @@ func (a *App) applyFNBSnapshot(u User, snapshot fnbSnapshot, observed string) er
 				return fmt.Errorf("invalid balance")
 			}
 		}
+	}
+	return nil
+}
+
+func (a *App) applyFNBSnapshot(u User, snapshot fnbSnapshot, observed string) error {
+	if err := validateFNBSnapshot(snapshot); err != nil {
+		return err
 	}
 	return a.fnbWrite(u, func(tx *sql.Tx, u User) error {
 		// Recheck permissions after network work; no grant or preference changes occur during sync.

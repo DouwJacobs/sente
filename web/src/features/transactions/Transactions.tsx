@@ -34,7 +34,7 @@ export function Transactions({
   importIds?: number[];
   onImport?: () => void;
   onClearFilters?: () => void;
-  stagedCount?: number;
+  stagedCount?: number | null;
   review: boolean;
   period: string;
   account: string;
@@ -262,7 +262,7 @@ export function Transactions({
       {!items.length && !loading && !listError ? (
         <section className="panel transaction-panel">
           <Empty kind={emptyKind} title={stagedCount ? "Your imports need attention" : defaultReview ? "You're all caught up" : restricted ? "No transactions found" : "Your transactions start here"}>
-            {stagedCount > 0
+            {stagedCount !== null && stagedCount > 0
               ? stagedCount +
                 (stagedCount === 1 ? " import needs" : " imports need") +
                 " attention. Resolve possible duplicates or invalid data in Import activity."

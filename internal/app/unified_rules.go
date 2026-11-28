@@ -151,12 +151,13 @@ func (a *App) unifiedRules(w http.ResponseWriter, r *http.Request) error {
 }
 
 type unifiedRuleInput struct {
-	Kind     string            `json:"kind"`
-	Refs     []RuleRef         `json:"refs"`
-	Scope    string            `json:"scope"`
-	Rule     ruleInput         `json:"rule"`
-	Merchant merchantRuleInput `json:"merchant_rule"`
-	Delete   bool              `json:"delete"`
+	Kind         string            `json:"kind"`
+	MerchantName string            `json:"merchant_name,omitempty"`
+	Refs         []RuleRef         `json:"refs"`
+	Scope        string            `json:"scope"`
+	Rule         ruleInput         `json:"rule"`
+	Merchant     merchantRuleInput `json:"merchant_rule"`
+	Delete       bool              `json:"delete"`
 }
 
 func (a *App) saveUnifiedRule(w http.ResponseWriter, r *http.Request) error {
@@ -200,6 +201,21 @@ func (a *App) writeUnifiedRulesTx(tx *sql.Tx, u User, b unifiedRuleInput) ([]Rul
 		if len(targets) == 0 {
 			return nil, fail(400, "No accounts with editor access")
 		}
+	}
+	if b.MerchantName != "" {
+		if b.Kind != "merchant" || len(b.Refs) != 0 || b.Merchant.Merchant != 0 || b.Delete {
+			return nil, fail(400, "Choose an existing merchant or a new merchant name")
+		}
+		account := b.Merchant.Account
+		if b.Scope == "current" || b.Scope == "global" {
+			account = 0
+		}
+		id, err := labelID(tx, u, a, account, "merchant", b.MerchantName, true)
+		if err != nil {
+			return nil, err
+		}
+		b.Merchant.Merchant = id
+		b.Merchant.LogoVersion = queryInt(tx, "SELECT version FROM merchants WHERE id=?", id)
 	}
 	seen := map[string]bool{}
 	merchantLogoWritten := false

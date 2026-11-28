@@ -21,7 +21,7 @@ A remote agent needs a reachable HTTPS `PUBLIC_URL`. HTTP is allowed only on loc
 - Connections and refresh credentials expire after 90 days, independently of browser sign-in. `POST /oauth/revoke` or own Settings revoke invalidates the connection. Stored codes/access/refresh credentials are hashes, never plaintext secrets. Existing manual tokens remain revocable legacy connections until expiry; new manual token creation is removed.
 - Metadata and public client/token endpoints allow credential-free cross-origin requests; they do not use browser cookies to authorize agents. MCP HTTP requests reject unrecognized Origins; native/backend MCP clients are supported, arbitrary browser origins require an explicit future allowlist. Browser decision APIs retain same-origin/CSRF checks. Registration, authorization and token endpoints have bounded per-IP rate limits and database caps.
 
-The official [Go MCP SDK](https://github.com/modelcontextprotocol/go-sdk) handles protocol negotiation and transport framing. The adapter is stateless and does not expose arbitrary REST calls, SQL, filesystem tools or bank operations. Protocol authorization follows the [MCP authorization specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization). Actual external client compatibility must be checked with the chosen client; synthetic browser/client tests do not prove every agent supports remote MCP/OAuth.
+The official [Go MCP SDK](https://github.com/modelcontextprotocol/go-sdk) handles protocol negotiation and transport framing. The adapter is stateless and does not expose arbitrary REST calls, SQL or filesystem tools. Bank refreshes use the separately consented workflow below; credentials and bank administration remain browser-only. Protocol authorization follows the [MCP authorization specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization). Actual external client compatibility must be checked with the chosen client; synthetic browser/client tests do not prove every agent supports remote MCP/OAuth.
 
 ## Data and permission boundary
 
@@ -47,6 +47,7 @@ MCP excludes account numbers/bank IDs, usernames, bank login credentials, transa
 | `get_budget_limits` | All paged expense limits for `period_id` |
 | `get_budget_summary` | Household or explicitly authorized account spending/limits summary, including group/category comparisons |
 | `get_budget_trends` | Read saved-period/year comparisons using the shared authorized report service |
+| `get_bank_refresh_status` | Consent-gated refresh availability/eligible internal accounts, or this connection's job result by `job_id`; never contacts the bank |
 | `get_account_import_health` | Paged import/check freshness and schedule state; generic account labels; does not refresh banking |
 | `list_merchants`, `list_merchant_rules`, `preview_merchant_rule` | Consent-gated merchant reads and rule previews; see Merchant capabilities |
 | `prepare_change` | Validate and store an exact proposal without changing finances |
@@ -69,7 +70,7 @@ All money is integer ZAR cents. Split sums and signs must match the parent exact
 
 Proposals expire after one hour and are capped at 20 active proposals per connection. Browser approval uses normal session/CSRF protection and authorizes the immutable stored payload only. Application rechecks current permissions and versions, and commits financial writes, agent audit, status and replay result together. Failed/stale application rolls back all financial changes; prepare a fresh proposal after reloading. Applied replays return the saved result without repeating writes. Connection identity and proposal ID supplement normal financial audits, without logging credentials or financial text.
 
-The server supports edits, categorization and limits; it does not delete transactions, change account sharing, fetch banking credentials, trigger bank imports, manage users, restore backups or provide unrestricted commands. ACP and embedded agent sessions remain future work.
+The server supports separately consented transaction cleanup and bank refresh intents, alongside edits, categorization and limits. It cannot change sharing, fetch credentials, discover/create bank accounts, edit bank schedules, manage users, restore backups or provide unrestricted commands. ACP and embedded agent sessions remain future work.
 
 
 ## Setup through the endpoint link (2026-10-05)
@@ -441,3 +442,83 @@ or pending proposal effects. Existing consent never expands silently. Custom
 permission edits clear the flag; selecting another preset clears it and YOLO
 automatic approval. Revocation, account access and financial checks remain.
 Schema stays 36; no public financial read fields or proposal effects are added.
+
+
+## On-demand bank refresh
+
+An agent can request balances, recent posted transactions, or both for explicit
+existing accounts in its authenticated administrator's own FNB profile. Each
+target must be mapped, visible, within connection scope and currently editable.
+Discovery, new accounts, names/sharing, credentials, schedules, browser settings
+and exception decisions remain browser-only. Status never starts a bank session.
+
+Independent permissions are `read_bank_refresh`, `capabilities.refresh_accounts`,
+`capabilities.refresh_transactions` and matching `automatic_approval` flags. Either
+action requires the read flag. Combined refresh requires both action grants, and
+both automatic flags for automatic approval. Legacy/read-only/categorisation/
+finance presets gain no refresh actions. A read-only OAuth connection reconnects
+with `finance:propose` to request actions. Custom controls appear in OAuth and
+Settings. New/explicitly updated YOLO includes registered grants; old snapshots
+stay unchanged unless the owner already enabled future permissions.
+
+1. Call `get_bank_refresh_status` with `{}` for availability, reason/recovery,
+   eligible generic account IDs and retry/poll guidance. Read consent and current
+   administrator access apply. A missing own profile returns `not_connected`;
+   other users' connections never appear. Local runtime prerequisite checks do
+   not launch a browser or certify live bank compatibility.
+2. Call `prepare_change` with an explicit immutable intent:
+
+   ```json
+   {"operation":"refresh_bank","refresh":{"mode":"balances_and_transactions","account_ids":[1,2]}}
+   ```
+
+   Required modes: `balances`, `transactions`, `balances_and_transactions`.
+   Select 1–100 distinct positive internal IDs. Omitted/wildcard scope, unrelated
+   changes and mixed-validity batches reject. Preparation makes no bank call;
+   the existing one-hour proposal expiry/active-proposal cap apply.
+3. Obtain browser approval or explicit automatic approval. The preview binds
+   accounts, mode and normal import policy. Bank results are unknown before
+   fetching and are not presented as exact financial edits. Approval alone
+   starts no bank work.
+4. `apply_change` accepts a durable job and returns `job_id`, `status=queued`,
+   `poll_after_seconds=5`. Proposal `applied` means accepted, **not** banking
+   completion. Replays return the same reference without another login, even
+   while running or after detail expiry, subject to current access checks.
+5. Poll `get_bank_refresh_status` with `{"job_id":"returned-id"}` no faster than
+   the five-second recommendation. Use existing financial reads after completion.
+   Jobs belong to the same user and immutable connection; recreated connections
+   cannot inherit a reused numeric ID's results. Lost target access and foreign/
+   unknown jobs return a generic unavailable error.
+
+States: `queued`, `running`, `succeeded`, `needs_review`, `partial`, `failed`,
+`cancelled`, `interrupted`, `result_expired`. Results contain generic targets,
+timestamps, bounded reason/recovery, per-account/total balance-update, inserted,
+duplicate and exception counts, stage completion and possible-gap flags. No bank
+IDs, credentials/fingerprints, source rows, names, notes, raw errors, logs or
+diagnostics appear. Settings → MCP shows the same authorized summaries; Refresh
+proposals reloads them. Existing import-health reads stay unchanged.
+
+All triggers share one connector reservation. Busy or a per-owner 60-second MCP
+cooldown rejects without consuming an approved proposal. User/connection expiry,
+permission version, automatic flags if used, grants/scope/visibility/mapping and
+encrypted credential identity are checked at admission, start and every financial
+stage. Permission edits/explicit revocation cancel matching active agent work;
+other access changes still block persistence. Normal short-lived OAuth bearer
+rotation alone does not revoke the approved connection.
+
+Clean files use existing matching/classification/acceptance/seen services; blocked
+files stay in Import activity. Normal import policy needs no unrelated edit grants.
+Transactions-only preserves Accounts balance dates; combined uses one provider
+session. Incomplete-history warnings remain after success or zero new rows.
+Schedules remain unchanged; completion calculates their current next due time.
+Connections needing attention recover in Accounts & banking before another agent
+refresh; provider failures keep normal schedule pause behavior.
+
+Provider work runs outside SQL with the existing four-minute timeout and bounded
+logout cleanup. Each financial stage commits with its counters/audit; the whole
+external job is not atomic. Partial/interrupted results retain stage receipts.
+Serving startup interrupts unfinished jobs without automatic replay. Another
+attempt requires a fresh proposal. Details expire after 90 days or the newest 500
+per owner; minimal replay receipts remain while their proposals exist. Revocation
+does not erase audit receipts. `apply_change` is annotated open-world because an
+approved refresh contacts a bank; these hints grant no access.

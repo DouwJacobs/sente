@@ -153,7 +153,6 @@ export function ImportPreview({
                 {p.total} transactions
               </p>
             </div>
-            <Badge tone="pending">Needs attention</Badge>
           </div>
           {p.coverage && (
             <p className="footnote">

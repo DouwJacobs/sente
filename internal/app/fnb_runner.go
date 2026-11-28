@@ -29,19 +29,44 @@ func (a *App) runFNB(owner int64, manual, transactions bool, scope ...int64) ([]
 	return a.runFNBRequest(owner, manual, transactions, nil, scope...)
 }
 func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *http.Request, scope ...int64) ([]ParsedFile, error) {
+	opts := fnbRunOptions{Trigger: "scheduler", Transactions: transactions, Balances: !manual || !transactions, Discovery: true, Request: request}
+	if manual {
+		opts.Trigger = "browser"
+	}
+	if len(scope) > 0 {
+		opts.Selected = scope[0]
+	}
+	return a.runFNBOptions(owner, opts)
+}
+
+type fnbRunOptions struct {
+	Trigger      string
+	Transactions bool
+	Balances     bool
+	Discovery    bool
+	Request      *http.Request
+	Selected     int64
+	Reserved     bool
+	Actor        *bankRefreshActor
+}
+
+func (a *App) runFNBOptions(owner int64, opts fnbRunOptions) ([]ParsedFile, error) {
+	if (opts.Trigger == "mcp") != (opts.Actor != nil) || (opts.Actor != nil && opts.Discovery) {
+		return nil, fail(403, "Bank refresh actor does not permit discovery")
+	}
+	manual, transactions, request := opts.Trigger != "scheduler", opts.Transactions, opts.Request
 	select {
 	case <-a.stop:
 		return nil, fail(503, "Tracker is stopping")
 	default:
 	}
-	if !a.fnbMu.TryLock() {
-		return nil, fail(409, "An FNB refresh is already running")
+	if !opts.Reserved {
+		if !a.fnbMu.TryLock() {
+			return nil, fail(409, "An FNB refresh is already running")
+		}
+		defer a.fnbMu.Unlock()
 	}
-	defer a.fnbMu.Unlock()
-	selected := int64(0)
-	if len(scope) > 0 {
-		selected = scope[0]
-	}
+	selected := opts.Selected
 	a.fnbRefreshTransactions.Store(transactions)
 	defer a.fnbRefreshTransactions.Store(false)
 	a.fnbRefreshAccount.Store(selected)
@@ -71,11 +96,28 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 		return nil, fail(503, "Saved refresh schedule is invalid")
 	}
 	u.fnbCredentialHash = hash(string(secret))
+	if opts.Actor != nil {
+		u.bankRefresh = opts.Actor
+		p, err := readMCPPermissions(a.DB, opts.Actor.Identity)
+		if err != nil {
+			return nil, err
+		}
+		u.MCPAccounts = p.Constraints.AccountIDs
+		if state != "ready" {
+			return nil, fail(409, "Bank connection needs attention")
+		}
+	}
 	if !manual && state != "ready" {
 		return nil, nil
 	}
 	var targets []fnbTarget
-	if transactions {
+	if opts.Actor != nil {
+		var err error
+		targets, err = a.bankRefreshTargets(a.DB, u, opts.Actor.Exact.Change.Refresh.AccountIDs)
+		if err != nil {
+			return nil, err
+		}
+	} else if transactions {
 		var err error
 		targets, err = a.fnbTargets(a.DB, u)
 		if err != nil {
@@ -101,6 +143,10 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 	}
 	clear(key)
 	if err != nil {
+		if opts.Actor != nil {
+			_ = a.finishAgentFNB(u, "KEY_UNAVAILABLE", fnbSnapshot{}, false)
+			return nil, fail(503, "FNB encryption key unavailable")
+		}
 		a.DB.Exec("UPDATE fnb_connections SET state='action_required',last_error='KEY_UNAVAILABLE',next_due=NULL,version=version+1 WHERE user_id=?", owner)
 		return nil, fail(503, "FNB encryption key unavailable")
 	}
@@ -114,6 +160,21 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 			return nil, e
 		}
 		hiddenRows = append(hiddenRows, others...)
+	}
+	if opts.Actor != nil {
+		allowed := map[string]bool{}
+		for _, target := range targets {
+			allowed[target.BankID] = true
+		}
+		others, err := data(a.DB, "SELECT bank_id FROM fnb_discoveries WHERE user_id=?", owner)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range others {
+			if !allowed[row["bank_id"].(string)] {
+				hiddenRows = append(hiddenRows, row)
+			}
+		}
 	}
 	for _, row := range hiddenRows {
 		credentials.Hidden = append(credentials.Hidden, row["bank_id"].(string))
@@ -129,23 +190,54 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
 	a.fnbCancelMu.Lock()
 	a.fnbCancelOwner, a.fnbCancel = owner, cancel
+	if opts.Actor != nil {
+		a.fnbCancelConnection = opts.Actor.Identity.TokenID
+	}
 	a.fnbCancelMu.Unlock()
 	defer func() {
 		cancel()
 		a.fnbCancelMu.Lock()
 		a.fnbCancelOwner, a.fnbCancel = 0, nil
+		a.fnbCancelConnection = 0
 		a.fnbCancelMu.Unlock()
 	}()
 	done := make(chan struct{})
 	defer close(done)
 	go func() {
-		select {
-		case <-a.stop:
-			cancel()
-		case <-done:
+		var ticks <-chan time.Time
+		if opts.Actor != nil {
+			ticker := time.NewTicker(time.Second)
+			defer ticker.Stop()
+			ticks = ticker.C
+		}
+		for {
+			select {
+			case <-a.stop:
+				cancel()
+				return
+			case <-done:
+				return
+			case <-ticks:
+				// Covers OAuth revocation/expiry and access changes that have no
+				// browser callback. Financial writes still recheck independently.
+				tx, err := a.DB.Begin()
+				if err == nil {
+					err = a.authorizeBankRefresh(tx, opts.Actor.Identity, opts.Actor.Exact)
+					tx.Rollback()
+				}
+				if err != nil {
+					cancel()
+					return
+				}
+			}
 		}
 	}()
 	if err := a.fnbWrite(u, func(tx *sql.Tx, actor User) error {
+		if opts.Actor != nil {
+			if _, err := tx.Exec("UPDATE bank_refresh_jobs SET status='running',started_at=? WHERE id=? AND status='queued'", time.Now().Unix(), opts.Actor.JobID); err != nil {
+				return err
+			}
+		}
 		if selected > 0 && !ruleAccess(tx, a, actor, selected) {
 			return fail(403, "Account editor access required")
 		}
@@ -182,8 +274,18 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 	}
 	if err == nil {
 		now = time.Now().UTC().Format(time.RFC3339)
-		if transactions {
-			if !manual {
+		if opts.Actor != nil {
+			if opts.Balances {
+				err = a.applyMappedFNBBalances(u, targets, snapshot, now)
+			}
+			if err == nil && transactions {
+				previews, err = a.stageFNBTransactions(u, targets, snapshot, runID)
+				if err == nil {
+					err = a.autoCommitFNB(u, previews)
+				}
+			}
+		} else if transactions {
+			if opts.Balances {
 				err = a.applyFNBSnapshot(u, snapshot, now)
 			}
 			if err == nil {
@@ -218,8 +320,15 @@ func (a *App) runFNBRequest(owner int64, manual, transactions bool, request *htt
 		}
 	}
 	if err != nil {
+		if opts.Actor != nil {
+			_ = a.finishAgentFNB(u, code, snapshot, opts.Balances)
+			return nil, bankRefreshRunError{Code: code, Cause: err}
+		}
 		a.DB.Exec("UPDATE fnb_connections SET state='action_required',last_error=?,last_diagnostics=?,next_due=NULL,version=version+1 WHERE user_id=?", code, fnbDiagnosticJSON(snapshot.Diagnostics), owner)
 		return nil, fail(502, "FNB refresh needs attention: "+code)
+	}
+	if opts.Actor != nil {
+		return previews, a.finishAgentFNB(u, "", snapshot, opts.Balances)
 	}
 	due := nextFNBDue(time.Now(), interval, dailyTime)
 	if calendar != nil {

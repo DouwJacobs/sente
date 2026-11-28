@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, setCSRF } from "../../api";
+import { api, APIError, setCSRF } from "../../api";
 import type { Row, PageProps } from "../../shared/types";
 export function useSession({
   notify,
@@ -32,7 +32,9 @@ export function useSession({
             setUser(v.user);
             setCSRF(v.csrf);
           }
-        } catch {}
+        } catch (error) {
+          if (!(error instanceof APIError && error.status === 401)) throw error;
+        }
       })
       .catch((e) => alive && setStartupError(e.message))
       .finally(() => alive && setReady(true));

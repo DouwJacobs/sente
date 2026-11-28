@@ -13,7 +13,7 @@ import (
 
 func backfillPreview(t *testing.T, e *testEnv, user int, refs []RuleRef, period int64) map[string]any {
 	t.Helper()
-	w := e.req(t, user, "/api/rule-backfill/preview", "POST", ruleBackfillInput{refs, period})
+	w := e.req(t, user, "/api/rule-backfill/preview", "POST", ruleBackfillInput{Refs: refs, PeriodID: period})
 	status(t, w, 200)
 	return workflowJSON(t, w.Body.Bytes())
 }
@@ -370,5 +370,119 @@ func TestMCPRuleSearchAndFutureOnlyDescription(t *testing.T) {
 	workflowExec(t, e, "UPDATE spending_groups SET name='Changed recurring',version=version+1 WHERE id=?", group)
 	if result, failed = mcpCall(t, e, token, "list_rules", map[string]any{"filters": map[string]string{"page": "1", "list_version": listVersion}}); !failed {
 		t.Fatal("renamed search assignment did not invalidate paging", result)
+	}
+}
+
+func TestBackfillDateRangeInclusiveAndValidated(t *testing.T) {
+	e := setup(t)
+	refs := unifiedCreate(t, e, map[string]any{"kind": "category", "scope": "1", "rule": map[string]any{"account_id": 1, "pattern": "Synthetic merchant", "category_id": 1, "direction": "debit", "enabled": true}})
+	for _, date := range []string{"2026-10-01", "2026-10-02", "2026-10-03"} {
+		id := merchantTransaction(t, e, 1, -100, nil)
+		workflowExec(t, e, "UPDATE transactions SET date=? WHERE id=?", date, id)
+	}
+	preview := func(input ruleBackfillInput, code int) map[string]any {
+		t.Helper()
+		w := e.req(t, 1, "/api/rule-backfill/preview", "POST", input)
+		status(t, w, code)
+		if code != 200 {
+			return nil
+		}
+		return workflowJSON(t, w.Body.Bytes())
+	}
+	for _, input := range []ruleBackfillInput{
+		{Refs: refs, DateFrom: "2026-02-30", DateTo: "2026-03-01"},
+		{Refs: refs, DateFrom: "2026-10-03", DateTo: "2026-10-01"},
+		{Refs: refs, DateFrom: "2026-10-01"},
+		{Refs: refs, PeriodID: 1, DateFrom: "2026-10-01", DateTo: "2026-10-02"},
+	} {
+		preview(input, 400)
+	}
+	sameDay := preview(ruleBackfillInput{Refs: refs, DateFrom: "2026-10-02", DateTo: "2026-10-02"}, 200)
+	if len(sameDay["items"].([]any)) != 1 {
+		t.Fatal(sameDay)
+	}
+	bounded := preview(ruleBackfillInput{Refs: refs, DateFrom: "2026-10-01", DateTo: "2026-10-02"}, 200)
+	if len(bounded["items"].([]any)) != 2 {
+		t.Fatal(bounded)
+	}
+	w := e.req(t, 1, "/api/rule-backfill/apply", "POST", map[string]any{"token": bounded["token"]})
+	status(t, w, 200)
+	if num(workflowJSON(t, w.Body.Bytes())["applied"]) != 2 {
+		t.Fatal(w.Body.String())
+	}
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM allocations WHERE category_id=1 AND transaction_id IN (SELECT id FROM transactions WHERE date='2026-10-03' AND description='Synthetic merchant')") != 0 {
+		t.Fatal("outside range changed")
+	}
+}
+
+func TestUnifiedDraftMerchantAtomicAndExampleRollback(t *testing.T) {
+	e := setup(t)
+	name := "Atomic synthetic merchant"
+	body := map[string]any{"kind": "merchant", "scope": "current", "merchant_name": name, "merchant_rule": map[string]any{"pattern": "Atomic synthetic", "direction": "debit", "enabled": true}}
+	merchants := queryInt(e.a.DB, "SELECT COUNT(*) FROM merchants")
+	rules := queryInt(e.a.DB, "SELECT COUNT(*) FROM merchant_rules")
+	audits := queryInt(e.a.DB, "SELECT COUNT(*) FROM audit")
+	w := e.req(t, 1, "/api/unified-rules/test", "POST", map[string]any{"draft": body, "description": "Atomic synthetic purchase", "direction": "debit"})
+	status(t, w, 200)
+	if !strings.Contains(w.Body.String(), name) {
+		t.Fatal(w.Body.String())
+	}
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM merchants") != merchants || queryInt(e.a.DB, "SELECT COUNT(*) FROM merchant_rules") != rules || queryInt(e.a.DB, "SELECT COUNT(*) FROM audit") != audits {
+		t.Fatal("example persisted changes")
+	}
+	body["merchant_rule"].(map[string]any)["direction"] = "invalid"
+	status(t, e.req(t, 1, "/api/unified-rules", "POST", body), 400)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM merchants") != merchants ||
+		queryInt(e.a.DB, "SELECT COUNT(*) FROM merchant_rules") != rules ||
+		queryInt(e.a.DB, "SELECT COUNT(*) FROM audit") != audits {
+		t.Fatal("failed rule retained merchant, rule or audit writes")
+	}
+	body["merchant_rule"].(map[string]any)["direction"] = "debit"
+	status(t, e.req(t, 3, "/api/unified-rules", "POST", body), 400)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM merchants") != merchants {
+		t.Fatal("rejected scope retained merchant")
+	}
+	refs := unifiedCreate(t, e, body)
+	if len(refs) != 2 || queryInt(e.a.DB, "SELECT COUNT(*) FROM merchants") != merchants+1 {
+		t.Fatal("grouped creation did not share one merchant")
+	}
+	body["merchant_name"] = "  " + name + "  "
+	unifiedCreate(t, e, body)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM merchants") != merchants+1 {
+		t.Fatal("normalized duplicate name created another merchant")
+	}
+	body["merchant_rule"].(map[string]any)["merchant_id"] = 1
+	status(t, e.req(t, 1, "/api/unified-rules", "POST", body), 400)
+}
+
+func TestDateBackfillPrivateAccessStaleAndLimits(t *testing.T) {
+	e := setup(t)
+	refs := unifiedCreate(t, e, map[string]any{"kind": "category", "scope": "2", "rule": map[string]any{"account_id": 2, "pattern": "Synthetic merchant", "category_id": 1, "direction": "debit", "enabled": true}})
+	private := merchantTransaction(t, e, 2, -100, nil)
+	workflowExec(t, e, "UPDATE transactions SET date='2026-10-25' WHERE id=?", private)
+	input := ruleBackfillInput{Refs: refs, DateFrom: "2026-10-25", DateTo: "2026-10-25"}
+	preview := e.req(t, 1, "/api/rule-backfill/preview", "POST", input)
+	status(t, preview, 200)
+	if len(workflowJSON(t, preview.Body.Bytes())["items"].([]any)) != 1 {
+		t.Fatal(preview.Body.String())
+	}
+	status(t, e.req(t, 3, "/api/rule-backfill/preview", "POST", input), 403)
+	workflowExec(t, e, "UPDATE transactions SET version=version+1 WHERE id=?", private)
+	status(t, e.req(t, 1, "/api/rule-backfill/apply", "POST", map[string]any{"token": workflowJSON(t, preview.Body.Bytes())["token"]}), 409)
+	preview = e.req(t, 1, "/api/rule-backfill/preview", "POST", input)
+	status(t, preview, 200)
+	workflowExec(t, e, "DELETE FROM grants WHERE user_id=1 AND account_id=2")
+	status(t, e.req(t, 1, "/api/rule-backfill/apply", "POST", map[string]any{"token": workflowJSON(t, preview.Body.Bytes())["token"]}), 403)
+
+	refs = unifiedCreate(t, e, map[string]any{"kind": "category", "scope": "1", "rule": map[string]any{"account_id": 1, "pattern": "Synthetic merchant", "category_id": 1, "direction": "debit", "enabled": true}})
+	target := merchantTransaction(t, e, 1, -100, nil)
+	workflowExec(t, e, "UPDATE transactions SET date='2026-10-25' WHERE id=?", target)
+	workflowExec(t, e, "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<100001) INSERT INTO transactions(account_id,date,amount_cents,description,source_date,source_amount,source_description,provenance) SELECT 1,CASE WHEN i<=10001 THEN '2021-01-01' ELSE '2020-01-01' END,-100,'Synthetic merchant','2020-01-01',-100,'Synthetic merchant','{}' FROM n")
+	status(t, e.req(t, 1, "/api/rule-backfill/preview", "POST", ruleBackfillInput{Refs: refs}), 400)
+	status(t, e.req(t, 1, "/api/rule-backfill/preview", "POST", ruleBackfillInput{Refs: refs, DateFrom: "2021-01-01", DateTo: "2021-01-01"}), 400)
+	preview = e.req(t, 1, "/api/rule-backfill/preview", "POST", ruleBackfillInput{Refs: refs, DateFrom: "2026-10-25", DateTo: "2026-10-25"})
+	status(t, preview, 200)
+	if len(workflowJSON(t, preview.Body.Bytes())["items"].([]any)) != 1 {
+		t.Fatal("narrow date range failed to escape broad-history limits")
 	}
 }

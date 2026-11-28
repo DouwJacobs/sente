@@ -70,10 +70,28 @@ func (a *App) linkTransfer(w http.ResponseWriter, r *http.Request) error {
 }
 func (a *App) unlinkTransfer(w http.ResponseWriter, r *http.Request) error {
 	id := parseID(r)
+	var b struct {
+		Version     int64 `json:"version"`
+		Counterpart int64 `json:"counterpart_id"`
+	}
+	if r.ContentLength != 0 {
+		if err := decode(r, &b); err != nil {
+			return err
+		}
+	}
 	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		var left, right int64
 		if err := tx.QueryRow("SELECT left_id,right_id FROM transfer_links WHERE left_id=? OR right_id=?", id, id).Scan(&left, &right); err != nil {
 			return fail(404, "Transfer link not found")
+		}
+		if b.Version != 0 {
+			counterpart := left
+			if counterpart == id {
+				counterpart = right
+			}
+			if counterpart != b.Counterpart || queryInt(tx, "SELECT version FROM transactions WHERE id=?", id) != b.Version {
+				return fail(409, "Transfer changed; reload before unlinking")
+			}
 		}
 		for _, tid := range []int64{left, right} {
 			var account int64

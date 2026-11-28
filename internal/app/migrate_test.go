@@ -361,6 +361,7 @@ func removePostBaselineFixtureTables(t *testing.T, db *sql.DB) {
 // Synthetic downgrade fixtures remove later schema before replaying history.
 func removePost30FixtureColumns(t *testing.T, db *sql.DB) {
 	t.Helper()
+	migrationExec(t, db, "DROP TABLE bank_refresh_jobs; DROP TABLE bank_refresh_admissions")
 	migrationExec(t, db, "DROP TABLE transaction_removals")
 	migrationExec(t, db, "ALTER TABLE allocations DROP COLUMN group_override; ALTER TABLE allocations DROP COLUMN spending_group_id; ALTER TABLE fnb_connections DROP COLUMN schedule_json; ALTER TABLE fnb_connections DROP COLUMN daily_time")
 	columns, err := data(db, "PRAGMA table_info(merchant_rules)")

@@ -16,6 +16,8 @@ func fnbActorTx(tx *sql.Tx, u User) (User, error) {
 	}
 	actor.browserSession, actor.browserCSRF = u.browserSession, u.browserCSRF
 	actor.fnbCredentialHash = u.fnbCredentialHash
+	actor.bankRefresh = u.bankRefresh
+	actor.MCPAccounts = u.MCPAccounts
 	if u.fnbCredentialHash != "" {
 		var secret []byte
 		if tx.QueryRow("SELECT secret FROM fnb_connections WHERE user_id=?", u.ID).Scan(&secret) != nil || hash(string(secret)) != u.fnbCredentialHash {
@@ -32,6 +34,11 @@ func (a *App) fnbWrite(u User, fn func(*sql.Tx, User) error) error {
 		actor, err := fnbActorTx(tx, u)
 		if err != nil {
 			return err
+		}
+		if u.bankRefresh != nil {
+			if err := a.authorizeBankRefresh(tx, u.bankRefresh.Identity, u.bankRefresh.Exact); err != nil {
+				return err
+			}
 		}
 		return fn(tx, actor)
 	})

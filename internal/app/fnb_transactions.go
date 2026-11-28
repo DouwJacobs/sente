@@ -114,7 +114,7 @@ func (a *App) stageFNBTransactions(u User, targets []fnbTarget, snapshot fnbSnap
 			}
 			previews = append(previews, p)
 		}
-		return nil
+		return a.recordBankRefreshImports(tx, u, previews, false)
 	})
 	if err != nil {
 		return nil, err

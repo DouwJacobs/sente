@@ -11,7 +11,7 @@ import { useUserAccess } from "./useUserAccess";
 import { MCPSettings } from "../../MCPSettings";
 import { NetworkSettings } from "../../NetworkSettings";
 import { FNBConnection } from "../../FNBConnection";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../../api";
 import { Button, Tabs, Loading } from "../../ui";
 import { useTask } from "../../shared/useTask";
@@ -36,13 +36,19 @@ export function SettingsPage({
   onSectionChange: (v: string) => void;
 }) {
   const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState("");
+  const [settingsRetry, setSettingsRetry] = useState(0);
+  const [backupsLoading, setBackupsLoading] = useState(true);
+  const [backupsError, setBackupsError] = useState("");
+  const [backupsRetry, setBackupsRetry] = useState(0);
+  const dayDirty = useRef(false);
   const [notificationsVisited, setNotificationsVisited] = useState(section === "notifications");
   useEffect(() => { if (section === "notifications") setNotificationsVisited(true); }, [section]);
   const [mcpVisited, setMCPVisited] = useState(section === "mcp");
   useEffect(() => {
     if (section === "mcp") setMCPVisited(true);
   }, [section]);
-  const [startDay, setStartDay] = useState("20"),
+  const [startDay, setStartDay] = useState(""),
     [users, setUsers] = useState<Row[]>([]),
     [backups, setBackups] = useState<Row>({ items: [] }),
     [manageAccounts, setManageAccounts] = useState<Row[]>([]);
@@ -51,33 +57,37 @@ export function SettingsPage({
   useEffect(() => {
     let alive = true;
     setSettingsLoading(true);
-    Promise.all([
-      data.user.budget_member
-        ? api("/settings")
-        : Promise.resolve({ start_day: 20 }),
-      data.user.admin
-        ? api("/users?page=0&page_size=100")
-        : Promise.resolve([]),
-      data.user.admin ? Promise.resolve({ items: [] }) : Promise.resolve([]),
-      data.user.admin ? api("/backups") : Promise.resolve({ items: [] }),
-      data.user.admin
-        ? api("/accounts/manage?page=0&page_size=100")
-        : Promise.resolve([]),
-    ])
-      .then(([s, u, _g, b, a]) => {
-        if (alive) {
-          setStartDay(String(s.start_day));
-          setUsers(u.items || []);
-          setBackups(b);
-          setManageAccounts(a.items || []);
-        }
-      })
-      .catch((e) => alive && notify(e.message, true))
-      .finally(() => alive && setSettingsLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [revision]);
+    setSettingsError("");
+    const request = data.user.budget_member
+      ? api("/settings")
+      : Promise.resolve({ start_day: "" });
+    request.then(s => {
+      if (alive && !dayDirty.current) setStartDay(String(s.start_day));
+    }).catch(e => {
+      if (alive) { setSettingsError(e.message); notify(e.message, true); }
+    }).finally(() => { if (alive) setSettingsLoading(false); });
+    return () => { alive = false; };
+  }, [revision, settingsRetry, data.user.budget_member]);
+  useEffect(() => {
+    if (!data.user.admin) return;
+    let alive = true;
+    setBackupsLoading(true);
+    setBackupsError("");
+    api("/backups").then(value => {
+      if (alive) setBackups(value);
+    }).catch(e => {
+      if (alive) { setBackupsError(e.message); notify(e.message, true); }
+    }).finally(() => { if (alive) setBackupsLoading(false); });
+    return () => { alive = false; };
+  }, [revision, backupsRetry, data.user.admin]);
+  useEffect(() => {
+    if (!data.user.admin) return;
+    let alive = true;
+    Promise.all([api("/users?page=0&page_size=100"), api("/accounts/manage?page=0&page_size=100")])
+      .then(([u, a]) => { if (alive) { setUsers(u.items); setManageAccounts(a.items); } })
+      .catch(e => { if (alive) notify(e.message, true); });
+    return () => { alive = false; };
+  }, [revision, data.user.admin]);
   const tabs = [
     { id: "general", label: "General" },
     ...(data.user.admin
@@ -111,7 +121,6 @@ export function SettingsPage({
   });
   return (
     <>
-      {settingsLoading && <Loading>Loading settings</Loading>}
       <Tabs
         id="settings"
         label="Settings sections"
@@ -127,7 +136,11 @@ export function SettingsPage({
           theme={theme}
           onTheme={onTheme}
           startDay={startDay}
-          setStartDay={setStartDay}
+          setStartDay={value => { dayDirty.current = true; setStartDay(value); }}
+          loading={settingsLoading}
+          failed={!!settingsError}
+          onRetry={() => setSettingsRetry(value => value + 1)}
+          onSaved={() => { dayDirty.current = false; }}
           busy={busy}
           run={run}
         />
@@ -220,7 +233,9 @@ export function SettingsPage({
                   {backups.error}
                 </p>
               )}
-              {backups.items.length ? (
+              {backupsLoading ? <Loading>Loading backups</Loading> : backupsError ? (
+                <Button onClick={() => setBackupsRetry(value => value + 1)}>Retry backups</Button>
+              ) : backups.items.length ? (
                 <p>
                   Last successful backup:{" "}
                   <strong>{backups.items[0].created_at} UTC</strong>

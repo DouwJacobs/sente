@@ -197,8 +197,9 @@ or returned. Nested causes are bounded to four with cycle protection.
 Source: https://github.com/chromium/chromium/blob/main/net/base/net_error_list.h
 
 
-The production Dockerfile now reproduces the tested native Alpine Chromium 155
-runtime with its own authenticated virtual display. It uses Alpine edge throughout
+The production Dockerfile pins native Alpine Chromium 157.0.8103.50-r0
+with its own authenticated virtual display. The 12 November local image build
+updates the former 155.0.8059.84-r0 pin because Alpine edge no longer provides it. It uses Alpine edge throughout
 the final stage, with no stable/edge mixing and no positional-write preload adapter.
 The base digest and browser package version are explicit. Edge is rolling and may
 lag upstream security patches; do not treat a passing functional check or a clean
@@ -252,3 +253,16 @@ Individual Chromium protocol calls are bounded to 15 seconds, below the worker a
 Owner live diagnostic: initial navigation reports login_page_crashed=1 and timeout before credential entry. Container cgroup OOM/kill counters are zero; after cleanup /tmp and /dev/shm are empty, which does not establish their peak usage. The actual worker now uses the same fixed numeric browser-crash classifier as the public probe (sandbox syscall, GPU/WebGL, memory/storage and signal categories). Raw stderr is bounded, retained only transiently and never exported; counters remain within the browser diagnostic allowlist. No MCP schemas or consent scopes are expanded. The reproduced SIGILL is covered by the synthetic stack-overflow regression and resolved by the native Chromium 155 candidate.
 
 Owner identified the fourth transaction target as a 32-day notice savings account. The DOM product classifier now maps exact known 32 Day Notice/32 Day Flexi Notice labels (optional FNB prefix, hyphen/spacing and Account suffix) to the existing Savings type. Unknown/structured investment or loan labels remain rejected. Identity, ZAR currency, named columns and posted-history evidence remain mandatory; no partial batch is persisted on failure. This changes supported browser-connector labels, not API/MCP schemas, consent, authorization or transaction-import rules. The owner confirmed the exact Type label as 32 Day Flexi Notice and reported that the live retry succeeded. Scheduling has not been verified by this live test.
+
+
+## Agent-requested refresh sessions
+
+MCP can request separately consented refreshes of existing mapped accounts through
+the same local worker; it cannot supply credentials, change runtime/browser
+settings or discover accounts. Approved actions run asynchronously with the same
+global connector reservation, four-minute deadline, confirmed logout and bounded
+cleanup. Safe status checks inspect local prerequisites without launching a browser
+or contacting FNB. Current consent and account access are rechecked during the run
+and before every financial stage. Interrupted jobs never restart automatically.
+See MCP.md for permissions, intent approval, result polling and recovery. A fresh
+owner-run live/MFA check is still separate from synthetic verification.

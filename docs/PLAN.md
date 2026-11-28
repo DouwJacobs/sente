@@ -149,3 +149,37 @@ YOLO connections can explicitly include future permissions automatically. Existi
 connections keep their saved grants until updated. Settings provides Update YOLO
 permissions without changing presets, visible future-consent controls and the usual
 confirmation before saving. Current account access and validation always apply.
+
+## Transaction workflow refinements — 9 November 2026
+
+Transfer link/unlink actions use the editor's unsaved-draft choices. Saving before
+linking uses the committed transaction version. Unlink requests from the editor
+also identify the reviewed counterpart. Failed transfer actions retain the editor.
+
+For a single allocation, merchant suggestions track category and group separately.
+Changing or clearing a merchant updates values supplied by the previous selection.
+Saved assignments and explicit user choices, including clears, are protected.
+Split allocations remain user-controlled.
+
+At the end of a Needs category pass, recheck the original authorized ledger scope.
+Remaining entries offer another pass. A failed count offers retry without saving
+again. Only an empty unrestricted queue receives the general completion title.
+
+The browser can create a merchant and its first rule atomically. Draft examples
+evaluate the same write path inside a rolled-back savepoint. Historical application
+supports an inclusive transaction date range for editable household/private accounts
+as well as existing all/household-period scopes. Date bounds are signed into the
+preview, and existing limits, stale/access checks and missing-only behavior apply.
+
+
+## Agent-requested banking refresh
+
+Separate MCP grants allow an administrator's agent to refresh existing mapped
+account balances, recent posted transactions or both, for explicit visible
+editable accounts within connection scope. Approval binds the fetch/import intent;
+results are unknown before fetching. Applying accepts a background job; agents
+check completion separately. Existing clean import and exception policies remain.
+Shared connector serialization, per-owner cooldown, ongoing authorization,
+idempotent replay and truthful partial/interrupted results apply. Credentials,
+account discovery/sharing and bank settings remain browser-only. Saved grants
+expand only under previously explicit future-YOLO consent. See MCP.md.

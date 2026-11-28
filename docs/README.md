@@ -16,6 +16,10 @@ Start with the [project README](../README.md) for the product tour and quick sta
 
 Task-specific references: [test review](TEST-REVIEW.md), [MCP](MCP.md), [offline rulesets](RULESETS.md), [demo data](DEMO.md), [reverse proxy](REVERSE-PROXY.md) and [FNB runtime](FNB-RUNTIME.md) and [notification foundation](NOTIFICATIONS.md) and [security hardening](SECURITY-HARDENING.md) and [branding/PWA](PWA.md).
 
+Design record: [MCP bank refresh specification and implementation plan](MCP-BANK-REFRESH-PLAN.md)
+defines agent-requested balance/transaction refreshes and their separate consent.
+The implemented contract is maintained in MCP.md.
+
 These guides describe current behavior. Keep requirements in PLAN, implementation contracts in ARCHITECTURE, and visual/interaction conventions in UI; link to them instead of copying a decision into several dated logs. HANDOVER should remain a short operational entry point. VERIFICATION records the latest change and links to older evidence.
 
 [Archived development records](archive/README.md) preserve previous plans and test histories. They are background, not requirements. Do not use them to override the current guides.

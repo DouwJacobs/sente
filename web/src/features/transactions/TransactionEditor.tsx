@@ -1,7 +1,8 @@
+import { PagedSelect } from "../../PagedList";
 import {RuleBackfill} from "../rules/RuleBackfill";
 import { DeleteTransaction } from "./DeleteTransaction";
 import type {RuleRef} from "../rules/types";
-import { TransactionExtras } from "./TransactionExtras";
+import { TransactionExtras, type TransferDraft } from "./TransactionExtras";
 import { Allocations } from "./Allocations";
 import { balanceLastSplit } from "./splitDraft";
 import { TransactionLabels } from "../../CoreWorkflows";
@@ -15,7 +16,7 @@ import { proposeRulePattern } from "../../ruleProposal";
 import { useTask } from "../../shared/useTask";
 import { type Row, type PageProps } from "../../shared/types";
 export function TransactionEditor({
-  transaction: t,
+  transaction: initialTransaction,
   data,
   refresh,
   notify,
@@ -25,7 +26,9 @@ export function TransactionEditor({
   processed = [],
   onNavigate,
   onSaveNext,
+  navigationBusy = false,
 }: {
+  navigationBusy?: boolean;
   reviewQuery?: string;
   processed?: number[];
   onNavigate?: (direction: "previous" | "next") => Promise<void>;
@@ -37,6 +40,11 @@ export function TransactionEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [t, setTransaction] = useState(initialTransaction);
+  const savedTransaction = useRef(initialTransaction);
+  const [transferDraft, setTransferDraft] = useState<TransferDraft>({
+    counterpart: "", candidate: null, expanded: false, linkExpanded: false,
+  });
   const [note, setNote] = useState(t.note || ""),
     [merchant, setMerchant] = useState<number | null>(t.merchant_id || null),
     [tags, setTags] = useState<Row[]>(t.tags || []);
@@ -77,6 +85,11 @@ export function TransactionEditor({
     ),
     [assignment, setAssignment] = useState(t.assignment),
     [period, setPeriod] = useState(String(t.period_id || ""));
+  const merchantDefaults = useRef({
+    category: t.allocations.length !== 1 || !!t.allocations[0]?.category_id ? "user" : "untouched",
+    group: !!(t.allocations.length === 1 ? t.allocations[0]?.spending_group_id : t.spending_group_id) ? "user" : "untouched",
+  });
+  const [defaultHint, setDefaultHint] = useState("");
   const [seen, setSeen] = useState(!!t.seen);
   const [deleting, setDeleting] = useState(false);
   const changeSeen = async () => {
@@ -98,7 +111,8 @@ export function TransactionEditor({
   const [assignRuleMerchant,setAssignRuleMerchant]=useState(false);
   const [saveRule, setSaveRule] = useState(false),
     [pattern, setPattern] = useState(proposeRulePattern(t.description));
-  const { busy, run } = useTask(notify);
+  const { busy: taskBusy, run } = useTask(notify);
+  const busy = taskBusy || navigationBusy;
   const allocated = alloc.reduce((sum, a) => {
     try {
       return sum + cents(a.amount);
@@ -110,8 +124,21 @@ export function TransactionEditor({
   try {
     original = cents(amount);
   } catch {}
-  const update = (i: number, key: string, value: unknown) =>
+  const update = (i: number, key: string, value: unknown) => {
+    if (key === "category_id") merchantDefaults.current.category = "user";
     setAlloc((v) => balanceLastSplit(v.map((a, n) => (n === i ? { ...a, [key]: value } : a)), amount));
+  };
+  const changeGroup = (id: number | null, name?: string) => {
+    const isTransfer = (name ?? data.spendingGroups.find((group) => group.id === id)?.name ?? "").trim().toLowerCase() === "transfer";
+    if ((t.transfer_counterpart_id || t.transfer_counterpart_hidden) && !isTransfer) {
+      notify("Unlink the transfer before changing its spending group.", true);
+      return false;
+    }
+    setSpendingGroup(id);
+    if (alloc.length === 1) setAlloc((current) => current.map((allocation) => ({ ...allocation, spending_group_override: null })));
+    setTransfer(isTransfer);
+    return true;
+  };
   const canSaveRule =
     alloc.length === 1 &&
     !!alloc[0]?.category_id &&
@@ -142,7 +169,7 @@ export function TransactionEditor({
     const ok = await run(async () => {
       const parsed = cents(amount);
       const result = await api("/transactions/" + t.id, "PUT", {
-        version: t.version,
+        version: savedTransaction.current.version,
         date,
         amount_cents: parsed,
         description,
@@ -162,6 +189,19 @@ export function TransactionEditor({
         period_id: assignment === "manual" ? Number(period) : null,
         rule: saveRule && canSaveRule ? { pattern, ...(assignRuleMerchant&&merchant?{merchant_id:merchant}:{}) } : null,
       });
+      const saved = {
+        ...savedTransaction.current,
+        version: result.version,
+        date,
+        description,
+        amount_cents: parsed,
+        note,
+        merchant_id: merchant,
+        allocations: alloc.map((allocation) => ({ ...allocation, amount_cents: cents(allocation.amount) })),
+      };
+      savedTransaction.current = saved;
+      setTransaction(saved);
+      setSeen(true);
       let message =
         transfer || alloc.every((a) => a.category_id)
           ? "Transaction saved and accepted"
@@ -170,7 +210,14 @@ export function TransactionEditor({
       notify(message);
     });
     if (ok) {
-      baseline.current = draft();
+      baseline.current = JSON.stringify({ ...JSON.parse(draft()), saveRule: false, assignRuleMerchant: false });
+      setSaveRule(false);
+      setAssignRuleMerchant(false);
+      merchantDefaults.current = {
+        category: alloc.length !== 1 || !!alloc[0]?.category_id ? "user" : "untouched",
+        group: spendingGroup ? "user" : "untouched",
+      };
+      setDefaultHint("");
       setLeave(null);
       onSaved();
       refresh();
@@ -182,12 +229,17 @@ export function TransactionEditor({
   const submit = (container: HTMLElement) => {
     if (validateFields(container)) save();
   };
-  if(backfill)return <RuleBackfill canSelectPeriod={!!data.user.budget_member} refs={backfill.refs} notify={notify} refresh={refresh} offered onClose={()=>{if(backfill.after)backfill.after();else onClose()}}/>;
+  if(backfill)return <RuleBackfill canSelectPeriod={!!data.user.budget_member} refs={backfill.refs} notify={notify} refresh={refresh} offered onClose={()=>{
+    const continuation = backfill.after;
+    setBackfill(null);
+    if (continuation) continuation();
+    else onClose();
+  }}/>;
   return (
     <Modal
       size="wide"
       title={"Transaction #" + t.id}
-      onClose={() => requestLeave(onClose)}
+      onClose={() => { if (!busy) requestLeave(onClose); }}
     >
       {deleting && <DeleteTransaction transaction={t} dirty={draft()!==baseline.current} busy={busy} run={run} onClose={()=>setDeleting(false)} onDeleted={()=>{onSaved();refresh();onClose()}}/>}
       {leave && (
@@ -297,22 +349,10 @@ export function TransactionEditor({
               label={alloc.length > 1 ? "Default spending group" : "Spending group"}
               value={spendingGroup}
               onChange={(id, group) => {
-                const isTransfer =
-                  group?.name.trim().toLowerCase() === "transfer";
-                if (
-                  (t.transfer_counterpart_id ||
-                    t.transfer_counterpart_hidden) &&
-                  !isTransfer
-                ) {
-                  notify(
-                    "Unlink the transfer before changing its spending group.",
-                    true,
-                  );
-                  return;
+                if (changeGroup(id, group?.name)) {
+                  merchantDefaults.current.group = "user";
+                  setDefaultHint("");
                 }
-                setSpendingGroup(id);
-                if (alloc.length === 1) setAlloc((current) => current.map((allocation) => ({ ...allocation, spending_group_override: null })));
-                setTransfer(isTransfer);
               }}
               options={data.spendingGroups.map((g) => ({
                 id: g.id,
@@ -330,6 +370,8 @@ export function TransactionEditor({
               setAlloc={(next) => {
                 const updated = typeof next === "function" ? next(alloc) : next;
                 if (updated.length === 1) {
+                  merchantDefaults.current = { category: "user", group: "user" };
+                  setDefaultHint("");
                   setSpendingGroup((updated[0].spending_group_override ?? spendingGroup) || null);
                   setAlloc(updated.map((allocation) => ({ ...allocation, amount, spending_group_override: null })));
                 } else setAlloc(balanceLastSplit(updated, amount));
@@ -340,6 +382,7 @@ export function TransactionEditor({
               allocated={allocated}
               busy={busy}
             />
+            {defaultHint && <p className="muted" role="status">{defaultHint}</p>}
             {transfer && (
               <p className="muted">
                 Transfer excluded from income and spending. No category is
@@ -452,17 +495,22 @@ export function TransactionEditor({
                 tags={tags}
                 onMerchant={(id, choice) => {
                   setMerchant(id);
-                  if (
-                    id &&
-                    choice?.category_id &&
-                    alloc.length === 1 &&
-                    !alloc[0]?.category_id
-                  ) {
-                    update(0, "category_id", choice.category_id);
-                    if (choice.spending_group_id && !spendingGroup) {
-                      setSpendingGroup(choice.spending_group_id);
-                    }
+                  if (alloc.length !== 1) return;
+                  const defaults = merchantDefaults.current;
+                  const supplied: string[] = [];
+                  if (defaults.category !== "user") {
+                    const category = id ? choice?.category_id || null : null;
+                    setAlloc((current) => current.map((allocation) => ({ ...allocation, category_id: category })));
+                    defaults.category = category ? "merchant" : "untouched";
+                    if (category) supplied.push("category");
                   }
+                  if (defaults.group !== "user" && !t.transfer_counterpart_id && !t.transfer_counterpart_hidden && (!transfer || defaults.group === "merchant")) {
+                    const group = id ? choice?.spending_group_id || null : null;
+                    changeGroup(group);
+                    defaults.group = group ? "merchant" : "untouched";
+                    if (group) supplied.push("spending group");
+                  }
+                  setDefaultHint(supplied.length ? "Merchant supplied the " + supplied.join(" and ") + "." : "");
                 }}
                 onTags={setTags}
                 notify={notify}
@@ -498,20 +546,10 @@ export function TransactionEditor({
                     </select>
                   </Field>
                   {assignment === "manual" && (
-                    <Field label="Assigned period">
-                      <select
-                        required
-                        value={period}
-                        onChange={(e) => setPeriod(e.target.value)}
-                      >
-                        <option value="">Choose a period</option>
-                        {data.periods.map((p) => (
-                          <option value={p.id} key={p.id}>
-                            {p.name} · {p.start_date} – {p.end_date}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
+                    <PagedSelect url="/periods" label="Assigned period" required
+                      value={period} onChange={setPeriod} options={data.periods}
+                      optionLabel={p => p.name + " · " + p.start_date + " – " + p.end_date} />
+
                   )}
                 </div>
               )}
@@ -520,11 +558,14 @@ export function TransactionEditor({
         </div>
       </fieldset>
       <TransactionExtras
+        transferDraft={transferDraft}
+        setTransferDraft={setTransferDraft}
         transaction={t}
         busy={busy}
         run={run}
         refresh={refresh}
         onClose={onClose}
+        requestMutation={(action) => requestLeave(() => action(savedTransaction.current))}
       />
       <div className="transaction-editor-footer">
         <small className="muted">

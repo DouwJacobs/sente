@@ -1,3 +1,6 @@
+export class APIError extends Error {
+ constructor(message: string, readonly status: number) { super(message) }
+}
 let csrf = ''
 export function setCSRF(value: string) { csrf = value }
 export async function api<T = any>(path: string, method = 'GET', body?: unknown): Promise<T> {
@@ -8,7 +11,7 @@ export async function api<T = any>(path: string, method = 'GET', body?: unknown)
   body: body === undefined ? undefined : form ? body : JSON.stringify(body)
  })
  const result = await response.json().catch(() => ({error:'The server returned an invalid response'}))
- if (!response.ok) { if(response.status === 401 && path !== '/login' && (path !== '/me' || csrf !== '')) window.dispatchEvent(new Event('session-expired')); throw new Error(result.error || 'Request failed') }
+ if (!response.ok) { if(response.status === 401 && path !== '/login' && (path !== '/me' || csrf !== '')) window.dispatchEvent(new Event('session-expired')); throw new APIError(result.error || 'Request failed', response.status) }
  return result
 }
 export const money = (cents: number) => new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR'}).format(cents / 100)

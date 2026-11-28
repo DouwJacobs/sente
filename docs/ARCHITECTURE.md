@@ -14,7 +14,7 @@ Frontend workflows live in `web/src/features/<feature>`. App composes session, n
 
 ## Persistence and authorization
 
-The ordered registry in `internal/app/migrate.go` initializes and upgrades SQLite. The current schema is 36. Its one-time compatibility bridge uses the frozen version-22 `schema.sql` snapshot and preserves sparse legacy version history; subsequent upgrades append named, consecutive migrations. Schema/data changes and version records commit in one transaction, with a pinned connection and foreign-key integrity checking for table rebuilds. Current-version startup does not reapply schema or backfills. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser writes refresh the initiating session/CSRF and current actor roles through `browser_write.go` within that same transaction; browser user creation and its audit are atomic. `auth_maintenance.go` bounds login/OAuth rate state and removes expired credentials at serving startup/hourly. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
+The ordered registry in `internal/app/migrate.go` initializes and upgrades SQLite. The current schema is 37. Its one-time compatibility bridge uses the frozen version-22 `schema.sql` snapshot and preserves sparse legacy version history; subsequent upgrades append named, consecutive migrations. Schema/data changes and version records commit in one transaction, with a pinned connection and foreign-key integrity checking for table rebuilds. Current-version startup does not reapply schema or backfills. Foreign keys, WAL, one pooled connection and short serialized writes protect consistency. All mutation services check permissions, expected versions, dependencies and audit within one SQL transaction. Browser writes refresh the initiating session/CSRF and current actor roles through `browser_write.go` within that same transaction; browser user creation and its audit are atomic. `auth_maintenance.go` bounds login/OAuth rate state and removes expired credentials at serving startup/hourly. Browser handlers, MCP application and offline rulesets call those services rather than separate writers.
 
 Budget membership grants editor access to household accounts. Private accounts require explicit grants, including for administrators, and do not participate in shared budgets. Administrative account-management metadata excludes financial records. Hidden accounts are excluded before ordinary reads/aggregates and connector work. Access checks precede search, count, paging, history and aggregates.
 
@@ -232,3 +232,23 @@ DeleteTransaction component retains the editor draft on cancellation and shares
 its request lock. mcp_yolo.go resolves explicitly consented future permissions at
 existing read/authorization boundaries; missing consent preserves token snapshots.
 Pending proposals keep exact effects and current authorization checks. No migration.
+
+
+## Agent bank refresh jobs — schema 37
+
+`bank_refresh_schema.go` adds durable job receipts and per-owner admission times.
+`mcp_bank_refresh.go` owns typed intents, private immutable connection/credential/
+mapping evidence, authorization and explicit safe read DTOs. `bank_refresh_jobs.go`
+owns atomic admission/replay, stage receipts and retention; `bank_refresh_browser.go`
+adapts the same scoped results for Settings. Revocation preserves receipts; an
+immutable connection key prevents numeric token ID reuse leaks.
+
+`fnb_runner.go` separates run options from trigger identity and shares the existing
+provider/global reservation. `fnb_mapped_balances.go` updates only mapped balances,
+without discovery/name/grant effects, and completes against the current schedule.
+`fnb_authorization.go` retains the MCP actor across each shared financial write;
+its counters/audit commit with the stage. Admission reserves the connector before
+the SQL writer, never waiting for it inside SQL. A worker inherits the reservation
+after acceptance; shutdown cancels provider work and waits for that reservation.
+Startup interrupts unfinished jobs without replay. Status uses read snapshots
+without waking producers. See MCP.md for intent approval and privacy contracts.

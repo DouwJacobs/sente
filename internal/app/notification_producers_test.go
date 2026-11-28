@@ -15,6 +15,12 @@ func alertFixture(t *testing.T) *testEnv {
 	migrationExec(t, e.a.DB, "UPDATE periods SET start_date='2026-10-01',end_date='2026-10-31'; INSERT INTO targets VALUES(1,1,10000)")
 	return e
 }
+
+// Preference writes and diagnostics use the live clock, so their fixtures need a current period.
+func alignAlertPeriod(t *testing.T, e *testEnv, now time.Time) {
+	t.Helper()
+	workflowExec(t, e, "UPDATE periods SET start_date=?,end_date=? WHERE id=1", now.AddDate(0, 0, -1).Format("2006-01-02"), now.AddDate(0, 0, 1).Format("2006-01-02"))
+}
 func alertTransaction(t *testing.T, e *testEnv, id, account, amount int64, date string) {
 	t.Helper()
 	_, err := e.a.DB.Exec(`INSERT INTO transactions(id,account_id,date,amount_cents,description,source_date,source_amount,source_description,source_key,provenance,period_id,review_state) VALUES(?,?,?,?,'Synthetic payment',?,?,'Synthetic payment',?,'{}',1,'approved')`, id, account, date, amount, date, amount, fmt.Sprint(id))
@@ -288,9 +294,11 @@ func TestNotificationRecurringAmountChange(t *testing.T) {
 }
 func TestNotificationDiagnosticAuthorizationRedactionAndRetention(t *testing.T) {
 	e := alertFixture(t)
-	alertTransaction(t, e, 1, 1, -8000, "2026-10-15")
-	evaluateAlerts(t, e, time.Now())
-	evaluateAlerts(t, e, time.Now())
+	now := time.Now().UTC()
+	alignAlertPeriod(t, e, now)
+	alertTransaction(t, e, 1, 1, -8000, now.Format("2006-01-02"))
+	evaluateAlerts(t, e, now)
+	evaluateAlerts(t, e, now)
 	status(t, e.req(t, 3, "/api/notifications/diagnostics", "GET", nil), 403)
 	w := e.req(t, 1, "/api/notifications/diagnostics?type=budget_threshold&user=1&days=14", "GET", nil)
 	status(t, w, 200)

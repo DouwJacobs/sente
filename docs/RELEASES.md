@@ -78,7 +78,8 @@ pinned; Dependabot proposes updates. Review dependency/license/security changes.
 Only linux/amd64 is advertised and exercised. ARM and other architectures are not
 verified. The image runs as UID/GID 10001 with a read-only root, dropped capabilities,
 no-new-privileges, a writable temporary filesystem and two persistent named volumes.
-It excludes the optional FNB browser worker/runtime.
+It includes the FNB worker and native Alpine Chromium using an authenticated
+virtual display.
 
 Use a released version or the digest from its release notes:
 
@@ -134,7 +135,7 @@ compatibility across minor releases. Review release notes before updating.
 | MCP | Streamable HTTP, OAuth PKCE, explicit connection consent and current account grants. Initialization returns the image version. Synthetic protocol tests do not certify every external client. |
 | Configuration | JSON format version 2, validated preview/import/export and explicit account mapping. Unsupported formats must fail rather than be guessed. |
 | Statements | FNB ZAR CSV/OFX and bounded ZIP uploads; account identity/currency must match. Other banks/currencies/formats are not supported. |
-| Live FNB | Optional separate Node/browser runtime, owner-entered credentials and live MFA/layout checks. Recent history is capped at 150 bank rows; it is not complete bank history. |
+| Live FNB | Bundled Node/browser runtime, owner-entered credentials and live MFA/layout checks. Recent history is capped at 150 bank rows; it is not complete bank history. |
 | Browser/PWA/push | Desktop/mobile Chromium covered synthetically. PWA and financial alert producers are included; real Safari/device installation and provider/OS push delivery remain owner-run checks. No offline financial editing. |
 
 ## Upgrade with a pre-upgrade backup

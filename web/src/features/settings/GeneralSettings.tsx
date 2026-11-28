@@ -1,5 +1,5 @@
 import { api } from "../../api";
-import { Button, Field, Form } from "../../ui";
+import { Button, Field, Form, Loading } from "../../ui";
 import { useTask } from "../../shared/useTask";
 import { type PageProps } from "../../shared/types";
 export function GeneralSettings({
@@ -11,6 +11,10 @@ export function GeneralSettings({
   setStartDay,
   busy,
   run,
+  loading,
+  failed,
+  onRetry,
+  onSaved,
 }: {
   data: PageProps["data"];
   refresh: () => void;
@@ -18,6 +22,10 @@ export function GeneralSettings({
   onTheme: (theme: string) => void;
   startDay: string;
   setStartDay: (day: string) => void;
+  loading: boolean;
+  failed: boolean;
+  onRetry: () => void;
+  onSaved: () => void;
   busy: boolean;
   run: ReturnType<typeof useTask>["run"];
 }) {
@@ -45,6 +53,7 @@ export function GeneralSettings({
             <Form
               onSubmit={async (e) => {
                 e.preventDefault();
+                if (loading || failed) return;
                 if (
                   await run(
                     () =>
@@ -53,15 +62,20 @@ export function GeneralSettings({
                       }),
                     "Default updated; existing periods are unchanged",
                   )
-                )
+                ) {
+                  onSaved();
                   refresh();
+                }
               }}
             >
+              {loading && <Loading>Loading settings</Loading>}
+              {failed && <Button onClick={onRetry}>Retry settings</Button>}
               <Field
                 label="Default period start day"
                 hint="Used for new periods. Days beyond a month’s length use its last day."
               >
                 <input
+                  disabled={busy || loading || failed}
                   type="number"
                   min={1}
                   max={31}
@@ -71,7 +85,7 @@ export function GeneralSettings({
                 />
               </Field>
               <div className="form-actions">
-                <Button variant="primary" type="submit" loading={busy} disabled={busy}>Save default</Button>
+                <Button variant="primary" type="submit" loading={busy} disabled={busy || loading || failed}>Save default</Button>
               </div>
             </Form>
           )}

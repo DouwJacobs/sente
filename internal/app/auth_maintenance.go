@@ -52,7 +52,7 @@ func pruneCredentialsTx(tx *sql.Tx, now time.Time) error {
 			return err
 		}
 	}
-	return nil
+	return pruneBankRefreshJobs(tx, now)
 }
 
 // Maintenance runs only when serving, including quiet password-only deployments.

@@ -23,11 +23,13 @@ export function RuleBackfill({
 }) {
   const [scope, setScope] = useState("all"),
     [period, setPeriod] = useState(""),
+    [dateFrom, setDateFrom] = useState(""),
+    [dateTo, setDateTo] = useState(""),
     [preview, setPreview] = useState<Row | null>(null),
     [page, setPage] = useState(0);
   const { busy, run } = useTask(notify);
   const selection = useRef("");
-  selection.current = scope + ":" + period;
+  selection.current = JSON.stringify([scope, period, dateFrom, dateTo]);
   const reset = () => {
     setPreview(null);
     setPage(0);
@@ -58,6 +60,7 @@ export function RuleBackfill({
             const result = await api("/rule-backfill/preview", "POST", {
               refs,
               period_id: scope === "period" ? Number(period) : 0,
+              ...(scope === "dates" ? { date_from: dateFrom, date_to: dateTo } : {}),
             });
             if (selection.current !== currentSelection) return;
             setPreview(result);
@@ -75,11 +78,24 @@ export function RuleBackfill({
             }}
           >
             <option value="all">All previous transactions</option>
+            <option value="dates">Date range</option>
             {canSelectPeriod && (
               <option value="period">A specific budget period</option>
             )}
           </select>
         </Field>
+        {scope === "dates" && (
+          <div className="form-grid">
+            <Field label="From date">
+              <input type="date" required disabled={busy} value={dateFrom}
+                onChange={(event) => { setDateFrom(event.target.value); reset(); }} />
+            </Field>
+            <Field label="To date" validate={(value) => value && dateFrom && value < dateFrom ? "Choose a date on or after the from date." : ""}>
+              <input type="date" required disabled={busy} min={dateFrom || undefined} value={dateTo}
+                onChange={(event) => { setDateTo(event.target.value); reset(); }} />
+            </Field>
+          </div>
+        )}
         {scope === "period" && (
           <PagedSelect
             url="/periods"

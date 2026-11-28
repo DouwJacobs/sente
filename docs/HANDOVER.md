@@ -737,3 +737,96 @@ keeps registered reads/change grants/automatic approvals current without preset
 cycling. Existing grants never expand silently. Manual browser deletion uses the
 same archival service, independently of MCP consent. No migration; schema stays 36.
 A documentation-only follow-up records publication; the image retains its source SHA.
+
+## Transaction workflow refinements — 9 November 2026 (complete)
+
+All six items in the untracked TRANSACTION-WORKFLOW-IMPLEMENTATION.md plan are
+implemented. Transfer actions guard unsaved drafts and retain counterpart selection
+through the rule-backfill screen. Merchant defaults track category/group ownership.
+Review passes recheck the selected queue. New merchants and rules save atomically,
+and draft examples roll back. Historical application supports signed inclusive
+date ranges. Import previews have one calculated status.
+
+The final nine browser specs passed 52 cases. Focused backend race checks,
+classification tests, Go vet, 30 frontend unit tests and production build passed.
+All six backend batches completed successfully over 312 enumerated top-level
+tests, retaining the existing optional public-repository/supplied-FNB fixture
+skips. Four live-clock notification scenarios were corrected to align fixture
+periods and transaction dates with today. Their focused rerun and affected batch
+passed. See VERIFICATION.md for scope, artifacts and inspection limits.
+
+The extensions remain browser-scoped. Existing MCP consent, schemas and proposal
+contracts are unchanged. Shared authorized label/rule/financial write services,
+audits and signed previews remain in use. No migration is needed.
+Keep the planning document untracked and uncommitted.
+
+## UI and workflow review — 11 November 2026
+
+[Implementation handover](UI-WORKFLOW-REVIEW-2026-11-11.md) contains 12 open browser workflow tickets with source evidence, reproduction steps and acceptance criteria. Start with settings load isolation, budget preview freshness and partial import recovery.
+
+## UI and workflow implementation — 12 November 2026
+
+Implemented all twelve tickets in [the review handover](UI-WORKFLOW-REVIEW-2026-11-11.md).
+The settings, preview, import, session, selector, inbox and recovery changes retain
+the current shared controls and authorized server services. The new
+ui-workflow-review browser spec covers failures, pending requests, partial commits,
+large option lists, saved-period hydration and read-only recovery after a successful
+agent decision. Existing November transaction work remains part of the baseline.
+
+These are browser changes. MCP tools, input schemas, output allowlists, connection
+consent, proposal contracts and database schema need no expansion. Existing
+financial and audit services remain authoritative. See VERIFICATION.md for actual
+checks and inspection limits. Changes are local to the existing working tree.
+
+## Local test image — 12 November 2026
+
+Local image sente:ui-workflow-20261112 contains the current working tree. The Dockerfile's
+unavailable Chromium pin was updated to 157.0.8103.50-r0, and full synthetic
+production-image acceptance passed, including the native browser runtime.
+Image identity is sha256:31c8218559091c2777f9232462885afc16ac91f2c4824c0262582a8c1292dccf. See VERIFICATION.md.
+
+Owner test instance is http://localhost:8082 in Compose project sente-ui-test-20261112,
+with fresh isolated data and first-run setup required. The container is left
+running. Receipts and launch details are ignored under work/local-ui-image-20261112.
+Publication awaits the owner's local testing.
+
+## MCP bank refresh specification — 20 November 2026
+
+[Specification and implementation plan](MCP-BANK-REFRESH-PLAN.md) proposes
+agent-requested refreshes of existing connected account balances and recent
+transactions. It includes separate default-off read/balance/transaction grants,
+automatic approvals and existing future-YOLO consent behavior, exact scoped
+refresh intents, asynchronous jobs, ongoing authorization, privacy, recovery,
+migration and synthetic acceptance coverage. Account discovery and bank
+administration remain browser-only in the proposed first version.
+
+Documentation only: no MCP tools, runtime permissions, financial services,
+database schema or connection consent were changed. No live bank run, production
+data access, application tests, UI inspection or deployment was performed.
+
+
+## MCP bank refresh implementation — 20 November 2026
+
+Implemented the bank refresh design in the original WSL checkout, preserving
+existing unrelated local work. MCP adds get_bank_refresh_status and explicit
+refresh_bank intents through prepare/approve/apply. Separate default-off read,
+balance and transaction grants/automatic approvals appear in OAuth/Settings;
+future-YOLO follows existing explicit consent. Existing accounts only: no discovery,
+renames, grants, bank credentials or schedule editing through MCP.
+
+Schema 37 adds durable jobs and per-owner cooldowns. Shared connector admission
+reserves before SQL; the background worker inherits the reservation. Every
+financial stage rechecks current actor/connection/consent/scope/mapping/credentials
+and commits its result counters/audit together. Immutable connection keys prevent
+numeric ID reuse leaks. Startup interrupts unfinished jobs; replay never repeats
+banking. Results distinguish accepted/running/partial/review/complete and retain
+incomplete-history warnings. Settings shows the same authorized job summaries.
+
+Current contracts and ownership are in MCP.md, PLAN.md, ARCHITECTURE.md and
+REFACTORING.md. VERIFICATION.md records the actual checks and remaining limits.
+Complete race coverage finished with 319 passing top-level application tests and
+2 configured optional skips; domain/release packages and Go vet passed. All 30
+frontend unit tests, the production build and 35 targeted browser cases passed.
+Local timeout continuations and the corrected annotation assertion are documented
+in VERIFICATION.md. Changes remain local and uncommitted.
+No live banking, production data access, deployment or manual UI inspection.

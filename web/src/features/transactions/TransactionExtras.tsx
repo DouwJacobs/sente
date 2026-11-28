@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { Link2 } from "lucide-react";
 import { api, money } from "../../api";
 import { Button, Field, validateFields } from "../../ui";
@@ -6,28 +6,52 @@ import { useTransactionAccess } from "../../TransactionAccess";
 import type { Row } from "../../shared/types";
 import type { useTask } from "../../shared/useTask";
 import { AuditHistory } from "./AuditHistory";
+export type TransferDraft = {
+  counterpart: string;
+  candidate: Row | null;
+  expanded: boolean;
+  linkExpanded: boolean;
+};
+
 export function TransactionExtras({
   transaction: t,
   busy,
   run,
   refresh,
   onClose,
+  requestMutation,
+  transferDraft,
+  setTransferDraft,
 }: {
+  transferDraft: TransferDraft;
+  setTransferDraft: Dispatch<SetStateAction<TransferDraft>>;
   transaction: Row;
   busy: boolean;
   run: ReturnType<typeof useTask>["run"];
   refresh: () => void;
   onClose: () => void;
+  requestMutation: (action: (saved: Row) => void) => void;
 }) {
   const { openTransaction } = useTransactionAccess();
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [counterpart, setCounterpart] = useState(""),
-    [candidate, setCandidate] = useState<Row | null>(null);
+  const { counterpart, candidate } = transferDraft;
   return (
-    <details className="details transaction-editor-extras">
+    <details className="details transaction-editor-extras"
+      open={transferDraft.expanded}
+      onToggle={(event) => {
+        if (event.target !== event.currentTarget || !event.currentTarget.isConnected) return;
+        const expanded = event.currentTarget.open;
+        setTransferDraft(current => ({ ...current, expanded }));
+      }}>
       <summary>Transfer links, original details and history</summary>
       <div className="transaction-extra-grid">
-        <details className="details">
+        <details className="details"
+          open={transferDraft.linkExpanded}
+          onToggle={(event) => {
+            if (event.target !== event.currentTarget || !event.currentTarget.isConnected) return;
+            const linkExpanded = event.currentTarget.open;
+            setTransferDraft(current => ({ ...current, linkExpanded }));
+          }}>
           <summary>Link or unlink transfer</summary>
           {t.transfer_counterpart_id || t.transfer_counterpart_hidden ? (
             <>
@@ -48,17 +72,17 @@ export function TransactionExtras({
                 <Button
                   loading={busy}
                   disabled={busy}
-                  onClick={async () => {
+                  onClick={() => requestMutation(async (saved) => {
                     if (
                       await run(
-                        () => api("/transfers/" + t.id, "DELETE"),
+                        () => api("/transfers/" + saved.id, "DELETE", { version: saved.version, counterpart_id: t.transfer_counterpart_id }),
                         "Transfer unlinked",
                       )
                     ) {
                       refresh();
                       onClose();
                     }
-                  }}
+                  })}
                 >
                   Unlink transfer
                 </Button>
@@ -82,10 +106,10 @@ export function TransactionExtras({
                 >
                   <input
                     inputMode="numeric"
+                    disabled={busy}
                     value={counterpart}
                     onChange={(e) => {
-                      setCounterpart(e.target.value);
-                      setCandidate(null);
+                      setTransferDraft(current => ({ ...current, counterpart: e.target.value, candidate: null }));
                     }}
                   />
                 </Field>
@@ -102,7 +126,7 @@ export function TransactionExtras({
                           throw new Error(
                             "This transaction was not found, or you do not have access to its account.",
                           );
-                        setCandidate(v.items[0]);
+                        setTransferDraft(current => ({ ...current, candidate: v.items[0] }));
                       });
                   }}
                 >
@@ -122,14 +146,14 @@ export function TransactionExtras({
                   <Button
                     loading={busy}
                     disabled={busy}
-                    onClick={async () => {
+                    onClick={() => requestMutation(async (saved) => {
                       if (
                         await run(
                           () =>
                             api("/transfers", "POST", {
                               left_id: t.id,
                               right_id: candidate.id,
-                              left_version: t.version,
+                              left_version: saved.version,
                               right_version: candidate.version,
                             }),
                           "Transfer linked and accepted.",
@@ -138,7 +162,7 @@ export function TransactionExtras({
                         refresh();
                         onClose();
                       }
-                    }}
+                    })}
                   >
                     <Link2 size={16} />
                     Link transactions

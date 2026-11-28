@@ -161,6 +161,6 @@ func (a *App) autoCommitFNB(u User, previews []ParsedFile) error {
 			}
 			p.Inserted, p.Skipped, p.AlreadyImported = inserted, skipped, true
 		}
-		return nil
+		return a.recordBankRefreshImports(tx, u, previews, true)
 	})
 }

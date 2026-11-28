@@ -231,3 +231,22 @@ func TestCoreArchivedBudgetLegacyWriteCannotRestartCarry(t *testing.T) {
 		t.Fatal("archived category started copying again")
 	}
 }
+
+func TestTransferUnlinkChecksReviewedPairAndSavedVersion(t *testing.T) {
+	e := setup(t)
+	left := seedTransaction(t, e, 1, -1000, "2026-10-25", nil)
+	right := seedTransaction(t, e, 2, 1000, "2026-10-25", nil)
+	status(t, e.req(t, 1, "/api/transfers", "POST", map[string]any{"left_id": left, "right_id": right, "left_version": 1, "right_version": 1}), 200)
+	path := fmt.Sprintf("/api/transfers/%d", left)
+	status(t, e.req(t, 1, path, "DELETE", map[string]any{"version": 1, "counterpart_id": right}), 409)
+	status(t, e.req(t, 1, path, "DELETE", map[string]any{"version": 2, "counterpart_id": right + 1}), 409)
+	if queryInt(e.a.DB, "SELECT COUNT(*) FROM transfer_links WHERE left_id=?", left) != 1 {
+		t.Fatal("stale unlink changed link")
+	}
+	status(t, e.req(t, 1, path, "DELETE", map[string]any{"version": 2, "counterpart_id": right}), 200)
+	for _, id := range []int64{left, right} {
+		if queryInt(e.a.DB, "SELECT is_transfer FROM transactions WHERE id=?", id) != 0 || queryInt(e.a.DB, "SELECT version FROM transactions WHERE id=?", id) != 3 {
+			t.Fatal("unlink did not update both endpoints")
+		}
+	}
+}

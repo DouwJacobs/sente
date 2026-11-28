@@ -49,15 +49,19 @@ func (a *App) editTransaction(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	application := pendingRuleResult{}
+	var version int64
 	err := a.browserWrite(r, func(tx *sql.Tx, u User) error {
 		var err error
 		application, err = a.editTransactionTx(tx, u, id, b)
+		if err == nil {
+			version = queryInt(tx, "SELECT version FROM transactions WHERE id=?", id)
+		}
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	send(w, map[string]any{"ok": true, "pending_rule": application})
+	send(w, map[string]any{"ok": true, "pending_rule": application, "version": version})
 	return nil
 }
 

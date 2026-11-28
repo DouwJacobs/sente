@@ -3,6 +3,64 @@ import {test,expect,type Page} from '@playwright/test'
 import {createHash} from 'node:crypto'
 test.setTimeout(180000)
 
+for (const {width,theme} of desktopPhoneCases) test(`Bank refresh consent and honest job results ${width} ${theme}`, async ({page}) => {
+ await page.setViewportSize({width,height:900});
+ await page.addInitScript(value => localStorage.setItem('finance-theme',value),theme);
+ const name=`Bank refresh ${width}`;
+ const {token,endpoint}=await connect(page,name);
+ if(width===360){await page.getByRole('navigation',{name:'Mobile navigation',exact:true}).getByRole('button',{name:'More',exact:true}).click();await page.getByRole('navigation',{name:'More pages',exact:true}).getByRole('button',{name:'Settings',exact:true}).click()}
+ else await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('button',{name:'Settings',exact:true}).click();
+ await page.getByRole('tab',{name:'MCP',exact:true}).click();
+ const card=page.locator('.mcp-access-row').filter({hasText:name});
+ await card.getByRole('button',{name:'Edit permissions',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:`Permissions for ${name}`});
+ await expect(dialog.getByLabel('Read bank refresh availability and results',{exact:true})).not.toBeChecked();
+ await dialog.getByLabel('Permission level',{exact:true}).selectOption('custom');
+ await expect(dialog.getByLabel('Refresh balances for connected accounts',{exact:true})).not.toBeChecked();
+ await expect(dialog.getByLabel('Fetch recent transactions for connected accounts',{exact:true})).not.toBeChecked();
+ await dialog.getByLabel('Refresh balances for connected accounts',{exact:true}).check();
+ await dialog.getByLabel('Confirm permissions',{exact:true}).selectOption('confirmed');
+ await dialog.getByRole('button',{name:'Save permissions',exact:true}).click();
+ await expect(dialog.getByText('Allow bank refresh reads before enabling bank refresh requests.',{exact:true})).toBeVisible();
+ await dialog.getByLabel('Read bank refresh availability and results',{exact:true}).check();
+ await dialog.getByLabel('Fetch recent transactions for connected accounts',{exact:true}).check();
+ await dialog.locator('.permission-automatic > summary').click();
+ await dialog.getByLabel('Automatically approve: Refresh balances for connected accounts',{exact:true}).check();
+ await expect(dialog.getByLabel('Automatically approve: Fetch recent transactions for connected accounts',{exact:true})).not.toBeChecked();
+ await dialog.getByLabel('Confirm permissions',{exact:true}).selectOption('confirmed');
+ await dialog.getByRole('button',{name:'Save permissions',exact:true}).click();await expect(dialog).toBeHidden();
+ const settings=await (await page.request.get('/api/mcp/settings')).json();
+ const permissions=settings.connections.find((connection:any)=>connection.name===name).permissions;
+ expect(permissions.read_bank_refresh).toBe(true);expect(permissions.capabilities.refresh_accounts).toBe(true);
+ expect(permissions.capabilities.refresh_transactions).toBe(true);expect(permissions.automatic_approval.refresh_accounts).toBe(true);
+ expect(permissions.automatic_approval.refresh_transactions).toBe(false);
+ const response=await page.request.post(endpoint,{headers:{Authorization:`Bearer ${token}`,Accept:'application/json, text/event-stream','MCP-Protocol-Version':'2025-11-25'},data:{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'get_bank_refresh_status',arguments:{}}}});
+ expect(response.status()).toBe(200);const body=await response.json();expect(body.result.isError).not.toBe(true);
+ const status=JSON.parse(body.result.content[0].text);expect(status.available).toBe(false);expect(status.reason_code).toBe('not_connected');
+
+ // Synthetic presentation states complement the real backend execution tests.
+ let approved=false;
+ await page.route('**/api/mcp/settings',async route=>{
+  const original=await (await route.fetch()).json();
+  await route.fulfill({json:{...original,proposals:[{id:'synthetic-refresh-proposal',token_name:name,operation:'refresh_bank',status:approved?'approved':'pending',expires_at:Math.floor(Date.now()/1000)+3600,payload:{change:{operation:'refresh_bank',refresh:{mode:'balances_and_transactions',account_ids:[1]}},automatic_approval:false}}],bank_refresh_jobs:[
+   {job_id:'synthetic-queued-job',mode:'balances',status:'queued',created_at:Math.floor(Date.now()/1000),accounts:[{label:'Account #1'}],totals:{balances_updated:0,inserted:0,duplicates:0,exceptions:0}},
+   {job_id:'synthetic-partial-job',mode:'balances_and_transactions',status:'partial',created_at:Math.floor(Date.now()/1000),accounts:[{label:'Account #1'}],totals:{balances_updated:1,inserted:0,duplicates:0,exceptions:2,possible_gap:true},recovery:'Open Import activity to review staged exceptions.'}
+  ]}});
+ });
+ await page.route('**/api/mcp/proposals/synthetic-refresh-proposal',async route=>{expect(route.request().postDataJSON()).toEqual({approve:true});approved=true;await route.fulfill({json:{ok:true}})});
+ await page.getByRole('button',{name:'Refresh proposals',exact:true}).click();
+ const proposal=page.locator('.mcp-proposal').filter({hasText:'synthet'}).filter({hasText:'refresh bank'});
+ await proposal.getByText('Inspect bank refresh request',{exact:true}).click();
+ await expect(proposal).toContainText('unknown until the bank responds');
+ await expect(proposal).toContainText('The agent must apply it');
+ await proposal.getByRole('button',{name:'Approve bank refresh',exact:true}).click();
+ await expect(proposal).toContainText('approved');
+ await expect(page.getByRole('heading',{name:'Request accepted · waiting to start',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Partly completed · check the saved results',exact:true})).toBeVisible();
+ await expect(page.getByText('Recent bank history may be incomplete. A completed refresh does not guarantee full coverage.',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
 async function connect(page:Page,name:string,write=true,preset="finance"){
  const metadata=await (await page.request.get('/.well-known/oauth-authorization-server')).json()
  const endpoint=metadata.issuer+'/api/mcp',redirect='http://127.0.0.1:43210/callback'

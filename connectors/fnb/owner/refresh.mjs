@@ -122,7 +122,7 @@ export function signedOutDOM(){
  if(visible(user)&&visible(pass))return 1
  // Only explicit completed logout confirms success; impending logout does not.
  const text=document.body?.innerText||''
- if(/\b(?:you(?:['’]ve|\s+(?:have|are))?\s+(?:(?:now|successfully|been)\s+)*|successfully\s+)(?:logged|signed)\s+(?:off|out)\b|\b(?:logged|signed)\s+(?:off|out)\s+successfully\b|\b(?:log\s*(?:out|off)|sign\s*out)\s+(?:was\s+)?successful\b/i.test(text))return 2
+ if(/\b(?:you(?:['’]ve|\s+(?:have|are))?\s+(?:(?:now|successfully|been|securely)\s+)*|successfully\s+)(?:logged|signed)\s+(?:off|out)\b|\b(?:logged|signed)\s+(?:off|out)\s+successfully\b|\b(?:log\s*(?:out|off)|sign\s*out)\s+(?:was\s+)?successful\b/i.test(text))return 2
  return 0
 }
 async function bankSurfaces(context){

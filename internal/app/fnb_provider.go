@@ -82,6 +82,31 @@ type limitedFNBWriter struct {
 	remaining int
 }
 
+// Read-only prerequisite check, never a bank login or browser launch. Browser
+// compatibility remains checked by the provider when an approved request runs.
+func (a *App) bankRefreshRuntimeReady() bool {
+	if a.fnbProvider != nil {
+		return true
+	}
+	executable := os.Getenv("FNB_NODE_EXECUTABLE")
+	if executable == "" {
+		if _, err := os.Stat("/mnt/c/Program Files/nodejs/node.exe"); err == nil {
+			executable = "/mnt/c/Program Files/nodejs/node.exe"
+		} else {
+			executable = "node"
+		}
+	}
+	if _, err := exec.LookPath(executable); err != nil {
+		return false
+	}
+	runner := os.Getenv("FNB_RUNNER_PATH")
+	if runner == "" {
+		runner = "connectors/fnb/owner/refresh.mjs"
+	}
+	info, err := os.Stat(runner)
+	return err == nil && !info.IsDir()
+}
+
 func (w *limitedFNBWriter) Write(p []byte) (int, error) {
 	if len(p) > w.remaining {
 		return 0, fmt.Errorf("connector output exceeded")

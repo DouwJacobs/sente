@@ -1,6 +1,8 @@
 import { Button, Field } from "./ui";
 import type { Row } from "./shared/types";
 export const capabilityLabels: Record<string, string> = {
+  refresh_accounts: "Refresh balances for connected accounts",
+  refresh_transactions: "Fetch recent transactions for connected accounts",
 	merge_transactions: "Merge confirmed duplicates, keeping the chosen transaction",
 	delete_transactions: "Delete transactions from totals and prevent their re-import",
   manage_merchants: "Create/edit merchants and logos",
@@ -24,6 +26,7 @@ export const reviewPermissions = () => ({
   schema_version: 1,
   preset: "review",
   include_future_permissions: false,
+  read_bank_refresh: false,
   read_budget_alerts: false,
   read_context: false,
   read_merchants: false,
@@ -44,6 +47,8 @@ export function selectPreset(p: Row, preset: string): Row {
       k,
       preset === "yolo" || (preset === "finance" &&
         ![
+          "refresh_accounts",
+          "refresh_transactions",
           "merge_transactions",
           "delete_transactions",
           "create_period",
@@ -63,6 +68,7 @@ export function selectPreset(p: Row, preset: string): Row {
     preset,
     include_future_permissions: preset === "yolo",
     automatic_approval: preset === "yolo" ? { ...capabilities } : {},
+    read_bank_refresh: preset === "yolo" || !!p.read_bank_refresh,
     read_context: preset === "yolo" || p.read_context,
     read_merchants: preset === "yolo" || p.read_merchants,
     read_budget_alerts: preset === "yolo" || p.read_budget_alerts,
@@ -114,6 +120,9 @@ export function PermissionSummary({
         {value.preset === "yolo" && <li>{value.include_future_permissions
           ? "New permissions and tools are included automatically as Sente adds them."
           : "YOLO uses your saved permissions. New permissions need an update."}</li>}
+        <li>{value.read_bank_refresh
+          ? "Bank refresh availability and results can be read. Fetches require the separate banking permissions below."
+          : "Bank refresh availability and results are not shared."}</li>
         <li>
           {value.read_context
             ? "Your saved context is shared as written."
@@ -213,8 +222,10 @@ export function MCPPermissionFields({
     ].some((k) => value.capabilities[k]) && !value.read_merchants
       ? "Allow the agent to read merchant details before enabling merchant changes."
       : "";
+  const bankError = (value.capabilities.refresh_accounts || value.capabilities.refresh_transactions) && !value.read_bank_refresh
+    ? "Allow bank refresh reads before enabling bank refresh requests." : "";
   const constraintError =
-    merchantError ||
+    bankError || merchantError ||
     (value.capabilities.manage_budget_alerts && !value.read_budget_alerts
       ? "Allow personal budget alert reads before enabling alert changes."
       : "") ||
@@ -289,6 +300,12 @@ export function MCPPermissionFields({
           Includes the full text you saved in Settings. You can turn sharing off
           at any time.
         </p>
+        <label className="check">
+          <input type="checkbox" checked={!!value.read_bank_refresh}
+            onChange={e => onChange({ ...value, read_bank_refresh: e.target.checked })} />
+          Read bank refresh availability and results
+        </label>
+        <p className="footnote">Requires your own administrator FNB connection. Reading status never contacts the bank.</p>
         <label className="check">
           <input
             type="checkbox"
@@ -371,8 +388,10 @@ export function MCPPermissionFields({
             Choose specific change types. Each proposal needs your approval
             unless you enable automatic approval below.
           </p>
+          <p className="footnote">Bank refreshes affect only explicitly selected, connected accounts you can edit. Fetching transactions imports clean results using your existing rules, may change totals and trigger alerts, and may require phone approval. Recent history can be incomplete. New account discovery, credentials and schedules stay in Sente.</p>
           <div className="permission-groups">
             {[
+              ["Banking", ["refresh_accounts", "refresh_transactions"]],
               [
                 "Categorisation",
                 ["assign_missing", "recategorize", "create_category"],

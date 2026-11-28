@@ -8,7 +8,7 @@ describe("explicit MCP permission presets", () => {
   expect(Object.values(yolo.capabilities).every(Boolean)).toBe(true);
   expect(yolo.automatic_approval).toEqual(yolo.capabilities);
   expect(yolo.include_future_permissions).toBe(true);
-  expect([yolo.read_context,yolo.read_merchants,yolo.read_budget_alerts]).toEqual([true,true,true]);
+  expect([yolo.read_context,yolo.read_merchants,yolo.read_budget_alerts,yolo.read_bank_refresh]).toEqual([true,true,true,true]);
   expect(yolo.constraints.account_ids).toEqual([]);
   expect(yolo.constraints.selected_accounts).toBe(false);
   expect(selectPreset(yolo,"review").automatic_approval).toEqual({});
@@ -22,6 +22,9 @@ describe("explicit MCP permission presets", () => {
    const value = selectPreset(initial, preset);
    expect(value.capabilities.merge_transactions).toBe(false);
    expect(value.capabilities.delete_transactions).toBe(false);
+   expect(value.capabilities.refresh_accounts).toBe(false);
+   expect(value.capabilities.refresh_transactions).toBe(false);
+   expect(value.read_bank_refresh).toBe(false);
   }
  });
 });

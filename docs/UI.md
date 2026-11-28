@@ -239,9 +239,9 @@ MCP Permission level includes YOLO · all permissions and automatic approvals. E
 
 Rules replaces the separate automatic/merchant lists. Keep Search rules visible, with description/merchant/category/group matching, result count and bounded pagination. Filters contains status, assignment type, direction and account; Clear filters is explicit. Retain full grouped account membership through account filtering, editing, pausing and deletion. Rows show pattern, optional merchant avatar/name, per-rule assignments, scope, direction and accessible active/paused/global-fallback indicators. One shared ActionMenu provides Edit, Pause/Resume, Apply to previous transactions (active only), and Delete with explicit confirmation.
 
-One shared editor provides literal description matching for category/group rules and existing advanced matching for merchant rules. Assign a merchant is optional when creating; preserve existing matching type and account scope when editing. Category and group use shared searchable choices with category creation available through the picker. More options holds explicit account scope, direction, priority and active state. Check an example reports effective per-account results/conflicts using a rolled-back draft; it is disabled until a new merchant is saved/selected. Inline validation remains first-blur/live with submit focusing the invalid field.
+One shared editor provides literal description matching for category/group rules and existing advanced matching for merchant rules. Assign a merchant is optional when creating; preserve existing matching type and account scope when editing. Category and group use shared searchable choices with category creation available through the picker. More options holds explicit account scope, direction, priority and active state. Check an example reports effective per-account results/conflicts using a rolled-back draft; it also supports an unsaved merchant name without retaining the merchant. Inline validation remains first-blur/live with submit focusing the invalid field.
 
-Rule saving affects future imports. A new active rule opens Apply this rule to previous transactions? with Not now, all previous transactions or a specific budget period, Preview changes and explicit Apply N changes. Transaction-created rules follow the same offer. Manual backfill uses the same dialog. Preview rows show original description/date/account/signed money and named before/after assignments, paged 20 at a time; summary includes conflicts and skips. Existing assignments are preserved; transfers/splits are excluded. Hide period selection for non-members. Closing or failing backfill preserves the saved rule. Use overlay toasts for stale/permission/request failures and require another preview before retrying stale effects.
+Rule saving affects future imports. A new active rule opens Apply this rule to previous transactions? with Not now, all previous transactions, an inclusive date range or a specific budget period, Preview changes and explicit Apply N changes. Transaction-created rules follow the same offer. Manual backfill uses the same dialog. Preview rows show original description/date/account/signed money and named before/after assignments, paged 20 at a time; summary includes conflicts and skips. Existing assignments are preserved; transfers/splits are excluded. Hide period selection for non-members. Closing or failing backfill preserves the saved rule. Use overlay toasts for stale/permission/request failures and require another preview before retrying stale effects.
 
 
 ## Accounts & banking and friendly scheduling — 15 October 2026
@@ -293,3 +293,32 @@ Settings/OAuth form visibly offers Include future permissions automatically and
 explains new reads/tools/automatic approvals. The checkbox retains YOLO; individual
 permission changes switch to Custom and clear future consent. Keep explicit
 confirmation before saving. No preset cycling is required.
+
+
+## Transaction workflow refinements — 9 November 2026
+
+Link/unlink actions use Save and continue, Discard changes and Stay here when the
+editor has a draft. Failed mutations preserve the editor and its saved version.
+Merchant-supplied category/group values are identified with a brief local hint.
+Changing merchants replaces those suggestions independently, while explicit
+choices and saved assignments remain protected.
+
+A review pass with unresolved entries ends with End of this pass and Review
+remaining. Failed queue checks expose Retry. An empty filtered scope uses No matches
+remain. Historical application's Date range uses shared From date/To date fields,
+first-blur/live validation and dependent date validation. Changing scope or dates
+clears the preview. A new merchant can be tested and saved with its rule atomically.
+Expanded import previews retain the single calculated status in their summary.
+
+
+## MCP bank refresh consent and results
+
+Keep bank refresh reads, balance/transaction actions and matching automatic
+approvals separate in the shared OAuth/Settings permission fields. Validate the
+read dependency through Field/Form. Explain ordinary auto-import effects, possible
+phone approval and incomplete history. Review names exact targets/mode while
+stating bank values/counts are unknown. Approve bank refresh approves the intent;
+the agent still applies it. Render accepted/running/partial/complete results in
+the MCP feature using existing panels and spacing, generic account labels, actual
+counts and recovery text. Refresh proposals reloads results. Preserve drafts,
+request locks, 44px actions and phone/desktop wrapping; use toasts for failures.

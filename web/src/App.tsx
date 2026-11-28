@@ -319,11 +319,11 @@ export default function App() {
               { id: "all", label: "All transactions" },
               {
                 id: "review",
-                label: "Needs review (" + workCounts.review + ")",
+                label: "Needs review" + (workCounts.review === null ? "" : " (" + workCounts.review + ")"),
               },
               {
                 id: "imports",
-                label: "Import activity (" + workCounts.imports + ")",
+                label: "Import activity" + (workCounts.imports === null ? "" : " (" + workCounts.imports + ")"),
               },
             ]}
             value={transactionTab}

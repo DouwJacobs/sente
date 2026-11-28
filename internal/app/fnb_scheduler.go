@@ -1,11 +1,16 @@
 package app
 
 import (
+	"database/sql"
 	"time"
 )
 
 func (a *App) StartFNBScheduler() {
 	a.DB.Exec("UPDATE fnb_connections SET state='action_required',last_error='INTERRUPTED',next_due=NULL,version=version+1 WHERE state='refreshing'")
+	a.write(func(tx *sql.Tx) error {
+		_, err := tx.Exec("UPDATE bank_refresh_jobs SET status='interrupted',reason_code='interrupted',finished_at=? WHERE status IN ('queued','running')", time.Now().Unix())
+		return err
+	})
 	a.fnbWG.Add(1)
 	go func() {
 		defer a.fnbWG.Done()

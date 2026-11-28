@@ -47,7 +47,12 @@ export function MCPProposalCard({
         </Badge>
       </div>
       <details>
-        <summary>Inspect exact changes (amounts in cents)</summary>
+        <summary>{p.operation === "refresh_bank" ? "Inspect bank refresh request" : "Inspect exact changes (amounts in cents)"}</summary>
+        {p.operation === "refresh_bank" && !p.payload.unavailable && <>
+          <p>Fetch {p.payload.change.refresh.mode.replaceAll("_", " ")} for {p.payload.change.refresh.account_ids.map((id: number) => `Account #${id}`).join(", ")}.</p>
+          <p>New balances and transaction counts are unknown until the bank responds. Clean transactions may be imported using your existing rules, changing totals and triggering alerts. Exceptions require review in Import activity. Recent history may be incomplete and bank login may require phone approval.</p>
+          <p>Approval authorizes this request. The agent must apply it, then check the background job result before claiming it finished.</p>
+        </>}
         {p.payload.unavailable && <p>Access to these transaction details has changed. Reject this proposal or restore the required permissions before reviewing it.</p>}
         {p.payload.removal && (
           <>
@@ -180,7 +185,7 @@ export function MCPProposalCard({
             disabled={busy}
             onClick={() => onDecide(true)}
           >
-            Approve exact changes
+            {p.operation === "refresh_bank" ? "Approve bank refresh" : "Approve exact changes"}
           </Button>
           <Button disabled={busy} onClick={() => onDecide(false)}>
             Reject

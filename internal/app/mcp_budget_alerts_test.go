@@ -232,6 +232,9 @@ func TestMCPBudgetAlertStaleAtomicityAndAuditRollback(t *testing.T) {
 }
 func TestMCPBudgetAlertSilentBaselineGlobalPrecedenceAndAutomaticConsent(t *testing.T) {
 	e := scopedAlertFixture(t)
+	// This scenario uses the live clock because preference saves baseline at the current time.
+	now := time.Now().UTC()
+	alignAlertPeriod(t, e, now)
 	token := mcpToken(t, e, 1, true)
 	p := mcpAlertPermissions()
 	p.Automatic.ManageBudgetAlerts = true

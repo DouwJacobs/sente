@@ -1,7 +1,8 @@
 import { MCPConnectionCard } from "./features/mcp/MCPConnectionCard";
 import { MCPProposalCard } from "./features/mcp/MCPProposalCard";
+import { BankRefreshJobs } from "./features/mcp/BankRefreshJobs";
 import { SavedMCPContext } from "./features/mcp/SavedMCPContext";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { Button, Field, Loading, Empty, Form, Modal } from "./ui";
 import { useTask } from "./shared/useTask";
@@ -15,23 +16,33 @@ export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
     [consent, setConsent] = useState(false),
     [selected, setSelected] = useState<string[]>([]);
   const { busy, run } = useTask(notify);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const alive = useRef(true);
+  const request = useRef(0);
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; request.current++; };
+  }, []);
   const load = async () => {
-    const next = await api("/mcp/settings");
-    setState(next);
-    setSelected((ids) =>
-      ids.filter((id) =>
+    const current = ++request.current;
+    try {
+      setLoadFailed(false);
+      const next = await api("/mcp/settings");
+      if (!alive.current || current !== request.current) return;
+      setState(next);
+      setSelected(ids => ids.filter(id =>
         next.proposals.some((p: Row) => p.id === id && p.status === "pending"),
-      ),
-    );
+      ));
+    } catch (error) {
+      if (!alive.current || current !== request.current) return;
+      setState(null);
+      setSelected([]);
+      setLoadFailed(true);
+      throw error;
+    }
   };
   useEffect(() => {
-    let alive = true;
-    api("/mcp/settings")
-      .then((s) => alive && setState(s))
-      .catch((e) => alive && notify(e.message, true));
-    return () => {
-      alive = false;
-    };
+    void load().catch(error => notify(error.message, true));
   }, []);
   const endpoint = state?.endpoint || "";
   const copy = (value: string) =>
@@ -80,7 +91,7 @@ export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
             enable them for that agent. Context is shared as written.
           </p>
         </details>
-        {!state ? (
+        {loadFailed ? <Button disabled={busy} onClick={() => run(load)}>Retry MCP settings</Button> : !state ? (
           <Loading>Loading MCP settings</Loading>
         ) : (
           <>
@@ -220,6 +231,7 @@ export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
           />
         ))}
       </section>
+      <BankRefreshJobs jobs={state?.bank_refresh_jobs || []} />
       {editing && draft && (
         <Modal
           size="wide"
@@ -241,8 +253,8 @@ export function MCPSettings({ notify }: Pick<PageProps, "notify" | "refresh">) {
                     consent,
                   },
                 );
-                await load();
                 setEditing(null);
+                await load();
               }, "Connection permissions updated")
             }
           >

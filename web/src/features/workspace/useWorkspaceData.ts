@@ -31,7 +31,7 @@ export function useWorkspaceData({
   const [data, setData] = useState<Data | null>(null);
   const [refreshingData, setRefreshingData] = useState(false),
     periodInitialized = useRef(false);
-  const [workCounts, setWorkCounts] = useState({ review: 0, imports: 0 });
+  const [workCounts, setWorkCounts] = useState<{ review: number | null; imports: number | null }>({ review: null, imports: null });
   useEffect(() => {
     if (!user || consent) return;
     let alive = true;
@@ -128,11 +128,12 @@ export function useWorkspaceData({
   useEffect(() => {
     if (!user || consent) return;
     let alive = true;
-    Promise.all([api("/transactions?pending=1"), api("/imports?page=0")])
-      .then(([t, i]) => {
-        if (alive)
-          setWorkCounts({ review: t.total, imports: i.pending_total || 0 });
-      })
+    setWorkCounts({ review: null, imports: null });
+    api("/transactions?pending=1")
+      .then(t => { if (alive) setWorkCounts(old => ({ ...old, review: t.total })); })
+      .catch(() => {});
+    api("/imports?page=0")
+      .then(i => { if (alive) setWorkCounts(old => ({ ...old, imports: i.pending_total || 0 })); })
       .catch(() => {});
     return () => {
       alive = false;

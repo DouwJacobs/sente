@@ -11,7 +11,7 @@ import {
 } from "../../ui";
 import { CircleCheck, Pause, Globe } from "lucide-react";
 import { MerchantAvatar } from "../../MerchantAvatar";
-import { usePagedList, ListStatus, ListNavigation } from "../../PagedList";
+import { PagedSelect, usePagedList, ListStatus, ListNavigation } from "../../PagedList";
 import { useTask } from "../../shared/useTask";
 import type { PageProps, Row } from "../../shared/types";
 import { rulePayload, ruleRefs } from "./types";
@@ -120,22 +120,10 @@ export function RulesPage({
               <option value="credit">Money in</option>
             </select>
           </Field>
-          <Field label="Account">
-            <select
-              value={account}
-              onChange={(e) => {
-                setAccount(e.target.value);
-                list.setPage(0);
-              }}
-            >
-              <option value="">All accessible accounts</option>
-              {data.accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <PagedSelect url="/accounts" label="Account" empty="All accessible accounts"
+            value={account} options={data.accounts} revision={revision}
+            onChange={value => { setAccount(value); list.setPage(0); }} />
+
         </div>
       </details>
       {filtered && (

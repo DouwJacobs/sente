@@ -1440,3 +1440,184 @@ keeps registered reads/change grants/automatic approvals current without preset
 cycling. Existing grants never expand silently. Manual browser deletion uses the
 same archival service, independently of MCP consent. No migration; schema stays 36.
 A documentation-only follow-up records publication; the image retains its source SHA.
+
+## Transaction workflow refinements — 9 November 2026 (complete)
+
+All nine focused browser specs passed 52 cases with zero skips in
+web/test-results/run-mnc9z33i. Coverage includes transaction-workflow,
+transaction-editor, core-improvements, review-defaults, rules, pending-rules,
+merchant-global, fnb-transactions and editor-layout. New workflow cases cover
+360px/light and 1440px/dark; existing suites add both themes, 390/430/760/761/900px
+and short landscape. These are automated synthetic checks. Manual visual and
+physical-device inspection were excluded by the current owner policy.
+
+| Plan item | Implementation and verification evidence |
+| --- | --- |
+| Draft-safe transfers | Editor continuation, retained TransferDraft and committed save version. Browser cases check invalid-save focus, save/discard/stay, rule-backfill continuation, failed-link retry, duplicate clicks and both endpoints. TestTransferUnlinkChecksReviewedPairAndSavedVersion rejects stale versions and changed pairs. |
+| Predictable merchant defaults | Independent draft ownership, protected saved/manual choices and split preservation. Merchant workflow cases cover correction, clear, group-only defaults, reopen and split fields. |
+| Accurate review completion | Original-scope queue recheck, actual offset/list-version reset, restart and retry with request locks. Browser cases check the saved version and preserve another account's pending count. |
+| Atomic merchant and rule | Existing labelID and rule writes share the browser transaction/savepoint. TestUnifiedDraftMerchantAtomicAndExampleRollback checks preview rollback, failed writes, scope rejection and normalized duplicate names. Browser cases check draft examples and one historical-application offer. |
+| Date-scoped backfill | Signed inclusive bounds and SQL filtering before scan limits. Backend tests cover invalid/same-day dates, 100,001-row histories, the 10,000-match cap, private access and stale/revoked previews. Browser cases check dependent validation, preview invalidation and explicit apply. Existing unified backfill tests cover all/period scopes and replay. |
+| Single import status | Expanded header's fixed badge removed. FNB browser cases count one pending status, then one ready status after duplicate resolution. Import eligibility and recovery checks remain in the same spec. |
+
+Focused backend race checks passed (168.600s) for new transfer/merchant/date
+regressions and existing unified backfill behavior. Classification tests, Go vet,
+30 frontend unit tests and the production build passed. The build retains its
+existing bundle-size advisory.
+
+All six application test batches passed over the complete enumeration of 312
+top-level tests. Batches 1–3 retain their successful logs. Final batches 4–6
+record JSON events and summaries with 60, 59 and 12 passes respectively, plus
+the existing supplied-FNB-fixture skip in batch 5. The public-repository smoke
+check also retained its existing explicit opt-in skip. No required workflow
+check remains outstanding. Logs and enumeration are ignored under
+work/transaction-workflow-verification.
+
+The initial single application run reached the ten-minute package timeout.
+Bounded batches completed using temporary synthetic databases with
+TMPDIR=/dev/shm and GOTMPDIR=/tmp. The full run exposed four notification
+scenarios mixing live-clock saves/diagnostics with October-only fixture periods.
+Those test scenarios now share a helper aligning periods and transaction dates
+with today. All four focused regressions and the affected full batch passed.
+
+Review completion also resets the ledger's actual offset and discards its old
+list version before rechecking/restarting. The final browser run follows a clean
+production rebuild and verifies failed-count retry against that query. All work
+remains uncommitted, including the untracked implementation-plan document.
+
+MCP assessment covers browser-only draft merchant names, date-scoped historical
+application and optional unlink concurrency evidence. Transaction save responses
+include their committed version for guarded continuation. Existing MCP schemas,
+output allowlists, permissions, consent and proposal contracts are unchanged.
+Shared authorized financial writes and audit transactions are reused. No schema
+migration or production financial-data access is introduced.
+
+## UI and workflow review — 11 November 2026
+
+Documentation-only review of the current working tree. All 30 frontend unit tests, the production build (existing bundle-size advisory) and all 10 cohesive-flow synthetic browser cases passed. No manual visual inspection. [Review and implementation cases](UI-WORKFLOW-REVIEW-2026-11-11.md).
+
+## UI and workflow implementation — 12 November 2026
+
+All twelve items in [the review handover](UI-WORKFLOW-REVIEW-2026-11-11.md)
+are implemented. This batch changes browser code and adds the focused
+web/e2e/ui-workflow-review.spec.ts regression spec.
+
+From the WSL source directory, with Linux Node on PATH, the following passed.
+
+- npm --prefix web test — 30 unit tests.
+- npm --prefix web run build — TypeScript and production build, retaining the existing bundle-size advisory.
+- python3 scripts/test-browser.py ui-workflow-review.spec.ts settings.spec.ts transaction-workflow.spec.ts cohesive-flow.spec.ts notifications.spec.ts mcp.spec.ts experience.spec.ts polish.spec.ts theme-states.spec.ts global-search.spec.ts budget-group-interaction.spec.ts transaction-filters.spec.ts mobile-core.spec.ts toasts.spec.ts
+- python3 scripts/test-browser.py ui-workflow-review.spec.ts mcp.spec.ts fnb-transactions.spec.ts core-improvements.spec.ts rules.spec.ts workspace-controls.spec.ts onboarding.spec.ts
+- After the final import pending-lock refinements and production rebuild, python3 scripts/test-browser.py ui-workflow-review.spec.ts fnb-transactions.spec.ts cohesive-flow.spec.ts — all 33 cases passed.
+- git diff --check.
+
+There are 126 distinct passing browser cases across 19 specs, counting repeated
+specs once with their latest results. The new regression spec has 16 cases.
+Receipts are ignored under web/test-results/run-_kcmxj9l,
+run-lrp3p9bs and run-4wxckn_2. Earlier attempts exposed test-fixture timing,
+an invalid synthetic notification timestamp, an already-open assignment disclosure,
+and a missing async declaration in a route fixture. Those fixtures were corrected
+before the successful runs above.
+
+New coverage includes isolated settings/backup failures and draft retention,
+delayed and closed period previews, startup 503/network recovery, 51-option
+pagination, pending/failed category search, inbox page retention and privacy
+clamping, MCP read retry after a successful decision without a repeated write,
+category dependency recovery, independent unknown counts, unknown connection
+recovery, partial bulk imports with exact commit counts and pending navigation
+locks, saved off-page period hydration, and an editor account outside the initial
+viewer-only snapshot.
+
+The existing suites also exercised keyboard/focus behavior, both themes,
+phone/intermediate/desktop layouts, real synthetic financial writes, rule backfill,
+transfer draft guards, automatic import idempotency, explicit agent consent and
+first-run setup. This was focused automated verification using disposable fixtures.
+Manual visual inspection, physical devices and live banking remain unverified.
+The full browser suite and backend-only gates were not rerun for this browser batch.
+
+MCP impact is browser-only recovery and selection behavior. Existing MCP tools,
+input schemas, output allowlists, consent, proposal payloads, financial/audit
+services and migrations require no changes. APIError adds HTTP status to the
+internal browser error object. It introduces no server response field or disclosure.
+
+## Local UI test image — 12 November 2026
+
+Built sente:ui-workflow-20261112 from the current working tree for linux/amd64.
+Image identity is sha256:31c8218559091c2777f9232462885afc16ac91f2c4824c0262582a8c1292dccf. Embedded version is
+0.1.3-dev.0+gd7f5f1bfcbac.dirty, with revision d7f5f1bfcbacfdab0f0bc52b0db207edc06aa980.
+This is a local candidate using development metadata.
+
+The initial build failed because Alpine edge no longer supplied the exact
+Chromium 155.0.8059.84-r0 package. Dockerfile now pins 157.0.8103.50-r0.
+The available package was checked against the [Alpine package catalogue](https://pkgs.alpinelinux.org/package/edge/community/x86_64/chromium).
+The runtime documentation now records the bundled browser and worker.
+
+The rebuilt image passed scripts/test-release-image.py with its exact embedded
+version and commit. Checks covered hardened fresh onboarding, image/MCP metadata,
+restart persistence, backup/restore, browser and agent credential invalidation,
+v22 upgrades with money/source/audit/grants/consent preservation, database integrity,
+once-only restart and FNB key creation/recovery. The bundled Chromium passed the
+synthetic login, stack-overflow, loopback networking, namespace/seccomp and cleanup
+checks. scripts/publish-release.test.py passed all five tests.
+
+A separate Compose project sente-ui-test-20261112 is running at http://localhost:8082.
+It uses fresh named volumes, with first-run setup required, and an environment-file
+override that leaves the checkout's existing .env out of this test launch. Health
+and page responses succeeded from WSL and the health endpoint is reachable from
+Windows. The local test service is left running for owner testing.
+
+Build, acceptance and launch receipts are ignored under work/local-ui-image-20261112.
+No image publication or existing-installation deployment was performed. Live bank
+compatibility and owner visual/device testing remain open.
+
+
+## MCP bank refresh — 20 November 2026
+
+Implemented get_bank_refresh_status and refresh_bank intents through the existing
+prepare/approve/apply flow, separate read/balance/transaction grants and automatic
+approvals in OAuth/Settings, and explicitly consented future-YOLO resolution.
+Schema 37 adds durable jobs and per-owner cooldowns. Mapped-only balances and
+shared transaction imports retain current access/credential checks, source
+recognition, classification, acceptance/seen behavior and current schedules.
+No discovery, account renames/grants, credentials or bank settings are exposed.
+
+Verification used disposable synthetic databases/provider responses only:
+
+- Complete backend race coverage: 319 passing top-level application
+  tests plus 2 configured optional skips (TestConfigurationPublicStarterPull, TestSuppliedFNBPair).
+  Five domain/release packages passed in the initial all-packages race run:
+  classification, ledger, money, releases and statements.
+- The initial all-packages run was continued with three isolated application
+  batches; those reached their 25-minute local bounds. Completed cases were
+  retained, and all 82 unfinished cases resumed in four smaller isolated batches.
+  The manifest/coverage receipt accounts for all 321 enumerated application tests.
+  A pre-existing annotation assertion expected every tool to be closed-world;
+  it now correctly requires open-world only for apply_change, which can contact
+  the bank. Its exact test and the privacy/catalogue test passed under race on
+  recheck (42.438s). No product permission boundary was weakened for that fixture.
+- The final affected banking/refresh race run passed (754.591s), including scoped
+  modes, approval before network work, replay, immutable connection identity,
+  read-only/non-admin/private/hidden access, current consent and in-flight
+  revocation, OAuth cancellation, busy/cooldown, audit rollback, committed-stage
+  receipts, review/partial failures, logout/MFA failures, migration rollback/
+  retry/preservation/once-only startup and expired results without refetching.
+  The final empty-details completion-flag correction passed its focused race
+  recheck (24.109s). Earlier targeted runs also passed (261.605s, 349.900s).
+- Go vet and diff whitespace checks passed. All 30 frontend unit tests and the
+  production build passed; the existing bundle-size advisory remains.
+- All five targeted browser specs passed: MCP 16 cases, FNB transactions 7,
+  calendar 4, connection 4, and pause/recovery 4 (35 cases, no skipped/flaky cases).
+  New MCP cases cover real saved permissions/read dependencies/independent
+  automatic flags plus synthetic intent/job presentation at 360px light and
+  1440px dark. Backend tests exercise actual refresh execution and authorization;
+  browser presentation fixtures never contact a bank. The first browser command
+  included a nonexistent fnb-schedules filename after its two passing specs;
+  the actual fnb-calendar/connection/pause specs passed in the follow-up batch.
+
+Evidence remains ignored under work/bank-refresh-* and
+web/test-results/run-ut20uow6, run-j7v1j3xq. No owner financial data was copied,
+no live banking or external-client certification was performed, and no production
+image/deployment or manual visual inspection is claimed. Existing unrelated local
+changes were preserved. Current contracts are in MCP.md and module ownership in
+ARCHITECTURE.md/REFACTORING.md. Old saved permissions remain unchanged except for
+already explicit future-YOLO consent; owner opt-in is required for other connections.

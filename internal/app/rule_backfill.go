@@ -9,11 +9,14 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 )
 
 type ruleBackfillInput struct {
 	Refs     []RuleRef `json:"refs"`
 	PeriodID int64     `json:"period_id"`
+	DateFrom string    `json:"date_from,omitempty"`
+	DateTo   string    `json:"date_to,omitempty"`
 }
 type ruleBackfillSeal struct {
 	Input       ruleBackfillInput `json:"input"`
@@ -68,6 +71,13 @@ func (a *App) previewRuleBackfillTx(tx *sql.Tx, u User, b ruleBackfillInput) (ru
 	out := ruleBackfillResult{Items: []ruleBackfillChange{}}
 	if len(b.Refs) == 0 || len(b.Refs) > 10000 || b.PeriodID < 0 {
 		return out, fail(400, "Choose saved rules and a valid period")
+	}
+	if b.DateFrom != "" || b.DateTo != "" {
+		start, startErr := time.Parse("2006-01-02", b.DateFrom)
+		end, endErr := time.Parse("2006-01-02", b.DateTo)
+		if startErr != nil || endErr != nil || start.After(end) || b.PeriodID != 0 {
+			return out, fail(400, "Choose a valid date range without a budget period")
+		}
 	}
 	if b.PeriodID != 0 {
 		if !u.Member {
@@ -156,13 +166,13 @@ func (a *App) previewRuleBackfillTx(tx *sql.Tx, u User, b ruleBackfillInput) (ru
   (SELECT id FROM allocations WHERE transaction_id=t.id ORDER BY id LIMIT 1) allocation_id,
   (SELECT category_id FROM allocations WHERE transaction_id=t.id ORDER BY id LIMIT 1) category_id,
   (SELECT amount_cents FROM allocations WHERE transaction_id=t.id ORDER BY id LIMIT 1) allocation_amount
-  FROM transactions t JOIN accounts a ON a.id=t.account_id WHERE t.account_id=? AND (?=0 OR a.household=1 AND t.period_id=?) ORDER BY t.id LIMIT 100001`, account, b.PeriodID, b.PeriodID)
+  FROM transactions t JOIN accounts a ON a.id=t.account_id WHERE t.account_id=? AND (?=0 OR a.household=1 AND t.period_id=?) AND (?='' OR t.date>=?) AND (?='' OR t.date<=?) ORDER BY t.id LIMIT 100001`, account, b.PeriodID, b.PeriodID, b.DateFrom, b.DateFrom, b.DateTo, b.DateTo)
 		if err != nil {
 			return out, err
 		}
 		readCount += len(rows)
 		if readCount > 100000 {
-			return out, fail(400, "Too many transactions to check. Choose a specific budget period")
+			return out, fail(400, "Too many transactions to check. Choose a narrower date range or budget period")
 		}
 		for _, row := range rows {
 			refs := []RuleRef{}
@@ -181,7 +191,7 @@ func (a *App) previewRuleBackfillTx(tx *sql.Tx, u User, b ruleBackfillInput) (ru
 			}
 			scanned++
 			if scanned > 10000 {
-				return out, fail(400, "More than 10,000 matches. Choose a specific budget period")
+				return out, fail(400, "More than 10,000 matches. Choose a narrower date range or budget period")
 			}
 			out.Matched++
 			evidence = append(evidence, row)
@@ -318,7 +328,7 @@ func (a *App) ruleBackfillApply(w http.ResponseWriter, r *http.Request) error {
 			if err = acceptCategorized(tx, u, change.AccountID, change.ID); err != nil {
 				return err
 			}
-			if err = audit(tx, u, change.AccountID, "transaction", change.ID, "rule_backfilled", map[string]any{"rules": seal.Input.Refs, "period_id": seal.Input.PeriodID, "change": change}); err != nil {
+			if err = audit(tx, u, change.AccountID, "transaction", change.ID, "rule_backfilled", map[string]any{"rules": seal.Input.Refs, "period_id": seal.Input.PeriodID, "date_from": seal.Input.DateFrom, "date_to": seal.Input.DateTo, "change": change}); err != nil {
 				return err
 			}
 			count++

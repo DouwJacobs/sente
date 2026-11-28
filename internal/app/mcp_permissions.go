@@ -12,6 +12,8 @@ import (
 )
 
 type mcpCapabilities struct {
+	RefreshAccounts     bool `json:"refresh_accounts"`
+	RefreshTransactions bool `json:"refresh_transactions"`
 	MergeTransactions   bool `json:"merge_transactions"`
 	DeleteTransactions  bool `json:"delete_transactions"`
 	CreatePeriod        bool `json:"create_period"`
@@ -37,6 +39,7 @@ type mcpConstraints struct {
 	ConstrainedRules bool    `json:"constrained_rules"`
 }
 type mcpPermissions struct {
+	ReadBankRefresh          bool            `json:"read_bank_refresh"`
 	IncludeFuturePermissions bool            `json:"include_future_permissions"`
 	ReadBudgetAlerts         bool            `json:"read_budget_alerts"`
 	ReadContext              bool            `json:"read_context"`
@@ -95,6 +98,8 @@ func (a *App) authorizeMCPExact(q queryer, identity mcpIdentity, exact mcpExactC
 		return denied
 	}
 	switch b.Operation {
+	case "refresh_bank":
+		return a.authorizeBankRefresh(q, identity, exact)
 	case "merge_transactions", "delete_transactions":
 		return a.authorizeMCPTransactionRemoval(q, identity, p, exact)
 	case "save_merchant", "save_merchant_rule", "assign_merchants", "delete_merchant_rule":
@@ -280,6 +285,7 @@ func (a *App) validateMCPPermissions(q queryer, u User, p mcpPermissions) (mcpPe
 		p.Constraints.MissingOnly = false
 		p.Constraints.ConstrainedRules = false
 	case "yolo":
+		p.ReadBankRefresh = true
 		p.ReadContext, p.ReadMerchants, p.ReadBudgetAlerts = true, true, true
 		p.Capabilities = allMCPCapabilities()
 		p.Automatic = p.Capabilities
@@ -326,6 +332,9 @@ func (a *App) validateMCPPermissions(q queryer, u User, p mcpPermissions) (mcpPe
 	}
 	if !p.ReadMerchants && (p.Capabilities.ManageMerchants || p.Capabilities.ManageMerchantRules || p.Capabilities.DeleteMerchantRule || p.Capabilities.AssignMerchants) {
 		return p, fail(400, "Enable merchant reads for merchant changes")
+	}
+	if (p.Capabilities.RefreshAccounts || p.Capabilities.RefreshTransactions) && !p.ReadBankRefresh {
+		return p, fail(400, "Enable bank refresh reads before allowing bank refresh requests")
 	}
 	if !mcpCapabilitiesContain(p.Capabilities, p.Automatic) {
 		return p, fail(400, "Automatic approval requires the corresponding change permission")
@@ -383,6 +392,7 @@ func (a *App) updateMCPPermissions(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
+	a.cancelAgentBankRefresh(Current(r).ID, parseID(r))
 	success(w)
 	return nil
 }
@@ -400,6 +410,10 @@ func mcpRequiredCapabilities(exact mcpExactChange) mcpCapabilities {
 	var needed mcpCapabilities
 	b := exact.Change
 	switch b.Operation {
+	case "refresh_bank":
+		if b.Refresh != nil {
+			needed.RefreshAccounts, needed.RefreshTransactions = refreshModes(b.Refresh.Mode)
+		}
 	case "merge_transactions":
 		needed.MergeTransactions = true
 	case "delete_transactions":

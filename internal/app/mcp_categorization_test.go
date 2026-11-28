@@ -224,7 +224,9 @@ func TestMCPRuleDeletionAuditAndToolAnnotations(t *testing.T) {
 	for _, entry := range tools {
 		tool := entry.(map[string]any)
 		annotations := tool["annotations"].(map[string]any)
-		if annotations["openWorldHint"] != false {
+		// Applying an approved refresh can contact the bank. Preparation and
+		// every read, including job status, remain closed-world.
+		if annotations["openWorldHint"] != (tool["name"] == "apply_change") {
 			t.Fatal(tool)
 		}
 		switch tool["name"] {
